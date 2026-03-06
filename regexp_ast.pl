@@ -3,7 +3,7 @@
         re_pipe//0, re_left_paren//0, re_right_paren//0, 
         re_left_brace//0, re_right_brace//0, re_left_bracket//0, 
         re_right_bracket//0, re_metachar//0,metachars/1, re_postfix//2, re_char//1,
-        re_chars//1]).
+        re_chars//1,re_suffix//1]).
 :-use_module(library(dcgs)).
 :-use_module(library(reif)).
 :- use_module(library(tabling)).
@@ -54,9 +54,11 @@ re_metachar --> re_dot
 re_expr(re_dollar) --> re_dollar.
 re_expr(re_dot) --> re_dot.
 re_expr(re_char(C)) --> re_char(C).
-re_expr(re_concat(L,R)) --> re_expr(L), re_expr(R).
-re_postfix(re_expr(Sub),Postfix ) --> re_expr(Sub), re_suffix(Postfix).
+%TODO this is causing infinfite loop when a postfix expression like .* 
+%re_expr(re_concat(L,R)) --> re_expr(L), re_expr(R).
 
+re_expr(re_postfix(Sub, Postfix)) --> re_postfix(Sub, Postfix).
+re_postfix(re_expr(Sub),re_suffix(Postfix)) --> re_expr(Sub), re_suffix(Postfix).
 
 
 

@@ -5,12 +5,13 @@
 :- use_module(library(pio)).
 :- use_module(library(dcgs)).
 
-test("Force Fail",false).
+% test("Force Fail",false).  %uncomment to see the test suites actually are doing something.
+
 test("Force Pass",true).
 
 %DCG Tests
 test("Test Dot", 
-    (phrase(re_dot,"."),
+    (phrase(re_expr(re_dot),"."),
     phrase(re_dot,".abcde",Cs),
     Cs="abcde"  %double checking Cs is what we expect
     )).
@@ -32,13 +33,20 @@ test("Test backslash",
 test("Parse:Test Not Dot", \+phrase(re_dot,"abc.")).
 
 test("Parse:Test .*", 
-    (phrase( (re_dot, re_star), ".*"))).
+    (
+        %test internal re_dot and re_star matches
+        phrase( (re_dot, re_star), ".*")
+        )).
 
 
-test("Parse:Postfix Expr", 
-    (phrase(re_postfix(L,R),".*")
-    )
+test("Parse:Postfix Star", 
+    phrase(re_postfix(L,R),".*")
 ).
+
+test("Postfix Star", 
+    phrase(re_expr(re_postfix(re_expr(re_dot),re_suffix(re_star))),".*")
+).
+
 
 test("Parse:simple character sequence",
     (phrase(re_chars(L),"abc"),
