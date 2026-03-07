@@ -1,13 +1,14 @@
+:- dynamic(metachars/1).
 :- module(regexp_ast, [re_expr//1,re_dot//0, re_caret//0, re_dollar//0, 
         re_star//0, re_plus//0, re_question//0, re_backslash//0, 
         re_pipe//0, re_left_paren//0, re_right_paren//0, 
         re_left_brace//0, re_right_brace//0, re_left_bracket//0, 
         re_char//1,
-        re_right_bracket//0, re_metachar//0,metachars/1, re_postfix//2, 
+        re_right_bracket//0, re_metachar//0,metachars/1,  
         re_chars//1,re_suffix//1]).
+
 :-use_module(library(dcgs)).
 :-use_module(library(reif)).
-:- use_module(library(tabling)).
 
 %https://docs.python.org/3/library/re.html#re-syntax
 
@@ -17,8 +18,14 @@
 
 metachars_strings(Ss) :- findall(L,phrase(re_metachar,L),Bs),sort(Bs,Ss).
 
-:- table   metachars/1.
-metachars(Cs) :- metachars_strings(Ss),phrase(seqq(Ss),Cs).
+%todo memoize this
+metachars(Cs) :-
+    metachars_strings(Lists),
+    phrase(flatten_lists(Lists), Cs).
+
+flatten_lists([]) --> [].
+flatten_lists([[C]|Rest]) --> [C], flatten_lists(Rest).
+
  
 metachar_t(C, T) :-
     metachars(MCs),
@@ -87,17 +94,26 @@ re_expr_rest(AST, AST) --> [].
 
 re_term(AST) -->
     re_atom(A),
-    (   re_suffix(S)
-    ->  { adjust_postfix(A, S, AST) }
-    ;   { AST = A }
-    ).
+    re_term_suffix(A, AST).
+
+re_term_suffix(A, AST) -->
+    re_suffix(S),
+    { adjust_postfix(A, S, AST) }.
+
+re_term_suffix(A, A) --> [].
+
 
 adjust_postfix(re_chars(Cs), S, AST) :-
     split_last(Cs, Init, Last),
-    AST = re_concat(
+    (   Init = []
+    ->  AST = re_postfix(re_chars([Last]), S)
+    ;   AST = re_concat(
               re_chars(Init),
               re_postfix(re_chars([Last]), S)
-          ).
+          )
+    ).
+
+adjust_postfix(Other, S, re_postfix(Other, S)).
 
 
 split_last([X], [], X).
@@ -117,7 +133,7 @@ re_atom(re_dollar)    --> re_dollar.
 
 
 
-re_postfix(re_expr(Sub),re_suffix(Postfix)) --> re_expr(Sub), re_suffix(Postfix).
+% re_postfix(re_expr(Sub),re_suffix(Postfix)) --> re_expr(Sub), re_suffix(Postfix).
 
 
 
@@ -131,17 +147,23 @@ re_postfix(re_expr(Sub),re_suffix(Postfix)) --> re_expr(Sub), re_suffix(Postfix)
 re_suffix(re_star) --> re_star.
 re_suffix(re_question) --> re_question.
 re_suffix(re_plus) --> re_plus.
-
+ 
 re_chars([C|Cs]) -->
-    re_char(C),
-    (   peek_code(N),
-        { postfix_char_t(N, false) }
-    ->  re_chars(Cs)
-    ;   { Cs = [] }
-    ).
+    [C],
+    { metachar_t(C, false) },
+    re_chars_more(Cs).
+
+re_chars_more([C|Cs]) -->
+    [C],
+    { metachar_t(C, false) },
+    re_chars_more(Cs).
+
+re_chars_more([]) --> [].
+
+
 
 peek_code(C, [C|S], [C|S]).
-   
+
  
 
 re_char(C) -->
