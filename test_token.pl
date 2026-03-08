@@ -17,10 +17,28 @@
         T=lit("xyzab")
         )).
 
-
- test("Test string - with escaped \\",
-    (   In="\\\\a",
-        phrase(re_token(T),In),
-        T=lit("\\a")
+ test("Test Literal - generate literal string from token",
+    (   T=lit("xyzabc"),
+        var(Str),
+        phrase(re_token(T),Str),
+        Str="xyzabc"
         )).
-        
+
+
+ test("Test escaped",
+     (   
+        %test relation both ways, String and token
+        phrase(re_token(escaped(a)),Str),
+        Str="\\a",
+        phrase(re_token(T),Str),
+        T=escaped(a)
+        )).
+test("Metachars ex escaped",
+     %test by converting a string of metachars to tokens and back to strings again
+    (Cs=".^$*+?()[]|{}",
+    phrase(re_tokens(Ts),Cs),
+    var(As),
+    phrase(re_tokens(Ts),As),
+    As=Cs
+    )).
+

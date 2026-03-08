@@ -2,7 +2,10 @@
     re_expr//1,
     re_token//1,
     re_tokens//1,
-    re_literal_run//1
+    re_literal_run//1,
+    re_literal_run_recognize//1,
+    metachar/1,
+    metachars/1
     ]).
 
 :- use_module(library(dcgs)).
@@ -28,7 +31,16 @@ re_tokens([T|Ts]) --> re_token(T), !, re_tokens(Ts).
 re_tokens([])     --> [].
 
 %% re_token(-Tok)
+%% re_token(-Tok) / re_token(+Tok)
+%% If Cs is a variable: we are tokenizing input → use recognizer (greedy, lookahead).
+%% If Cs is instantiated: we are generating output → use reversible version.
+
 re_token(lit(Cs)) -->
+    { var(Cs) },                 % tokenizing
+    re_literal_run_recognize(Cs), !.
+
+re_token(lit(Cs)) -->
+    { nonvar(Cs) },              % generating
     re_literal_run(Cs), !.
 
 re_token(escaped(C)) -->
@@ -45,24 +57,34 @@ re_token(pipe)     --> "|", !.
 re_token(star)     --> "*", !.
 re_token(plus)     --> "+", !.
 re_token(question) --> "?", !.
+re_token(lbrace)   --> "{", !.
+re_token(rbrace)   --> "}", !.
 
 look_ahead(T), [T] --> [T].
 
-%% literal_run(-Chars)
+
+re_literal_run(Cs) -->
+    {Cs = [_|_]}, %nonempty
+    sequence(Cs).
+sequence([C|Cs]) --> [C], sequence(Cs).
+sequence([]) --> [].
+
+%% re_literal_run_recognize(-Chars)
 %% The literal run is from the first literal character to the characer not preceeded by a postfix operator.
 %% axd? 
 %% or 
 %% the first character followed by a postfix operator
 
-re_literal_run([C|Cs]) -->
+re_literal_run_recognize([C|Cs]) -->
     [C], 
     { \+ metachar(C)},
     not_postfix_next_char,
     !,
     re_literal_run_more(Cs).
 
-re_literal_run([C|Cs]) -->
+re_literal_run_recognize([C]) -->
     [C],
+    { \+ metachar(C)},
     postfix_next_char.
 
 
@@ -82,8 +104,10 @@ not_postfix_next_char --> call(eos) | (look_ahead(D), { \+ postfixchar(D) }).
 postfix_next_char --> look_ahead(D), { postfixchar(D) }.
 
 %% metachar(+Char)
+metachars(".^$*+?()[]|\\{}").
 metachar(C) :-
-    member(C, ".^$*+?()[]|\\{}").
+    metachars(Cs),
+    member(C, Cs). 
 postfixchar(D) :-
     member(D,"*+?").
 
