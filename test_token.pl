@@ -11,6 +11,13 @@
         T=lit("abxa")
         )).
 
+ test("Test Literal - string with a `:`, which should provide three tokens",
+    (   In="ab:xa",
+        phrase(re_tokens(T),In),
+        T = [lit("ab"),colon,lit("xa")]
+        )).
+
+
  test("Test Literal - literal string followed by a single character and then a postfix operator",
     (   In="xyzabc?d",
         phrase(re_token(T),In,_),

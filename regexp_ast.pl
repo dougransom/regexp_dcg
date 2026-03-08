@@ -59,6 +59,7 @@ re_token(plus)     --> "+", !.
 re_token(question) --> "?", !.
 re_token(lbrace)   --> "{", !.
 re_token(rbrace)   --> "}", !.
+re_token(colon) --> ":", !.
 
 look_ahead(T), [T] --> [T].
 
@@ -103,8 +104,8 @@ eos([], []).  %for detecting end of input, from https://www.metalevel.at/prolog/
 not_postfix_next_char --> call(eos) | (look_ahead(D), { \+ postfixchar(D) }).
 postfix_next_char --> look_ahead(D), { postfixchar(D) }.
 
-%% metachar(+Char)
-metachars(".^$*+?()[]|\\{}").
+%% metachar(+Char).  Note : is not a metachar in this list.
+metachars(".^$*+?()[]|\\{}:").
 metachar(C) :-
     metachars(Cs),
     member(C, Cs). 
