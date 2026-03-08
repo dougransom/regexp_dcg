@@ -29,8 +29,13 @@ re_tokens([])     --> [].
 
 %% re_token(-Tok)
 %% re_token(-Tok) / re_token(+Tok)
-%% If Cs is a variable: we are tokenizing input → use recognizer (greedy, lookahead).
-%% If Cs is instantiated: we are generating output → use reversible version.
+
+% character class (must come before lbrack/rbrack)
+re_token(class(Items)) -->
+    "[",
+    class_items(Items),
+    "]",
+    !.
 
 re_token(lit(Cs)) -->
     { var(Cs) },                 % tokenizing
@@ -57,9 +62,41 @@ re_token(question) --> "?", !.
 re_token(lbrace)   --> "{", !.
 re_token(rbrace)   --> "}", !.
 re_token(colon)    --> ":", !.
-re_token(comma) --> ",", !.
+re_token(comma)    --> ",", !.
+
 
 look_ahead(T), [T] --> [T].
+
+
+class_items(Items) -->
+    "^", !,
+    class_items_rest(Rest),
+    { Items = neg(Rest) }.
+
+class_items(Items) -->
+    class_items_rest(Items).
+
+class_items_rest([Item|Items]) -->
+    class_item(Item),
+    class_items_rest(Items).
+
+class_items_rest([]) --> [].
+
+class_item(range(A,B)) -->
+    class_char(A),
+    "-",
+    class_char(B), !.
+
+class_item(char(C)) -->
+    class_char(C).
+
+class_char(C) -->
+    "\\", [C], !.     % escaped char
+
+class_char(C) -->
+    [C],
+    { C \= 0'] }.      % don't allow ']' inside
+
 
 re_literal_run(Cs) -->
     { Cs = [_|_] }, % nonempty
@@ -149,6 +186,11 @@ re_atom_tokens(escaped(C)) -->
 re_atom_tokens(dot) -->
     [dot].
 
+%% Classes
+re_atom_tokens(class(Items)) -->
+    [class(Items)].
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% 4. GROUP PREFIXES
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -169,6 +211,8 @@ build_group_ast(capture, Sub, capture(Sub)).
 build_group_ast(noncapture, Sub, group(Sub)).
 build_group_ast(lookahead, Sub, lookahead(Sub)).
 build_group_ast(neg_lookahead, Sub, neg_lookahead(Sub)).
+
+
 
 %%% Quantifiers
 quantifier(mn(M,N)) -->

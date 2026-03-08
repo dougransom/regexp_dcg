@@ -67,3 +67,25 @@ test("Quantifier: open upper bound",
         T = [lit("c"), lbrace, lit("7"), comma, rbrace],
         AST = quant(lit("c"), mn(7,inf))
     )).
+
+test("CharClass: simple class",
+    (   phrase(re_tokens(T), "[abc]"),
+        phrase(re_expr_tokens(AST), T),
+        T = [class([char(a),char(b),char(c)])],
+        AST = class([char(a),char(b),char(c)])
+    )).
+
+test("CharClass: range",
+    (   phrase(re_tokens(T), "[a-z]"),
+        phrase(re_expr_tokens(AST), T),
+        T = [class([range(a,z)])],
+        AST = class([range(a,z)])
+    )).
+
+
+test("CharClass: negated class",
+    (   phrase(re_tokens(T), "[^abc]"),
+        phrase(re_expr_tokens(AST), T),
+        T = [class(neg([char(a),char(b),char(c)]))],
+        AST = class(neg([char(a),char(b),char(c)]))
+    )).

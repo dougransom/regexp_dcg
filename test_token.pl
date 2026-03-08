@@ -42,10 +42,23 @@
         )).
 test("Metachars ex escaped",
      %test by converting a string of metachars to tokens and back to strings again
-    (Cs=".^$*+?()[]|{}",
-    phrase(re_tokens(Ts),Cs),
-    var(As),
-    phrase(re_tokens(Ts),As),
-    As=Cs
+    (
+     phrase(re_tokens(Ts),".^$*+?()[]|{}:,"),
+    Ts = [dot,caret,dollar,star,plus,question,lparen,rparen,class([]),pipe,lbrace,rbrace,colon,comma])
+).
+
+
+test("CharClass Tokens: simple class",
+    (   phrase(re_tokens(T), "[abc]"),
+        T = [class([char(a),char(b),char(c)])]
     )).
 
+test("CharClass Tokens: range",
+    (   phrase(re_tokens(T), "[a-z]"),
+        T = [class([range(a,z)])]
+    )).
+
+test("CharClass Tokens: negated class",
+    (   phrase(re_tokens(T), "[^abc]"),
+        T = [class(neg([char(a),char(b),char(c)]))]
+    )).
