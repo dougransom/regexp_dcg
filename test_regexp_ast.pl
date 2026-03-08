@@ -44,3 +44,26 @@ test("Postfix: simple literal with ?",
         T = [lit([a]), question],
         AST = postfix(lit([a]), question)
     )).
+
+test("Quantifier: exact repetition",
+    (   phrase(re_tokens(T), "a{3}"),
+        phrase(re_expr_tokens(AST), T),
+        T = [lit("a"), lbrace, lit("3"), rbrace],
+        AST = quant(lit("a"), mn(3,3))
+    )).
+
+test("Quantifier: bounded range",
+    (   phrase(re_tokens(T), "b{2,5}"),
+        phrase(re_expr_tokens(AST), T),
+        T = [lit("b"), lbrace, lit("2"), comma, lit("5"), rbrace],
+        AST = quant(lit("b"), mn(2,5))
+    )).
+
+
+
+test("Quantifier: open upper bound",
+    (   phrase(re_tokens(T), "c{7,}"),
+        phrase(re_expr_tokens(AST), T),
+        T = [lit("c"), lbrace, lit("7"), comma, rbrace],
+        AST = quant(lit("c"), mn(7,inf))
+    )).

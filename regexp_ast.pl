@@ -57,6 +57,7 @@ re_token(question) --> "?", !.
 re_token(lbrace)   --> "{", !.
 re_token(rbrace)   --> "}", !.
 re_token(colon)    --> ":", !.
+re_token(comma) --> ",", !.
 
 look_ahead(T), [T] --> [T].
 
@@ -100,7 +101,7 @@ not_postfix_next_char --> call(eos)
 postfix_next_char --> look_ahead(D), { postfixchar(D) }.
 
 %% metachar(+Char)
-metachars(".^$*+?()[]|\\{}:").
+metachars(".^$*+?()[]|\\{}:,").
 metachar(C) :-
     metachars(Cs),
     member(C, Cs).
@@ -169,6 +170,19 @@ build_group_ast(noncapture, Sub, group(Sub)).
 build_group_ast(lookahead, Sub, lookahead(Sub)).
 build_group_ast(neg_lookahead, Sub, neg_lookahead(Sub)).
 
+%%% Quantifiers
+quantifier(mn(M,N)) -->
+    [lbrace],
+    integer_token(M),
+    (   [comma], integer_token(N)
+    ;   [comma], { N = inf }
+    ;   { N = M }
+    ),
+    [rbrace].
+
+integer_token(N) -->
+    [lit(Cs)],
+    { number_chars(N, Cs) }.
 
 %%% Postfix Operators
 
@@ -180,5 +194,7 @@ re_postfix_tokens(AST) -->
     re_atom_tokens(A),
     (   postfix_op(Op),
         { AST = postfix(A, Op) }
+    ;   quantifier(Q),
+        { AST = quant(A, Q) }
     ;   { AST = A }
     ).
