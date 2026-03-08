@@ -5,27 +5,19 @@
     re_literal_run//1,
     re_literal_run_recognize//1,
     metachar/1,
-    metachars/1,
-    re_group//1,
-    parse_atom/3,
-    parse_group/3,
-    parse_subexpr/3
-    ]).
+    metachars/1
+]).
 
 :- use_module(library(dcgs)).
 :- use_module(library(lists)).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% 1. TOP-LEVEL: tokenize → postfix → concat → alternation
+%% 1. TOP-LEVEL: tokenize → token-level DCG parser
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 re_expr(AST) -->
     re_tokens(Toks),
-    {
-        bind_postfix(Toks, P1),
-        parse_concat(P1, C0),
-        parse_alternation(C0, AST)
-    }.
+    phrase(re_expr_tokens(AST), Toks).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% 2. re_tokenIZER (DCG, deterministic, greedy)
@@ -63,35 +55,32 @@ re_token(plus)     --> "+", !.
 re_token(question) --> "?", !.
 re_token(lbrace)   --> "{", !.
 re_token(rbrace)   --> "}", !.
-re_token(colon) --> ":", !.
+re_token(colon)    --> ":", !.
 
 look_ahead(T), [T] --> [T].
 
-
 re_literal_run(Cs) -->
-    {Cs = [_|_]}, %nonempty
+    { Cs = [_|_] }, % nonempty
     sequence(Cs).
+
 sequence([C|Cs]) --> [C], sequence(Cs).
 sequence([]) --> [].
 
 %% re_literal_run_recognize(-Chars)
-%% The literal run is from the first literal character to the characer not preceeded by a postfix operator.
-%% axd? 
-%% or 
-%% the first character followed by a postfix operator
+%% The literal run is from the first literal character to the character
+%% not preceded by a postfix operator.
 
 re_literal_run_recognize([C|Cs]) -->
-    [C], 
-    { \+ metachar(C)},
+    [C],
+    { \+ metachar(C) },
     not_postfix_next_char,
     !,
     re_literal_run_more(Cs).
 
 re_literal_run_recognize([C]) -->
     [C],
-    { \+ metachar(C)},
+    { \+ metachar(C) },
     postfix_next_char.
-
 
 re_literal_run_more([C|Cs]) -->
     [C],
@@ -100,91 +89,28 @@ re_literal_run_more([C|Cs]) -->
     !,
     re_literal_run_more(Cs).
 
-
 re_literal_run_more([]) --> [].
 
-eos([], []).  %for detecting end of input, from https://www.metalevel.at/prolog/dcg
+eos([], []).  % for detecting end of input
 
-not_postfix_next_char --> call(eos) | (look_ahead(D), { \+ postfixchar(D) }).
+not_postfix_next_char --> call(eos)
+    | (look_ahead(D), { \+ postfixchar(D) }).
+
 postfix_next_char --> look_ahead(D), { postfixchar(D) }.
 
-%% metachar(+Char).  Note : is not a metachar in this list.
+%% metachar(+Char)
 metachars(".^$*+?()[]|\\{}:").
 metachar(C) :-
     metachars(Cs),
-    member(C, Cs). 
+    member(C, Cs).
+
 postfixchar(D) :-
-    member(D,"*+?").
+    member(D, "*+?").
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% 3. POSTFIX BINDING
+%% 3. TOKEN-LEVEL PARSER (DCG over tokens)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-bind_postfix([], []).
-
-bind_postfix([lit(Cs), plus | Rest], [postfix(lit(Cs), plus) | Out]) :-
-    bind_postfix(Rest, Out).
-
-bind_postfix([lit(Cs), star | Rest], [postfix(lit(Cs), star) | Out]) :-
-    bind_postfix(Rest, Out).
-
-bind_postfix([lit(Cs), question | Rest], [postfix(lit(Cs), question) | Out]) :-
-    bind_postfix(Rest, Out).
-
-bind_postfix([A | Rest], [A | Out]) :-
-    bind_postfix(Rest, Out).
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% 4. CONCATENATION (left fold)
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-parse_concat([A], A).
-parse_concat([A,B|Rest], concat(A, C)) :-
-    parse_concat([B|Rest], C).
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% 5. ALTERNATION
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-parse_alternation(concat(A, concat(pipe, B)), or(A1, B1)) :-
-    parse_alternation(A, A1),
-    parse_alternation(B, B1).
-
-parse_alternation(concat(A, B), concat(A1, B1)) :-
-    parse_alternation(A, A1),
-    parse_alternation(B, B1).
-
-parse_alternation(pipe, pipe).
-parse_alternation(X,X).
-
-%%% Groups
-
-re_group(AST) -->
-    [lparen],
-    group_prefix(Prefix),
-    re_expr(SubAST),
-    [rparen],
-    { build_group_ast(Prefix, SubAST, AST) }.
-
-group_prefix(capture) -->
-    [].
-
-group_prefix(noncapture) -->
-    [question, colon].
-
-group_prefix(lookahead) -->
-    [question, '='].
-
-group_prefix(neg_lookahead) -->
-    [question, '!'].
-
-build_group_ast(capture, Sub, capture(Sub)).
-build_group_ast(noncapture, Sub, group(Sub)).
-build_group_ast(lookahead, Sub, lookahead(Sub)).
-build_group_ast(neg_lookahead, Sub, neg_lookahead(Sub)).
-
-%top roken-level parsing
- 
 re_expr_tokens(AST) -->
     re_alt_tokens(AST).
 
@@ -203,7 +129,7 @@ re_concat_tokens(AST) -->
     ;   { AST = A }
     ).
 
-%group rule
+%% Group rule
 re_atom_tokens(AST) -->
     [lparen],
     group_prefix(P),
@@ -220,3 +146,23 @@ re_atom_tokens(escaped(C)) -->
 re_atom_tokens(dot) -->
     [dot].
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% 4. GROUP PREFIXES
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+group_prefix(capture) -->
+    [].
+
+group_prefix(noncapture) -->
+    [question, colon].
+
+group_prefix(lookahead) -->
+    [question, '='].
+
+group_prefix(neg_lookahead) -->
+    [question, '!'].
+
+build_group_ast(capture, Sub, capture(Sub)).
+build_group_ast(noncapture, Sub, group(Sub)).
+build_group_ast(lookahead, Sub, lookahead(Sub)).
+build_group_ast(neg_lookahead, Sub, neg_lookahead(Sub)).
