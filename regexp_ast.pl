@@ -5,7 +5,11 @@
     re_literal_run//1,
     re_literal_run_recognize//1,
     metachar/1,
-    metachars/1
+    metachars/1,
+    re_group//1,
+    parse_atom/3,
+    parse_group/3,
+    parse_subexpr/3
     ]).
 
 :- use_module(library(dcgs)).
@@ -152,3 +156,67 @@ parse_alternation(concat(A, B), concat(A1, B1)) :-
 
 parse_alternation(pipe, pipe).
 parse_alternation(X,X).
+
+%%% Groups
+
+re_group(AST) -->
+    [lparen],
+    group_prefix(Prefix),
+    re_expr(SubAST),
+    [rparen],
+    { build_group_ast(Prefix, SubAST, AST) }.
+
+group_prefix(capture) -->
+    [].
+
+group_prefix(noncapture) -->
+    [question, colon].
+
+group_prefix(lookahead) -->
+    [question, '='].
+
+group_prefix(neg_lookahead) -->
+    [question, '!'].
+
+build_group_ast(capture, Sub, capture(Sub)).
+build_group_ast(noncapture, Sub, group(Sub)).
+build_group_ast(lookahead, Sub, lookahead(Sub)).
+build_group_ast(neg_lookahead, Sub, neg_lookahead(Sub)).
+
+%top roken-level parsing
+ 
+re_expr_tokens(AST) -->
+    re_alt_tokens(AST).
+
+re_alt_tokens(AST) -->
+    re_concat_tokens(A),
+    (   [pipe],
+        re_alt_tokens(B),
+        { AST = or(A, B) }
+    ;   { AST = A }
+    ).
+
+re_concat_tokens(AST) -->
+    re_atom_tokens(A),
+    (   re_concat_tokens(B),
+        { AST = concat(A, B) }
+    ;   { AST = A }
+    ).
+
+%group rule
+re_atom_tokens(AST) -->
+    [lparen],
+    group_prefix(P),
+    re_expr_tokens(Sub),
+    [rparen],
+    { build_group_ast(P, Sub, AST) }.
+
+re_atom_tokens(lit(Cs)) -->
+    [lit(Cs)].
+
+re_atom_tokens(escaped(C)) -->
+    [escaped(C)].
+
+re_atom_tokens(dot) -->
+    [dot].
+
