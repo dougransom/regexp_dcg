@@ -10,70 +10,37 @@
 test("Force Pass",true).
 
 %DCG Tests
-test("Test Dot", 
-    (phrase(re_expr(re_dot),"."),
-    phrase(re_dot,".abcde",Cs),
-    Cs="abcde"  %double checking Cs is what we expect
+test("Test Capture", 
+    (phrase(re_tokens(T), "(abc)"),
+    format("Tokens = ~w~n", [T]),
+    phrase(re_expr_tokens(AST), T),
+    AST=capture(lit("abc")),
+    format("AST = ~w~n", [AST]))).
+
+test("Postfix: simple literal with star",
+    (   phrase(re_tokens(T), "a*"),
+        phrase(re_expr_tokens(AST), T),
+        T = [lit([a]), star],
+        AST = postfix(lit([a]), star)
     )).
 
-test("Test backslash",
-    (phrase(re_backslash,"\\"),
-    phrase( ("abc",re_backslash),"abc\\de",Cs),
-    Cs="de"  %double checking Cs is what we expect
-)).
-
- test("Test Metachars", 
-    (metachars(Cs),
-    Cs="$()*+.?[\\]^{|}"
+test("Postfix: capturing group with plus",
+    (   phrase(re_tokens(T), "(abc)+"),
+        phrase(re_expr_tokens(AST), T),
+        T = [lparen, lit([a,b,c]), rparen, plus],
+        AST = postfix(capture(lit([a,b,c])), plus)
     )).
-    
-%test simple puncutation tokens
 
+test("Postfix: nested postfix inside noncapturing group",
+    (   phrase(re_tokens(T), "(?:x+)+"),
+        phrase(re_expr_tokens(AST), T),
+        T = [lparen, question, colon, lit([x]), plus, rparen, plus],
+        AST = postfix(group(postfix(lit([x]), plus)), plus)
+    )).
 
-test("Parse:Test Not Dot", \+phrase(re_dot,"abc.")).
-
-test("Parse:Test .*", 
-    (
-        %test internal re_dot and re_star matches
-        phrase( (re_dot, re_star), ".*")
-        )).
-
-
-test("Parse:Postfix Star", 
-    phrase(re_postfix(L,R),".*")
-).
-
-test("Postfix Star", 
-    phrase(re_expr(re_postfix(re_expr(re_dot),re_suffix(re_star))),".*")
-).
-
-
-test("Parse:simple character sequence",
-    (phrase(re_chars(L),"abc"),
-    L="abc")
-).
-
-test("Parse:backlash",
-    %remember two '\' in a prolog string is one backslash.  So to have a 
-    %backlash in a regexp to match a character '\' requires four '\' in a row in a prolog string.
-
-    (phrase(re_chars(L),"\\\\"),
-    L="\\")).
-
-test("Parse:bakslash_from_input",
-    %just to show how to encode a regexp in a text file or from user input as opposed to Prolog.
-    (phrase_from_file(seq(Cs),"backslash.txt"),
-    phrase(re_chars(L),Cs),
-    L="\\")).
-
-test("Parse:character sequence with metachars",
-    (phrase(re_chars(L),"abc\\\\"),
-    L="abc\\")
-).
-
-test("DCG:string to DCG",
-    % reminder \\ in a prog string is one backslash 
-    %abc\\\\ in a prolog string should match one backlash in input.
-    (phrase(re_chars(L),"abc\\\\"),  
-    L="abc\\")
-    ).
+test("Postfix: simple literal with ?",
+    (   phrase(re_tokens(T), "a?"),
+        phrase(re_expr_tokens(AST), T),
+        T = [lit([a]), question],
+        AST = postfix(lit([a]), question)
+    )).

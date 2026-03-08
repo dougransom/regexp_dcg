@@ -5,7 +5,8 @@
     re_literal_run//1,
     re_literal_run_recognize//1,
     metachar/1,
-    metachars/1
+    metachars/1,
+    re_expr_tokens//1
 ]).
 
 :- use_module(library(dcgs)).
@@ -123,11 +124,12 @@ re_alt_tokens(AST) -->
     ).
 
 re_concat_tokens(AST) -->
-    re_atom_tokens(A),
+    re_postfix_tokens(A),
     (   re_concat_tokens(B),
         { AST = concat(A, B) }
     ;   { AST = A }
     ).
+
 
 %% Group rule
 re_atom_tokens(AST) -->
@@ -166,3 +168,17 @@ build_group_ast(capture, Sub, capture(Sub)).
 build_group_ast(noncapture, Sub, group(Sub)).
 build_group_ast(lookahead, Sub, lookahead(Sub)).
 build_group_ast(neg_lookahead, Sub, neg_lookahead(Sub)).
+
+
+%%% Postfix Operators
+
+postfix_op(star)     --> [star].
+postfix_op(plus)     --> [plus].
+postfix_op(question) --> [question].
+
+re_postfix_tokens(AST) -->
+    re_atom_tokens(A),
+    (   postfix_op(Op),
+        { AST = postfix(A, Op) }
+    ;   { AST = A }
+    ).
