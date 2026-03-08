@@ -1,64 +1,94 @@
 :- module(regexp_ast, [
-    re_expr//1
-]).
+    re_expr//1,
+    re_token//1,
+    re_tokens//1,
+    re_literal_run//1
+    ]).
 
 :- use_module(library(dcgs)).
 :- use_module(library(lists)).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% 1. TOKENIZER — flat list of atoms
+%% 1. TOP-LEVEL: tokenize → postfix → concat → alternation
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 re_expr(AST) -->
-    flat_expr(Tokens),
-    { bind_postfix(Tokens, P1),
-      parse_concat(P1, AST0),
-      parse_alternation(AST0, AST)
+    re_tokens(Toks),
+    {
+        bind_postfix(Toks, P1),
+        parse_concat(P1, C0),
+        parse_alternation(C0, AST)
     }.
 
-%% flat_expr(-Atoms)
-flat_expr([A|As]) -->
-    flat_atom(A),
-    flat_expr(As).
-flat_expr([]) --> [].
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% 2. re_tokenIZER (DCG, deterministic, greedy)
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%% flat_atom(-Atom)
-flat_atom(lit(Cs)) -->
-    literal_run(Cs).
+re_tokens([T|Ts]) --> re_token(T), !, re_tokens(Ts).
+re_tokens([])     --> [].
 
-flat_atom(dot)       --> ".".
-flat_atom(caret)     --> "^".
-flat_atom(dollar)    --> "$".
-flat_atom(lparen)    --> "(".
-flat_atom(rparen)    --> ")".
-flat_atom(lbrack)    --> "[".
-flat_atom(rbrack)    --> "]".
-flat_atom(pipe)      --> "|".
-flat_atom(star)      --> "*".
-flat_atom(plus)      --> "+".
-flat_atom(question)  --> "?".
+%% re_token(-Tok)
+re_token(lit(Cs)) -->
+    re_literal_run(Cs), !.
 
-flat_atom(escaped(C)) -->
-    "\\", [C].
+re_token(escaped(C)) -->
+    "\\", [C], !.
+
+re_token(dot)      --> ".", !.
+re_token(caret)    --> "^", !.
+re_token(dollar)   --> "$", !.
+re_token(lparen)   --> "(", !.
+re_token(rparen)   --> ")", !.
+re_token(lbrack)   --> "[", !.
+re_token(rbrack)   --> "]", !.
+re_token(pipe)     --> "|", !.
+re_token(star)     --> "*", !.
+re_token(plus)     --> "+", !.
+re_token(question) --> "?", !.
+
+look_ahead(T), [T] --> [T].
 
 %% literal_run(-Chars)
-literal_run([C|Cs]) -->
-    [C],
-    { \+ metachar(C) },
-    literal_run_more(Cs).
+%% The literal run is from the first literal character to the characer not preceeded by a postfix operator.
+%% axd? 
+%% or 
+%% the first character followed by a postfix operator
 
-literal_run_more([C|Cs]) -->
+re_literal_run([C|Cs]) -->
+    [C], 
+    { \+ metachar(C)},
+    not_postfix_next_char,
+    !,
+    re_literal_run_more(Cs).
+
+re_literal_run([C|Cs]) -->
+    [C],
+    postfix_next_char.
+
+
+re_literal_run_more([C|Cs]) -->
     [C],
     { \+ metachar(C) },
-    literal_run_more(Cs).
-literal_run_more([]) --> [].
+    not_postfix_next_char,
+    !,
+    re_literal_run_more(Cs).
+
+
+re_literal_run_more([]) --> [].
+
+eos([], []).  %for detecting end of input, from https://www.metalevel.at/prolog/dcg
+
+not_postfix_next_char --> call(eos) | (look_ahead(D), { \+ postfixchar(D) }).
+postfix_next_char --> look_ahead(D), { postfixchar(D) }.
 
 %% metachar(+Char)
 metachar(C) :-
-    member(C, `.^$*+?()[]|\\{}`).
+    member(C, ".^$*+?()[]|\\{}").
+postfixchar(D) :-
+    member(D,"*+?").
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% 2. POSTFIX BINDING
+%% 3. POSTFIX BINDING
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 bind_postfix([], []).
@@ -76,7 +106,7 @@ bind_postfix([A | Rest], [A | Out]) :-
     bind_postfix(Rest, Out).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% 3. CONCATENATION (left fold)
+%% 4. CONCATENATION (left fold)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 parse_concat([A], A).
@@ -84,7 +114,7 @@ parse_concat([A,B|Rest], concat(A, C)) :-
     parse_concat([B|Rest], C).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% 4. ALTERNATION
+%% 5. ALTERNATION
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 parse_alternation(concat(A, concat(pipe, B)), or(A1, B1)) :-
@@ -95,5 +125,5 @@ parse_alternation(concat(A, B), concat(A1, B1)) :-
     parse_alternation(A, A1),
     parse_alternation(B, B1).
 
-parse_alternation(pipe, pipe).  % shouldn't appear alone
-parse_alternation(X, X).
+parse_alternation(pipe, pipe).
+parse_alternation(X,X).
