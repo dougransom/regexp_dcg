@@ -6,11 +6,17 @@
     re_literal_run_recognize//1,
     metachar/1,
     metachars/1,
-    re_expr_tokens//1
+    re_expr_tokens//1,
+    posix_name//1,
+    class_item//1
 ]).
 
 :- use_module(library(dcgs)).
 :- use_module(library(lists)).
+
+%:- dynamic metachars/1.
+foo.
+%
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% 1. TOP-LEVEL: tokenize → token-level DCG parser
@@ -82,6 +88,13 @@ class_items_rest([Item|Items]) -->
 
 class_items_rest([]) --> [].
 
+%order matters for class item
+
+class_item(posix(Name)) -->
+    "[:",
+    posix_name(Name),
+    ":]".
+
 class_item(range(A,B)) -->
     class_char(A),
     "-",
@@ -89,6 +102,23 @@ class_item(range(A,B)) -->
 
 class_item(char(C)) -->
     class_char(C).
+
+posix_name(Name) -->
+    posix_name_chars(Cs),
+    { atom_chars(Name, Cs) }.
+
+posix_name_chars([C|Cs]) -->
+    [C],
+    { C \= 0': }, 
+    posix_name_chars(Cs).
+
+posix_name_chars([]) -->
+    [].
+
+
+
+
+
 
 class_char(C) -->
     "\\", [C], !.     % escaped char

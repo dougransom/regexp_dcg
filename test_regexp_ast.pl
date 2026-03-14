@@ -89,3 +89,49 @@ test("CharClass: negated class",
         T = [class(neg([char(a),char(b),char(c)]))],
         AST = class(neg([char(a),char(b),char(c)]))
     )).
+test("CharClass: negated range",
+    (   phrase(re_tokens(T), "[^a-z]"),
+        phrase(re_expr_tokens(AST), T),
+        T = [class(neg([range(a,z)]))],
+        AST = class(neg([range(a,z)]))
+    )).
+
+test("CharClass: escaped closing bracket",
+    (   phrase(re_tokens(T), "[\\]]"),
+        phrase(re_expr_tokens(AST), T),
+        T = [class([char(']')])],
+        AST = class([char(']')])
+    )).
+
+test("CharClass: mixed items",
+    (   phrase(re_tokens(T), "[a-z_]"),
+        phrase(re_expr_tokens(AST), T),
+        T = [class([range(a,z), char(_)])],
+        AST = class([range(a,z), char(_)])
+    )).
+test("CharClass: mixed ranges and chars",
+    (   phrase(re_tokens(T), "[a-zA-Z_]"),
+        phrase(re_expr_tokens(AST), T),
+        T = [class([range(a,z), range(A,Z), char(_)])],
+        AST = class([range(a,z), range(A,Z), char(_)])
+    )).
+
+test("CharClass: negated mixed",
+    (   phrase(re_tokens(T), "[^a-z_]"),
+        phrase(re_expr_tokens(AST), T),
+        T = [class(neg([range(a,z), char(_)]))],
+        AST = class(neg([range(a,z), char(_)]))
+    )).
+
+test("CharClass: escaped hyphen",
+    (   phrase(re_tokens(T), "[a\\-z]"),
+        phrase(re_expr_tokens(AST), T),
+        T = [class([char(a), char('-'), char(z)])],
+        AST = class([char(a), char('-'), char(z)])
+    )).
+test("CharClass: POSIX digit",
+    (   phrase(re_tokens(T), "[[:digit:]]"),
+        phrase(re_expr_tokens(AST), T),
+        T = [class([posix(digit)])],
+        AST = class([posix(digit)])
+    )).
