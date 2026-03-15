@@ -56,18 +56,18 @@ pattern_ast(Pattern, AST) :-
     phrase(re_tokens(Tokens), Chars),
     phrase(re_ast(AST), Tokens).
 
-initial_state(state{
-    full: _,
-    groups: [],
-    named: captures{},   % later
-    tree: _       % later
-}).
+state(_Full, _Groups, _Named, _Tree).
+
+state_full(state(Full, _, _, _), Full).
+state_groups(state(_, Groups, _, _), Groups).
+state_named(state(_, _, Named, _), Named).
+state_tree(state(_, _, _, Tree), Tree).
+
+initial_state(state(_, [], [], _)).
 
 state_match(State, Match) :-
-    Match = State.full.
+    state_full(State,Match).
 
-state_groups(State, Groups) :-
-    Groups = State.groups.
 
 % ast_dcg(+AST, +State0, -StateF, -DCG)
 ast_dcg(AST, S0, SF, DCG) :-
