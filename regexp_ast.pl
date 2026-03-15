@@ -1,7 +1,8 @@
 :- module(regexp_ast, [
-    re_expr//1,
+ 
     re_token//1,
     re_tokens//1,
+    re_ast//1,
     re_literal_run//1,
     re_literal_run_recognize//1,
     metachar/1,
@@ -22,9 +23,85 @@ foo.
 %% 1. TOP-LEVEL: tokenize → token-level DCG parser
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-re_expr(AST) -->
-    re_tokens(Toks),
-    phrase(re_expr_tokens(AST), Toks).
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%  AST PARSER (Phase 1D)
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% Entry point
+re_ast(AST) -->
+    re_alt(AST).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Alternation: A | B | C
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+re_alt(AST) -->
+    re_concat(T),
+    (   [pipe],
+        re_alt(R),
+        { AST = alt(T, R) }
+    ;   { AST = T }
+    ).
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Concatenation: implicit adjacency
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+re_concat(concat([F|Fs])) -->
+    re_factor(F),
+    re_concat_more(Fs).
+
+re_concat(F) -->
+    re_factor(F).
+
+re_concat_more([F|Fs]) -->
+    re_factor(F),
+    !,
+    re_concat_more(Fs).
+
+re_concat_more([]) -->
+    [].
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Postfix operators: *, +, ?
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+re_factor(Node) -->
+    re_atom(A),
+    (   [star],  { Node = star(A) }
+    ;   [plus],  { Node = plus(A) }
+    ;   [qmark], { Node = maybe(A) }
+    ;   { Node = A }
+    ).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Atoms: groups, classes, anchors, boundaries, literals
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+re_atom(group(A)) -->
+    [lparen],
+    re_alt(A),
+    [rparen].
+
+re_atom(class(Items)) -->
+    [class(Items)].
+
+re_atom(anchor(bol)) -->
+    [caret].
+
+re_atom(anchor(eol)) -->
+    [dollar].
+
+re_atom(boundary(word)) -->
+    [boundary(word)].
+
+re_atom(boundary(not_word)) -->
+    [boundary(not_word)].
+
+re_atom(lit(S)) -->
+    [lit(S)].
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% 2. re_tokenIZER (DCG, deterministic, greedy)
@@ -35,6 +112,22 @@ re_tokens([])     --> [].
 
 %% re_token(-Tok)
 %% re_token(-Tok) / re_token(+Tok)
+
+% escaped should be first
+
+re_token(boundary(word))     --> "\\b", !.
+re_token(boundary(not_word)) --> "\\B", !.
+
+
+re_token(builtin(digit))      --> "\\d", !.
+re_token(builtin(not_digit))  --> "\\D", !.
+
+re_token(builtin(word))       --> "\\w", !.
+re_token(builtin(not_word))   --> "\\W", !.
+
+re_token(builtin(space))      --> "\\s", !.
+re_token(builtin(not_space))  --> "\\S", !.
+
 
 % character class (must come before lbrack/rbrack)
 re_token(class(Items)) -->
@@ -89,6 +182,14 @@ class_items_rest([Item|Items]) -->
 class_items_rest([]) --> [].
 
 %order matters for class item
+class_item(builtin(digit))      --> "\\d", !.
+class_item(builtin(not_digit))  --> "\\D", !.
+
+class_item(builtin(word))       --> "\\w", !.
+class_item(builtin(not_word))   --> "\\W", !.
+
+class_item(builtin(space))      --> "\\s", !.
+class_item(builtin(not_space))  --> "\\S", !.
 
 class_item(posix(Name)) -->
     "[:",
@@ -179,6 +280,17 @@ postfixchar(D) :-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% 3. TOKEN-LEVEL PARSER (DCG over tokens)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+re_expr_tokens(anchor(bol)) -->
+    [caret].
+
+re_expr_tokens(anchor(eol)) -->
+    [dollar].
+
+re_expr_tokens(boundary(word)) -->
+    [boundary(word)].
+
+re_expr_tokens(boundary(not_word)) -->
+    [boundary(not_word)].
 
 re_expr_tokens(AST) -->
     re_alt_tokens(AST).

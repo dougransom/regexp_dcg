@@ -135,3 +135,116 @@ test("CharClass: POSIX digit",
         T = [class([posix(digit)])],
         AST = class([posix(digit)])
     )).
+
+
+test("POSIX digit", 
+    (phrase(re_tokens(T), "[[:digit:]]"),
+    T = [class([posix(digit)])])).
+
+test("POSIX alpha", 
+    (phrase(re_tokens(T), "[[:alpha:]]"),
+    T = [class([posix(alpha)])])).
+
+test("POSIX alnum", 
+    (phrase(re_tokens(T), "[[:alnum:]]"),
+    T = [class([posix(alnum)])])).
+
+test("POSIX space", 
+    (phrase(re_tokens(T), "[[:space:]]"),
+    T = [class([posix(space)])])).
+
+test("Builtin: digit",
+    ( phrase(re_tokens(T), "\\d"),
+      T = [builtin(digit)]
+    )).
+
+test("Builtin: word",
+    ( phrase(re_tokens(T), "\\w"),
+      T = [builtin(word)]
+    )).
+
+test("Builtin: space",
+    ( phrase(re_tokens(T), "\\s"),
+      T = [builtin(space)]
+    )).
+
+test("Builtin: digit in class",
+    ( phrase(re_tokens(T), "[\\d]"),
+      T = [class([builtin(digit)])]
+    )).
+
+test("Builtin: mixed class",
+    ( phrase(re_tokens(T), "[a\\d_]"),
+        format("Tokens = ~w~n", [T]),
+        T = [class([char(a),builtin(digit),char(_)])])
+    ).
+test("Anchor: beginning of line",
+    ( phrase(re_tokens(T), "^abc"),
+      T = [caret, lit("abc")]
+    )).
+
+test("Anchor: end of line",
+    ( phrase(re_tokens(T), "abc$"),
+      T = [lit("abc"), dollar]
+    )).
+
+test("Boundary: word boundary",
+    ( phrase(re_tokens(T), "\\babc"),
+      T = [boundary(word), lit("abc")]
+    )).
+
+test("Boundary: not word boundary",
+    ( phrase(re_tokens(T), "\\Babc"),
+      T = [boundary(not_word), lit("abc")]
+    )).
+test("Boundary: literal inside class",
+    ( phrase(re_tokens(T), "[\\b]"),
+      T = [class([char(b)])]
+    )).
+test("Anchor + boundary + literal",
+    ( phrase(re_tokens(T), "^\\babc$"),
+      T = [caret, boundary(word), lit("abc"), dollar]
+    )).
+
+%AST Tests
+test("AST 1D: concat of literals",
+    ( phrase(re_tokens(T), "abc"),
+      phrase(re_ast(AST), T),
+      AST = concat([lit("abc")])
+    )).
+
+test("AST 1D: postfix star",
+    ( phrase(re_tokens(T), "ab*c"),
+      phrase(re_ast(AST), T),
+      AST = concat([
+          lit("a"),
+          star(lit("b")),
+          lit("c")
+      ])
+    )).
+
+test("AST 1D: alternation",
+    ( phrase(re_tokens(T), "a|b"),
+      phrase(re_ast(AST), T),
+      AST = alt(lit("a"), lit("b"))
+    )).
+
+test("AST 1D: grouping + concat",
+    ( phrase(re_tokens(T), "(ab)c"),
+      phrase(re_ast(AST), T),
+      AST = concat([
+          group(lit("ab")),
+          lit("c")
+      ])
+    )).
+
+
+test("AST 1D: mixed precedence",
+    ( phrase(re_tokens(T), "a(b|c)*d"),
+      phrase(re_ast(AST), T),
+      AST = concat([
+          lit("a"),
+          star(group(alt(lit("b"), lit("c")))),
+          lit("d")
+      ])
+    )).
