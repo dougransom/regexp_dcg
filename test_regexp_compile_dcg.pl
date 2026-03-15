@@ -5,10 +5,10 @@
 :- use_module(library(debug)).
 :- use_module(library(pio)).
 :- use_module(library(dcgs)).
+:- set_debug(on).
+
 
 test("simple match",
     (
-    set_debug(on),
     re_match("abc", "abc", Match),
-    set_debug(off),
     assertion(Match == "abc"))).

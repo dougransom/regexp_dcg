@@ -2,7 +2,9 @@
 :- module(regexp_dcg, [
     re_match/3,
     re_match_groups/4,
-    set_debug/1
+    set_debug/1,
+    dformat/2,
+    dformat/1
     % later: re_match_named/4, re_match_tree/4
 ]).
 :- use_module(regexp_ast).   % your existing front-end
@@ -15,10 +17,17 @@ set_debug(off) :- retractall(debug_mode(_)), assertz(debug_mode(off)).
 
 dformat(Format, Args) :-
     debug_mode(on),
-    !,
     format(Format, Args).
-dformat(_, _).
 
+dformat(_Format, _Args) :-
+    debug_mode(off).
+
+dformat(Message) :-
+    debug_mode(on),
+    writeln(Message).
+
+dformat(_Message) :-
+    debug_mode(off).
 
 
 
