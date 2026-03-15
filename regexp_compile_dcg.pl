@@ -59,7 +59,7 @@ pattern_ast(Pattern, AST) :-
 initial_state(state{
     full: _,
     groups: [],
-    named: _{},   % later
+    named: captures{},   % later
     tree: _       % later
 }).
 
