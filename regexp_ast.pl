@@ -36,12 +36,14 @@ re_ast(AST) -->
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 re_alt(AST) -->
-    re_concat(T),
+    re_concat(L0),
     (   [pipe],
-        re_alt(R),
-        { AST = alt(T, R) }
-    ;   { AST = T }
-    ).
+        re_alt(R0),
+        { AST1 = alt(L0, R0) }
+    ;   { AST1 = L0 }
+    ),
+    { normalize_concat(AST1, AST) }.
+
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -79,6 +81,9 @@ re_concat_more(Acc, AST) -->
 
 re_concat_more(Acc, Acc) -->
     [].
+
+normalize_concat(concat([X]), X) :- !.
+normalize_concat(X, X).
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
