@@ -54,6 +54,14 @@ state_match(State, Match) :-
 ast_dcg(AST, S0, SF, DCG) :-
     ast_dcg_(AST, S0, SF, DCG).
 
+% literal: lit([a,b,c])
+ast_dcg_(lit(Chars), S, S, DCG) :-
+    DCG = literal_match(Chars).
+
+literal_match([]) --> [].
+literal_match([C|Cs]) --> [C], literal_match(Cs).
+
+
 % literals, concat, alt, star, capture, etc. go into ast_dcg_/4
 
 sequence([]) --> [].
