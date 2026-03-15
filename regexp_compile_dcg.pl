@@ -1,6 +1,9 @@
 :- module(regexp_dcg, [
     re_match/3,
-    re_match_groups/4
+    re_match_groups/4,
+    pattern_ast/2,
+    ast_dcg/4,
+    ast_dcg_/4
     % later: re_match_named/4, re_match_tree/4
 ]).
 :- use_module(regexp_ast).
