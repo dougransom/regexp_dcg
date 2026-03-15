@@ -48,18 +48,32 @@ re_alt(AST) -->
 % Concatenation: implicit adjacency
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-re_concat(concat([F|Fs])) -->
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Concatenation: implicit adjacency
+%
+% Important: we ONLY build concat/1 when there are 2+ factors.
+% A single factor is returned as-is.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+re_concat(AST) -->
     re_factor(F),
-    re_concat_more(Fs).
+    re_concat_more(F, AST).
 
-
-re_concat_more([F|Fs]) -->
+re_concat_more(Acc, AST) -->
     re_factor(F),
     !,
-    re_concat_more(Fs).
+    {
+        ( Acc = concat(List0) ->
+            append(List0, [F], List)
+        ;   List = [Acc, F]
+        ),
+        Acc1 = concat(List)
+    },
+    re_concat_more(Acc1, AST).
 
-re_concat_more([]) -->
+re_concat_more(Acc, Acc) -->
     [].
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Postfix operators: *, +, ?

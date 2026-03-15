@@ -209,7 +209,9 @@ test("Anchor + boundary + literal",
 %AST Tests
 test("AST 1D: concat of literals",
     ( phrase(re_tokens(T), "abc"),
+      format("~nT is ~w~n", [T]),
       phrase(re_ast(AST), T),
+      format("AST is ~w~n", [AST]),
       AST = concat([lit("abc")])
     )).
 
