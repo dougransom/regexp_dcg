@@ -29,6 +29,12 @@ dformat(Message) :-
 dformat(_Message) :-
     debug_mode(off).
 
+test("dcg for literal",
+    (pattern_ast("abc", AST),
+    ast_dcg(AST, S0, S1, DCG),
+    dformat("DCG: ~w~n", [DCG]),
+    assertion(S0 == S1))).
+
 test("simple match",
     (
     re_match("abc", "abc", Match),
