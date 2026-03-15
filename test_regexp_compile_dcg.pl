@@ -5,8 +5,29 @@
 :- use_module(library(debug)).
 :- use_module(library(pio)).
 :- use_module(library(dcgs)).
-:- set_debug(on).
+:- dynamic(debug_mode/1).
+debug_mode(on).
 
+:- use_module(regexp_ast).   % your existing front-end
+
+
+
+set_debug(on)  :- retractall(debug_mode(_)), assertz(debug_mode(on)).
+set_debug(off) :- retractall(debug_mode(_)), assertz(debug_mode(off)).
+
+dformat(Format, Args) :-
+    debug_mode(on),
+    format(Format, Args).
+
+dformat(_Format, _Args) :-
+    debug_mode(off).
+
+dformat(Message) :-
+    debug_mode(on),
+    writeln(Message).
+
+dformat(_Message) :-
+    debug_mode(off).
 
 test("simple match",
     (

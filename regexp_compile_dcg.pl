@@ -1,34 +1,9 @@
-
 :- module(regexp_dcg, [
     re_match/3,
-    re_match_groups/4,
-    set_debug/1,
-    dformat/2,
-    dformat/1
+    re_match_groups/4
     % later: re_match_named/4, re_match_tree/4
 ]).
-:- use_module(regexp_ast).   % your existing front-end
-:-dynamic(debug_mode/1).
-
-
-debug_mode(off).
-set_debug(on)  :- retractall(debug_mode(_)), assertz(debug_mode(on)).
-set_debug(off) :- retractall(debug_mode(_)), assertz(debug_mode(off)).
-
-dformat(Format, Args) :-
-    debug_mode(on),
-    format(Format, Args).
-
-dformat(_Format, _Args) :-
-    debug_mode(off).
-
-dformat(Message) :-
-    debug_mode(on),
-    writeln(Message).
-
-dformat(_Message) :-
-    debug_mode(off).
-
+:- use_module(regexp_ast).
 
 
 % Most common: just get the full match
@@ -38,21 +13,16 @@ re_match(Pattern, Input, Match) :-
 % Richer: full match + numbered groups
 re_match_groups(Pattern, Input, Match, Groups) :-
     pattern_ast(Pattern, AST),
-    dformat("AST: ~w~n", [AST]),
-
+  
     initial_state(S0),
     ast_dcg(AST, S0, SF, DCG),
-    dformat("Compiled DCG: ~w~n", [DCG]),
-
+  
     to_chars(Input, Chars),
-    dformat("Input chars: ~w~n", [Chars]),
-
+  
     phrase(DCG, Chars),
-    dformat("DCG succeeded.~n", []),
-
+  
     state_match(SF, Match),
-    state_groups(SF, Groups),
-    dformat("Match: ~w~nGroups: ~w~n", [Match, Groups]).
+    state_groups(SF, Groups).
 
 % Pattern already an AST
 pattern_ast(AST, AST) :-
