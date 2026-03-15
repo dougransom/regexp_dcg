@@ -57,7 +57,13 @@ re_alt(AST) -->
 
 re_concat(AST) -->
     re_factor(F),
-    re_concat_more(F, AST).
+    re_concat_more(F, AST0),
+    {
+        ( AST0 = concat([Single]) ->
+            AST = Single
+        ;   AST = AST0
+        )
+    }.
 
 re_concat_more(Acc, AST) -->
     re_factor(F),
