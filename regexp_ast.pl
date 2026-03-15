@@ -52,8 +52,6 @@ re_concat(concat([F|Fs])) -->
     re_factor(F),
     re_concat_more(Fs).
 
-re_concat(F) -->
-    re_factor(F).
 
 re_concat_more([F|Fs]) -->
     re_factor(F),
