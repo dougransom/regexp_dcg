@@ -3,7 +3,10 @@
     re_match_groups/4
     % later: re_match_named/4, re_match_tree/4
 ]).
-:- dynamic debug_mode/1.
+:- use_module(regexp_ast).   % your existing front-end
+
+dynamic(debug_mode).
+
 debug_mode(off).
 set_debug(on)  :- retractall(debug_mode(_)), assertz(debug_mode(on)).
 set_debug(off) :- retractall(debug_mode(_)), assertz(debug_mode(off)).
@@ -16,7 +19,6 @@ dformat(_, _).
 
 
 
-:- use_module(regexp_ast).   % your existing front-end
 
 % Most common: just get the full match
 re_match(Pattern, Input, Match) :-
