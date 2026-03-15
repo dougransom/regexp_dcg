@@ -225,24 +225,31 @@ test("AST 1D: postfix star",
 
 test("AST 1D: alternation",
     ( phrase(re_tokens(T), "a|b"),
+      format("~nT is ~w~n", [T]),
       phrase(re_ast(AST), T),
+      format("AST is ~w~n", [AST]),
       AST = alt(lit("a"), lit("b"))
     )).
 
 test("AST 1D: grouping + concat",
     ( phrase(re_tokens(T), "(ab)c"),
+      format("~nT is ~w~n", [T]),
       phrase(re_ast(AST), T),
+      format("AST is ~w~n", [AST]),
       AST = concat([
           group(lit("ab")),
           lit("c")
       ])
+
     )).
 
 
 test("AST 1D: mixed precedence",
     ( phrase(re_tokens(T), "a(b|c)*d"),
-      phrase(re_ast(AST), T),
       format("~nT is ~w~n", [T]),
+      phrase(re_ast(AST), T),
+      format("AST is ~w~n", [AST]),
+
       AST = concat([
           lit("a"),
           star(group(alt(lit("b"), lit("c")))),
