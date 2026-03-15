@@ -242,7 +242,7 @@ test("AST 1D: grouping + concat",
 test("AST 1D: mixed precedence",
     ( phrase(re_tokens(T), "a(b|c)*d"),
       phrase(re_ast(AST), T),
-      format("~nT is w~n", [T]),
+      format("~nT is ~w~n", [T]),
       AST = concat([
           lit("a"),
           star(group(alt(lit("b"), lit("c")))),
