@@ -212,7 +212,7 @@ test("AST 1D: concat of literals",
       format("~nT is ~w~n", [T]),
       phrase(re_ast(AST), T),
       format("AST is ~w~n", [AST]),
-      AST = concat([lit("abc")])
+      AST = lit("abc")
     )).
 
 test("AST 1D: postfix star",
