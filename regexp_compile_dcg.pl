@@ -1,11 +1,13 @@
+
 :- module(regexp_dcg, [
     re_match/3,
-    re_match_groups/4
+    re_match_groups/4,
+    set_debug/1
     % later: re_match_named/4, re_match_tree/4
 ]).
 :- use_module(regexp_ast).   % your existing front-end
+:-dynamic(debug_mode/1).
 
-dynamic(debug_mode).
 
 debug_mode(off).
 set_debug(on)  :- retractall(debug_mode(_)), assertz(debug_mode(on)).
@@ -27,7 +29,7 @@ re_match(Pattern, Input, Match) :-
 % Richer: full match + numbered groups
 re_match_groups(Pattern, Input, Match, Groups) :-
     pattern_ast(Pattern, AST),
-    dprint("AST: ~w~n", [AST]),
+    dformat("AST: ~w~n", [AST]),
 
     initial_state(S0),
     ast_dcg(AST, S0, SF, DCG),
