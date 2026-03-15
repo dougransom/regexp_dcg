@@ -3,6 +3,18 @@
     re_match_groups/4
     % later: re_match_named/4, re_match_tree/4
 ]).
+:- dynamic debug_mode/1.
+debug_mode(off).
+set_debug(on)  :- retractall(debug_mode(_)), assertz(debug_mode(on)).
+set_debug(off) :- retractall(debug_mode(_)), assertz(debug_mode(off)).
+
+dformat(Format, Args) :-
+    debug_mode(on),
+    !,
+    format(Format, Args).
+dformat(_, _).
+
+
 
 :- use_module(regexp_ast).   % your existing front-end
 
@@ -12,20 +24,22 @@ re_match(Pattern, Input, Match) :-
 
 % Richer: full match + numbered groups
 re_match_groups(Pattern, Input, Match, Groups) :-
-    % 1. Get AST from Pattern (string or pre-parsed)
     pattern_ast(Pattern, AST),
+    dprint("AST: ~w~n", [AST]),
 
-    % 2. Build a DCG + initial state
-    initial_state(State0),
-    ast_dcg(AST, State0, StateF, DCG),
+    initial_state(S0),
+    ast_dcg(AST, S0, SF, DCG),
+    dformat("Compiled DCG: ~w~n", [DCG]),
 
-    % 3. Run the DCG on the input
     to_chars(Input, Chars),
-    phrase(DCG, Chars),
+    dformat("Input chars: ~w~n", [Chars]),
 
-    % 4. Extract match + groups from final state
-    state_match(StateF, Match),
-    state_groups(StateF, Groups).
+    phrase(DCG, Chars),
+    dformat("DCG succeeded.~n", []),
+
+    state_match(SF, Match),
+    state_groups(SF, Groups),
+    dformat("Match: ~w~nGroups: ~w~n", [Match, Groups]).
 
 % Pattern already an AST
 pattern_ast(AST, AST) :-
