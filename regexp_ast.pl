@@ -1,8 +1,10 @@
+% This module provides a DCG-based parser for regular expressions, matching those of Python 3.14 Regexp.
 :- module(regexp_ast, [
  
     re_token//1,
     re_tokens//1,
     re_ast//1,
+    re_ast_chars//1,
     re_literal_run//1,
     re_literal_run_recognize//1,
     metachar/1,
@@ -16,7 +18,7 @@
 :- use_module(library(lists)).
 
 %:- dynamic metachars/1.
-foo.
+
 %
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -30,6 +32,11 @@ foo.
 % Entry point
 re_ast(AST) -->
     re_alt(AST).
+
+% Convenience interface: tokenize chars and build AST in one step
+re_ast_chars(AST) -->
+    re_tokens(Tokens),
+    { phrase(re_expr_tokens(AST), Tokens) }.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Alternation: A | B | C

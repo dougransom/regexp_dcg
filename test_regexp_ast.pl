@@ -9,6 +9,8 @@
 
 test("Force Pass",true).
 
+
+
 %DCG Tests
 test("Test Capture", 
     (phrase(re_tokens(T), "(abc)"),
@@ -258,3 +260,9 @@ test("AST 1D: mixed precedence",
           lit("d")
       ])
     )).
+
+% Test  re_ast_chars interface
+test("re_ast_chars: simple alternation",
+    (phrase(re_ast_chars(AST), "abc|def"),
+    format("AST = ~w~n", [AST]),
+    AST = or(lit("abc"), lit("def")))).

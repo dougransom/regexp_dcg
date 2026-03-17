@@ -34,11 +34,7 @@ pattern_ast(AST, AST) :-
 
 % Pattern is a string/atom: tokenize + parse
 pattern_ast(Pattern, AST) :-
-    atom(Pattern),
-    atom_chars(Pattern, Chars),
-    % you already have: chars -> tokens -> AST
-    phrase(re_tokens(Tokens), Chars),
-    phrase(re_ast(AST), Tokens).
+    phrase(re_ast_chars(AST), Pattern).
 
 state(_Full, _Groups, _Named, _Tree).
 
@@ -57,18 +53,64 @@ state_match(State, Match) :-
 ast_dcg(AST, S0, SF, DCG) :-
     ast_dcg_(AST, S0, SF, DCG).
 
-% literal: lit([a,b,c])
+% ast_dcg_/4 - compile AST to DCG
 ast_dcg_(lit(Chars), S, S, DCG) :-
     DCG = literal_match(Chars).
 
+ast_dcg_(concat(List), S0, SF, DCG) :-
+    seq_dcgs(List, S0, SF, DCG).
+
+ast_dcg_(or(A, B), S0, SF, DCG) :-
+    (   ast_dcg_(A, S0, SF, DCG)
+    ;   ast_dcg_(B, S0, SF, DCG)
+    ).
+
+ast_dcg_(postfix(Expr, star), S0, SF, DCG) :-
+    star_dcg(Expr, S0, SF, DCG).
+
+ast_dcg_(postfix(Expr, plus), S0, SF, DCG) :-
+    plus_dcg(Expr, S0, SF, DCG).
+
+ast_dcg_(postfix(Expr, question), S0, SF, DCG) :-
+    question_dcg(Expr, S0, SF, DCG).
+
+% DCG for literal matching
 literal_match([]) --> [].
 literal_match([C|Cs]) --> [C], literal_match(Cs).
 
+% Convert input to character list
+to_chars(Input, Chars) :-
+    atom(Input),
+    atom_chars(Input, Chars),
+    !.
+to_chars(Input, Chars) :-
+    string(Input),
+    string_chars(Input, Chars),
+    !.
+to_chars(Input, Input) :-
+    is_list(Input),
+    !.
 
-% literals, concat, alt, star, capture, etc. go into ast_dcg_/4
+% Helper to sequence multiple DCGs
+seq_dcgs([], S, S, []) --> [].
+seq_dcgs([H|T], S0, SF, [DCG|DCGs]) -->
+    ast_dcg_(H, S0, S1, DCG),
+    seq_dcgs(T, S1, SF, DCGs).
 
-sequence([]) --> [].
-sequence([C|Cs]) --> [C], sequence(Cs).
+% Quantifier implementations
+star_dcg(Expr, S0, SF, DCG) -->
+    (   ast_dcg_(Expr, S0, S1, _),
+        star_dcg(Expr, S1, SF, DCG)
+    ;   { S0 = SF, DCG = [] }
+    ).
 
-seq([]) --> [].
-seq([D|Ds]) --> D, seq(Ds).
+plus_dcg(Expr, S0, SF, DCG) -->
+    ast_dcg_(Expr, S0, S1, _),
+    (   ast_dcg_(Expr, S1, SF, DCG)
+    ;   { S1 = SF, DCG = [] }
+    ).
+
+question_dcg(Expr, S0, SF, DCG) -->
+    (   ast_dcg_(Expr, S0, SF, DCG)
+    ;   { S0 = SF, DCG = [] }
+    ).

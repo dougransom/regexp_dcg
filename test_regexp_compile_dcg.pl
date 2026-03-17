@@ -1,3 +1,5 @@
+% translate a regexp ast to a DCG for regexp pattern matching over strings.
+
 :- use_module(bakage).
 :- use_module(pkg(testing)).
 :- use_module(regexp_ast).
@@ -32,7 +34,7 @@ dformat(_Message) :-
 test("dcg for literal",
     (pattern_ast("abc", AST),
     dformat("AST: ~w~n", [AST]),
-    ast_dcg(AST, S0, S1, DCG),
+    ast_dcg(AST, _S0, _S1, DCG),
     dformat("DCG: ~w~n", [DCG])
     )).
 
