@@ -48,7 +48,9 @@ global_log_level(info).
 :- initialization(setup_default_handlers).
 
 setup_default_handlers :-
-    if_(handler(_, _), true, add_handler(info, console_handler)).
+    (   handler(_, _) -> true
+    ;   add_handler(info, console_handler)
+    ).
 
 set_log_level(Level) :-
     must_be_valid_level(Level),
@@ -59,7 +61,9 @@ get_log_level(Level) :-
     global_log_level(Level).
 
 must_be_valid_level(Level) :-
-    if_(level_weight(Level, _), true, domain_error(log_level, Level)).
+    (   level_weight(Level, _) -> true
+    ;   domain_error(log_level, Level)
+    ).
 
 add_handler(Handler) :-
     global_log_level(Level),
@@ -92,20 +96,17 @@ log(Level, Format) :-
 log(Level, Format, Args) :-
     % Evaluate lazy message once for all handlers
     evaluate_lazy(Format, EvaluatedFormat),
-    if_(list_si(Args), ArgsList = Args, ArgsList = [Args]),
-    % Delay argument evaluation until actually needed
-    freeze(EvaluatedArgs, maplist(evaluate_lazy, ArgsList, EvaluatedArgs)),
-    % Delay time retrieval until actually needed
-    freeze(Time, current_time(Time)),
-    % Delay formatting until actually needed
-    freeze(FinalChars, format_log_chars(Time, Level, EvaluatedFormat, EvaluatedArgs, FinalChars)),
-    emit_log(FinalChars, Level).
-
-format_log_chars(Time, Level, EvaluatedFormat, EvaluatedArgs, FinalChars) :-
-    if_(
-        phrase(log_entry(Time, Level, EvaluatedFormat, EvaluatedArgs), FinalChars),
-        true,
-        phrase(format_("[~w] FORMAT_ERROR: ~q ~q\n", [Level, EvaluatedFormat, EvaluatedArgs]), FinalChars)
+    (   atom(Args) -> ArgsList = [Args]
+    ;   ArgsList = Args
+    ),
+    maplist(evaluate_lazy, ArgsList, EvaluatedArgs),
+    % Get system time once per log event
+    current_time(Time),
+    % Format the message once
+    (   phrase(log_entry(Time, Level, EvaluatedFormat, EvaluatedArgs), FinalChars)
+    ->  emit_log(FinalChars, Level)
+    ;   phrase(format_("[~w] FORMAT_ERROR: ~q ~q\n", [Level, EvaluatedFormat, EvaluatedArgs]), ErrorChars),
+        emit_log(ErrorChars, Level)
     ).
 
 emit_log(Chars, Level) :-
@@ -127,14 +128,9 @@ log_entry(Time, Level, Format, Args) -->
     "\n".
 
 log_format(Format, Args) -->
-    { if_((chars_si(Format), list_si(Args), maplist(chars_si, Args)), ok, fail) },
-    !,
     format_(Format, Args).
 log_format(Format, Args) -->
-    { if_((chars_si(Format), list_si(Args)), ok, fail) },
-    !,
-    format_(Format, Args).
-log_format(Format, Args) -->
+    {   \+ atom(Format) },
     { phrase(format_("~q", [Format]), FormatChars) },
     FormatChars,
     " ",
