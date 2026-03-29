@@ -1,0 +1,2 @@
+# Regexp Project-Specific Rules
+- **Testing:** Run tests via `scryer-prolog -g "run_tests, halt" tests.pl`.

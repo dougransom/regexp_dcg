@@ -26,19 +26,24 @@ dformat(_Format, _Args) :-
 
 dformat(Message) :-
     debug_mode(on),
-    writeln(Message).
+    format('~w~n', [Message]).
 
 dformat(_Message) :-
     debug_mode(off).
 
 test("dcg for literal",
     (pattern_ast("abc", AST),
-    dformat("AST: ~w~n", [AST]),
+    dformat("AST: ~w", [AST]),
     ast_dcg(AST, _S0, _S1, DCG),
-    dformat("DCG: ~w~n", [DCG])
+    dformat("DCG: ~w", [DCG]),
+    dformat("Testing DCG phrase...", []),
+    phrase(DCG, "abc") -> 
+        dformat("DCG phrase succeeded", []) ; 
+        dformat("DCG phrase failed", [])
     )).
 
 test("simple match",
-    (
+    (dformat("Testing re_match with 'abc' against 'abc'", []),
     re_match("abc", "abc", Match),
+    dformat("Match result: ~w", [Match]),
     assertion(Match == "abc"))).
