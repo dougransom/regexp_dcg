@@ -114,24 +114,37 @@ emit_to_handlers(Handlers, Level, Format, Args) :-
     % Get system time once per log event
     current_time(Time),
     % Format the message once
-    phrase(log_entry(Time, Level, EvaluatedFormat, EvaluatedArgs), FinalChars),
-    % Send to each handler
-    maplist(call_handler(FinalChars), Handlers).
+    (   phrase(log_entry(Time, Level, EvaluatedFormat, EvaluatedArgs), FinalChars) ->
+        % Send to each handler
+        maplist(call_handler(FinalChars), Handlers)
+    ;   % Fallback if DCG fails
+        phrase(format_("[~w] FORMAT_ERROR: ~q ~q\n", [Level, EvaluatedFormat, EvaluatedArgs]), ErrorChars),
+        maplist(call_handler(ErrorChars), Handlers)
+    ).
 
 log_entry(Time, Level, Format, Args) -->
     "[", format_time(Time), "] ",
     "[", format_level(Level), "] ",
     (   { chars_si(Format), list_si(Args), maplist(chars_si, Args) } ->
         format_(Format, Args)
-    ;   { list_si(Args), Args = [Term] } ->
-        format_("~q", [Term])
-    ;   format_("~q", [Format])
+    ;   { chars_si(Format), list_si(Args) } ->
+        format_(Format, Args)
+    ;   { phrase(format_("~q", [Format]), FormatChars) },
+        FormatChars,
+        " ",
+        { phrase(format_("~q", [Args]), ArgsChars) },
+        ArgsChars
     ),
     "\n".
 
 format_time(Time) -->
-    { Time = [year(Y), month(M), day(D), hour(H), minute(Min), second(S)|_],
-      phrase(format_("~w-~02w-~02w ~02w:~02w:~02w", [Y, M, D, H, Min, S]), Chars) },
+    { member('Y'=Y, Time),
+      member(m=M, Time),
+      member(d=D, Time),
+      member('H'=H, Time),
+      member('M'=Min, Time),
+      member('S'=S, Time),
+      phrase(format_("~s-~s-~s ~s:~s:~s", [Y, M, D, H, Min, S]), Chars) },
     Chars.
 
 format_level(Level) -->
