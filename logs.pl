@@ -30,6 +30,7 @@
 :- use_module(library(dcgs)).
 :- use_module(library(si)).
 :- use_module(library(reif)).
+:- use_module(library(freeze)).
 
 :- dynamic(handler/2). % handler(Level, Closure)
 :- dynamic(global_log_level/1).
@@ -99,17 +100,24 @@ log(Level, Format, Args) :-
     (   atom(Args) -> ArgsList = [Args]
     ;   ArgsList = Args
     ),
-    maplist(evaluate_lazy, ArgsList, EvaluatedArgs),
-    % Get system time once per log event
+    % Delay argument evaluation until actually needed
+    freeze(EvaluatedArgs, maplist(evaluate_lazy, ArgsList, EvaluatedArgs)),
+    
     current_time(Time),
     % Format the message once
-    (   phrase(log_entry(Time, Level, EvaluatedFormat, EvaluatedArgs), FinalChars)
-    ->  emit_log(FinalChars, Level)
-    ;   phrase(format_("[~w] FORMAT_ERROR: ~q ~q\n", [Level, EvaluatedFormat, EvaluatedArgs]), ErrorChars),
-        emit_log(ErrorChars, Level)
+    format("calling if\n",[]),
+    format("Phrase\n",[]),
+    phrase(log_entry(Time, Level, EvaluatedFormat, EvaluatedArgs), FinalChars),
+    format("\ncalling emit_log\n",[]),
+    if_(
+        emit_log(FinalChars, Level),
+        (   phrase(format_("[~w] FORMAT_ERROR: ~q ~q\n", [Level, EvaluatedFormat, EvaluatedArgs]), ErrorChars),
+            emit_log(ErrorChars, Level)
+        )
     ).
 
 emit_log(Chars, Level) :-
+    format("emit_log\n",[]),
     should_emit(Level, Handler),
     call_handler(Chars, Handler),
     fail.
@@ -122,9 +130,23 @@ should_emit(Level, Handler) :-
     Weight >= HandlerWeight.
 
 log_entry(Time, Level, Format, Args) -->
+    { 
+        format("log entry\n", []),
+        format("log_entry: Time=~q, Level=~q, Format=~q, Args=~q\n\n", [Time, Level, Format, Args]) 
+    }
+        ,
     "[", format_time(Time), "] ",
+    {
+        format("time\n", [])
+    } ,
     "[", format_level(Level), "] ",
+    {
+        format("formated Level, next log_format    \n" , [])
+    },        
     log_format(Format, Args),
+    {
+        format("log_format worked\n", [])
+    },
     "\n".
 
 log_format(Format, Args) -->

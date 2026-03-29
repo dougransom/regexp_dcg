@@ -2,6 +2,7 @@
 :- use_module(logs).
 :- use_module(library(format)).
 :- use_module(library(lists)).
+:- use_module(library(debug)).
 
 %examples, so for guiding the development of loggers.
 
