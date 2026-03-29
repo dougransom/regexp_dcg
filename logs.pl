@@ -29,6 +29,7 @@
 :- use_module(library(lists)).
 :- use_module(library(dcgs)).
 :- use_module(library(si)).
+:- use_module(library(reif)).
 
 :- dynamic(handler/2). % handler(Level, Closure)
 :- dynamic(global_log_level/1).
@@ -47,9 +48,7 @@ global_log_level(info).
 :- initialization(setup_default_handlers).
 
 setup_default_handlers :-
-    (   handler(_, _) -> true
-    ;   add_handler(info, console_handler)
-    ).
+    if_(handler(_, _), true, add_handler(info, console_handler)).
 
 set_log_level(Level) :-
     must_be_valid_level(Level),
@@ -60,9 +59,7 @@ get_log_level(Level) :-
     global_log_level(Level).
 
 must_be_valid_level(Level) :-
-    (   level_weight(Level, _) -> true
-    ;   domain_error(log_level, Level)
-    ).
+    if_(level_weight(Level, _), true, domain_error(log_level, Level)).
 
 add_handler(Handler) :-
     global_log_level(Level),
@@ -93,10 +90,29 @@ log(Level, Format) :-
     log(Level, Format, []).
 
 log(Level, Format, Args) :-
-    findall(H, should_emit(Level, H), Handlers),
-    (   Handlers = [] -> true
-    ;   emit_to_handlers(Handlers, Level, Format, Args)
+    % Evaluate lazy message once for all handlers
+    evaluate_lazy(Format, EvaluatedFormat),
+    if_(list_si(Args), ArgsList = Args, ArgsList = [Args]),
+    % Delay argument evaluation until actually needed
+    freeze(EvaluatedArgs, maplist(evaluate_lazy, ArgsList, EvaluatedArgs)),
+    % Delay time retrieval until actually needed
+    freeze(Time, current_time(Time)),
+    % Delay formatting until actually needed
+    freeze(FinalChars, format_log_chars(Time, Level, EvaluatedFormat, EvaluatedArgs, FinalChars)),
+    emit_log(FinalChars, Level).
+
+format_log_chars(Time, Level, EvaluatedFormat, EvaluatedArgs, FinalChars) :-
+    if_(
+        phrase(log_entry(Time, Level, EvaluatedFormat, EvaluatedArgs), FinalChars),
+        true,
+        phrase(format_("[~w] FORMAT_ERROR: ~q ~q\n", [Level, EvaluatedFormat, EvaluatedArgs]), FinalChars)
     ).
+
+emit_log(Chars, Level) :-
+    should_emit(Level, Handler),
+    call_handler(Chars, Handler),
+    fail.
+emit_log(_, _).
 
 should_emit(Level, Handler) :-
     handler(HandlerLevel, Handler),
@@ -104,38 +120,26 @@ should_emit(Level, Handler) :-
     level_weight(HandlerLevel, HandlerWeight),
     Weight >= HandlerWeight.
 
-emit_to_handlers(Handlers, Level, Format, Args) :-
-    % Evaluate lazy message once for all handlers
-    evaluate_lazy(Format, EvaluatedFormat),
-    (   list_si(Args) -> ArgsList = Args
-    ;   ArgsList = [Args]
-    ),
-    maplist(evaluate_lazy, ArgsList, EvaluatedArgs),
-    % Get system time once per log event
-    current_time(Time),
-    % Format the message once
-    (   phrase(log_entry(Time, Level, EvaluatedFormat, EvaluatedArgs), FinalChars) ->
-        % Send to each handler
-        maplist(call_handler(FinalChars), Handlers)
-    ;   % Fallback if DCG fails
-        phrase(format_("[~w] FORMAT_ERROR: ~q ~q\n", [Level, EvaluatedFormat, EvaluatedArgs]), ErrorChars),
-        maplist(call_handler(ErrorChars), Handlers)
-    ).
-
 log_entry(Time, Level, Format, Args) -->
     "[", format_time(Time), "] ",
     "[", format_level(Level), "] ",
-    (   { chars_si(Format), list_si(Args), maplist(chars_si, Args) } ->
-        format_(Format, Args)
-    ;   { chars_si(Format), list_si(Args) } ->
-        format_(Format, Args)
-    ;   { phrase(format_("~q", [Format]), FormatChars) },
-        FormatChars,
-        " ",
-        { phrase(format_("~q", [Args]), ArgsChars) },
-        ArgsChars
-    ),
+    log_format(Format, Args),
     "\n".
+
+log_format(Format, Args) -->
+    { if_((chars_si(Format), list_si(Args), maplist(chars_si, Args)), ok, fail) },
+    !,
+    format_(Format, Args).
+log_format(Format, Args) -->
+    { if_((chars_si(Format), list_si(Args)), ok, fail) },
+    !,
+    format_(Format, Args).
+log_format(Format, Args) -->
+    { phrase(format_("~q", [Format]), FormatChars) },
+    FormatChars,
+    " ",
+    { phrase(format_("~q", [Args]), ArgsChars) },
+    ArgsChars.
 
 format_time(Time) -->
     { member('Y'=Y, Time),
