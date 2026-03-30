@@ -100,20 +100,25 @@ log(Level, Format, Args) :-
     (   atom(Args) -> ArgsList = [Args]
     ;   ArgsList = Args
     ),
-    % Delay argument evaluation until actually needed
-    freeze(EvaluatedArgs, maplist(evaluate_lazy, ArgsList, EvaluatedArgs)),
     
+
+    %When will EvaluatedArgs be instantiated?
+    maplist(evaluate_lazy, ArgsList, EvaluatedArgs),    
     current_time(Time),
     % Format the message once
     format("calling if\n",[]),
     format("Phrase\n",[]),
+    %when will FinalChars be instantiated?  We want to to be never if none of the loggers actually write
+    %it out.
+    freeze(FinalChars, format("FinalChars instantiated\n", [])),
     phrase(log_entry(Time, Level, EvaluatedFormat, EvaluatedArgs), FinalChars),
+    (var(FinalChars) -> InstMsg = "NOT " ; InstMsg = ""),
+    format("FinalChars is ~sinstantiated\n", [InstMsg]),
     format("\ncalling emit_log\n",[]),
-    if_(
-        emit_log(FinalChars, Level),
-        (   phrase(format_("[~w] FORMAT_ERROR: ~q ~q\n", [Level, EvaluatedFormat, EvaluatedArgs]), ErrorChars),
-            emit_log(ErrorChars, Level)
-        )
+    (   emit_log(FinalChars, Level)
+    ->  true
+    ;   phrase(format_("[~w] FORMAT_ERROR: ~q ~q\n", [Level, EvaluatedFormat, EvaluatedArgs]), ErrorChars),
+        emit_log(ErrorChars, Level)
     ).
 
 emit_log(Chars, Level) :-
