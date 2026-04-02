@@ -4,6 +4,9 @@
 :- use_module(library(lists)).
 :- use_module(library(debug)).
 
+% Enable debug instrumentation for this module
+:- debug_logs.
+
 %examples, so for guiding the development of loggers.
 
 % A predicate that performs a "heavy" computation
@@ -16,10 +19,10 @@ heavy_computation(Result) :-
 
 
 a(7) :-
-    write("a(7):this should not be written to the console during log debug").
+    format("a(7):this should not be written to the console during log debug~n", []).
 
 a(9) :-
-    write("a(9):this should  be written to the console during log debug").
+    format("a(9):this should  be written to the console during log debug~n", []).
 
 setup_handlers :-
     remove_handlers,

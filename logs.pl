@@ -34,6 +34,16 @@
 
 :- dynamic(handler/2). % handler(Level, Closure)
 :- dynamic(global_log_level/1).
+:- dynamic(debug_on/0).
+
+% Instrumentation that can be compiled away
+debug_instrumentation(_).
+
+user:term_expansion((:- debug_logs), (:- initialization(assertz(debug_on)))).
+
+user:goal_expansion(debug_instrumentation(Msg), Expanded) :-
+    % Expand to a runtime check so that different modules can toggle it.
+    Expanded = (debug_on -> format(" [INSTRUMENTATION] ~s~n", [Msg]) ; true).
 
 % Log levels inspired by Python
 level_weight(debug, 10).
@@ -95,38 +105,27 @@ log(Level, Format) :-
     log(Level, Format, []).
 
 log(Level, Format, Args) :-
-    % Evaluate lazy message once for all handlers
-    evaluate_lazy(Format, EvaluatedFormat),
-    (   atom(Args) -> ArgsList = [Args]
-    ;   ArgsList = Args
-    ),
-    
-
-    %When will EvaluatedArgs be instantiated?
-    maplist(evaluate_lazy, ArgsList, EvaluatedArgs),    
-    current_time(Time),
-    % Format the message once
-    format("calling if\n",[]),
-    format("Phrase\n",[]),
-    %when will FinalChars be instantiated?  We want to to be never if none of the loggers actually write
-    %it out.
-    freeze(FinalChars, format("FinalChars instantiated\n", [])),
-    phrase(log_entry(Time, Level, EvaluatedFormat, EvaluatedArgs), FinalChars),
-    (var(FinalChars) -> InstMsg = "NOT " ; InstMsg = ""),
-    format("FinalChars is ~sinstantiated\n", [InstMsg]),
-    format("\ncalling emit_log\n",[]),
-    (   emit_log(FinalChars, Level)
-    ->  true
-    ;   phrase(format_("[~w] FORMAT_ERROR: ~q ~q\n", [Level, EvaluatedFormat, EvaluatedArgs]), ErrorChars),
-        emit_log(ErrorChars, Level)
+    (   should_emit(Level, _)
+    ->  evaluate_lazy(Format, EvaluatedFormat),
+        debug_instrumentation("Producing log entry via phrase/2"),
+        ( atom(Args) -> ArgsList = [Args] ; ArgsList = Args ),
+        maplist(evaluate_lazy, ArgsList, EvaluatedArgs),
+        current_time(Time),
+        (   catch(phrase(log_entry(Time, Level, EvaluatedFormat, EvaluatedArgs), FinalChars), _, fail)
+        ->  emit_log(FinalChars, Level),
+            debug_instrumentation("Log entry emitted successfully")
+        ;   phrase(format_("[~w] FORMAT_ERROR: ~q ~q\n", [Level, EvaluatedFormat, EvaluatedArgs]), ErrorChars),
+            emit_log(ErrorChars, Level)
+        )
+    ;   true
     ).
 
 emit_log(Chars, Level) :-
-    format("emit_log\n",[]),
-    should_emit(Level, Handler),
-    call_handler(Chars, Handler),
-    fail.
-emit_log(_, _).
+    (   should_emit(Level, Handler),
+        call_handler(Chars, Handler),
+        fail
+    ;   true
+    ).
 
 should_emit(Level, Handler) :-
     handler(HandlerLevel, Handler),
@@ -135,23 +134,9 @@ should_emit(Level, Handler) :-
     Weight >= HandlerWeight.
 
 log_entry(Time, Level, Format, Args) -->
-    { 
-        format("log entry\n", []),
-        format("log_entry: Time=~q, Level=~q, Format=~q, Args=~q\n\n", [Time, Level, Format, Args]) 
-    }
-        ,
     "[", format_time(Time), "] ",
-    {
-        format("time\n", [])
-    } ,
     "[", format_level(Level), "] ",
-    {
-        format("formated Level, next log_format    \n" , [])
-    },        
     log_format(Format, Args),
-    {
-        format("log_format worked\n", [])
-    },
     "\n".
 
 log_format(Format, Args) -->
@@ -193,12 +178,11 @@ stream_handler(Stream, Chars) :-
 log_accumulator([]).
 
 list_handler(Chars) :-
-    retract(log_accumulator(Old)),
-    append(Old, Chars, New),
-    asserta(log_accumulator(New)).
+    assertz(log_accumulator(Chars)).
 
 get_accumulated_logs(Logs) :-
-    log_accumulator(Logs).
+    findall(C, retract(log_accumulator(C)), Chunks),
+    append(Chunks, Logs).
 
 % Lazy evaluation: if term is call(Goal, Result), call it.
 evaluate_lazy(call(Goal, Result), Result) :-
@@ -209,4 +193,3 @@ evaluate_lazy(call(Goal, Result), Result) :-
         Result = Goal
     ).
 evaluate_lazy(Result, Result).
-
