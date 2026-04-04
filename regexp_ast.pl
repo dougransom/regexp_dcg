@@ -17,6 +17,19 @@
 :- use_module(library(dcgs)).
 :- use_module(library(lists)).
 
+% Reusable expansion to turn a string into O(1) facts for a predicate.
+user:term_expansion(generate_char_predicate(Name, String), [PluralFact|Clauses]) :-
+    atom_concat(Name, s, PluralName),
+    PluralFact =.. [PluralName, String],
+    findall(Head, (
+        member(Char, String),
+        Head =.. [Name, Char]
+    ), Clauses).
+
+user:term_expansion(tk(Term, String), (re_token(Term) --> String, !)).
+user:term_expansion(ci(Term, String), (class_item(Term) --> String, !)).
+
+
 %:- dynamic metachars/1.
 
 %
@@ -145,18 +158,15 @@ re_tokens([])     --> [].
 
 % escaped should be first
 
-re_token(boundary(word))     --> "\\b", !.
-re_token(boundary(not_word)) --> "\\B", !.
+tk(boundary(word),     "\\b").
+tk(boundary(not_word), "\\B").
 
-
-re_token(builtin(digit))      --> "\\d", !.
-re_token(builtin(not_digit))  --> "\\D", !.
-
-re_token(builtin(word))       --> "\\w", !.
-re_token(builtin(not_word))   --> "\\W", !.
-
-re_token(builtin(space))      --> "\\s", !.
-re_token(builtin(not_space))  --> "\\S", !.
+tk(builtin(digit),      "\\d").
+tk(builtin(not_digit),  "\\D").
+tk(builtin(word),       "\\w").
+tk(builtin(not_word),   "\\W").
+tk(builtin(space),      "\\s").
+tk(builtin(not_space),  "\\S").
 
 
 % character class (must come before lbrack/rbrack)
@@ -177,21 +187,21 @@ re_token(lit(Cs)) -->
 re_token(escaped(C)) -->
     "\\", [C], !.
 
-re_token(dot)      --> ".", !.
-re_token(caret)    --> "^", !.
-re_token(dollar)   --> "$", !.
-re_token(lparen)   --> "(", !.
-re_token(rparen)   --> ")", !.
-re_token(lbrack)   --> "[", !.
-re_token(rbrack)   --> "]", !.
-re_token(pipe)     --> "|", !.
-re_token(star)     --> "*", !.
-re_token(plus)     --> "+", !.
-re_token(question) --> "?", !.
-re_token(lbrace)   --> "{", !.
-re_token(rbrace)   --> "}", !.
-re_token(colon)    --> ":", !.
-re_token(comma)    --> ",", !.
+tk(dot,      ".").
+tk(caret,    "^").
+tk(dollar,   "$").
+tk(lparen,   "(").
+tk(rparen,   ")").
+tk(lbrack,   "[").
+tk(rbrack,   "]").
+tk(pipe,     "|").
+tk(star,     "*").
+tk(plus,     "+").
+tk(question, "?").
+tk(lbrace,   "{").
+tk(rbrace,   "}").
+tk(colon,    ":").
+tk(comma,    ",").
 
 
 look_ahead(T), [T] --> [T].
@@ -212,14 +222,14 @@ class_items_rest([Item|Items]) -->
 class_items_rest([]) --> [].
 
 %order matters for class item
-class_item(builtin(digit))      --> "\\d", !.
-class_item(builtin(not_digit))  --> "\\D", !.
+ci(builtin(digit),      "\\d").
+ci(builtin(not_digit),  "\\D").
 
-class_item(builtin(word))       --> "\\w", !.
-class_item(builtin(not_word))   --> "\\W", !.
+ci(builtin(word),       "\\w").
+ci(builtin(not_word),   "\\W").
 
-class_item(builtin(space))      --> "\\s", !.
-class_item(builtin(not_space))  --> "\\S", !.
+ci(builtin(space),      "\\s").
+ci(builtin(not_space),  "\\S").
 
 class_item(posix(Name)) -->
     "[:",
@@ -298,27 +308,9 @@ not_postfix_next_char --> call(eos)
 
 postfix_next_char --> look_ahead(D), { postfixchar(D) }.
 
-%% metachar(+Char)
-metachar('.').
-metachar('^').
-metachar('$').
-metachar('*').
-metachar('+').
-metachar('?').
-metachar('(').
-metachar(')').
-metachar('[').
-metachar(']').
-metachar('|').
-metachar('\\').
-metachar('{').
-metachar('}').
-metachar(':').
-metachar(',').
-
-postfixchar('*').
-postfixchar('+').
-postfixchar('?').
+%% Define metacharacters and postfix characters using the expansion mechanism.
+generate_char_predicate(metachar, ".^$*+?()[]|\\{}:,").
+generate_char_predicate(postfixchar, "*+?").
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% 3. TOKEN-LEVEL PARSER (DCG over tokens)
