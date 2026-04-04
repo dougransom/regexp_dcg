@@ -299,13 +299,26 @@ not_postfix_next_char --> call(eos)
 postfix_next_char --> look_ahead(D), { postfixchar(D) }.
 
 %% metachar(+Char)
-metachars(".^$*+?()[]|\\{}:,").
-metachar(C) :-
-    metachars(Cs),
-    member(C, Cs).
+metachar('.').
+metachar('^').
+metachar('$').
+metachar('*').
+metachar('+').
+metachar('?').
+metachar('(').
+metachar(')').
+metachar('[').
+metachar(']').
+metachar('|').
+metachar('\\').
+metachar('{').
+metachar('}').
+metachar(':').
+metachar(',').
 
-postfixchar(D) :-
-    member(D, "*+?").
+postfixchar('*').
+postfixchar('+').
+postfixchar('?').
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% 3. TOKEN-LEVEL PARSER (DCG over tokens)

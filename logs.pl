@@ -45,6 +45,26 @@ user:goal_expansion(debug_instrumentation(Msg), Expanded) :-
     % Expand to a runtime check so that different modules can toggle it.
     Expanded = (debug_on -> format(" [INSTRUMENTATION] ~s~n", [Msg]) ; true).
 
+% Goal expansion to optimize calls to log_Level/1 and log_Level/2 at the call site.
+user:goal_expansion(Call, log(Level, Format, Args)) :-
+    nonvar(Call),
+    functor(Call, Name, Arity),
+    atom_concat(log_, Level, Name),
+    level_weight(Level, _),
+    (   Arity =:= 1 -> arg(1, Call, T), Format = "~w", Args = [T]
+    ;   Arity =:= 2 -> arg(1, Call, Format), arg(2, Call, Args)
+    ).
+
+% Term expansion to generate the log_Level predicates automatically within this module.
+term_expansion(generate_log_predicates, Clauses) :-
+    findall(Clause, (
+        level_weight(Level, _),
+        atom_concat(log_, Level, Name),
+        (   Clause = (Head1 :- log(Level, "~q", [Term])), Head1 =.. [Name, Term]
+        ;   Clause = (Head2 :- log(Level, Format, Args)), Head2 =.. [Name, Format, Args]
+        )
+    ), Clauses).
+
 % Log levels inspired by Python
 level_weight(debug, 10).
 level_weight(info, 20).
@@ -87,19 +107,8 @@ add_handler(Level, Handler) :-
 remove_handlers :-
     retractall(handler(_, _)).
 
-% log_debug/1, log_info/1, etc. - logs a single term
-log_debug(Term)    :- log(debug, "~q", [Term]).
-log_info(Term)     :- log(info, "~q", [Term]).
-log_warning(Term)  :- log(warning, "~q", [Term]).
-log_error(Term)    :- log(error, "~q", [Term]).
-log_critical(Term) :- log(critical, "~q", [Term]).
-
-% log_debug/2, log_info/2, etc. - logs a format string and arguments
-log_debug(Format, Args)    :- log(debug, Format, Args).
-log_info(Format, Args)     :- log(info, Format, Args).
-log_warning(Format, Args)  :- log(warning, Format, Args).
-log_error(Format, Args)    :- log(error, Format, Args).
-log_critical(Format, Args) :- log(critical, Format, Args).
+% Generate the log_Level/1 and log_Level/2 predicates automatically
+generate_log_predicates.
 
 log(Level, Format) :-
     log(Level, Format, []).
@@ -108,7 +117,11 @@ log(Level, Format, Args) :-
     (   should_emit(Level, _)
     ->  evaluate_lazy(Format, EvaluatedFormat),
         debug_instrumentation("Producing log entry via phrase/2"),
-        ( atom(Args) -> ArgsList = [Args] ; ArgsList = Args ),
+        % Correctly distinguish between an argument list and a single string/term arg.
+        (   Args == [] -> ArgsList = []
+        ;   (list_si(Args), \+ maplist(character_si, Args)) -> ArgsList = Args
+        ;   ArgsList = [Args]
+        ),
         maplist(evaluate_lazy, ArgsList, EvaluatedArgs),
         current_time(Time),
         (   catch(phrase(log_entry(Time, Level, EvaluatedFormat, EvaluatedArgs), FinalChars), _, fail)
@@ -140,28 +153,44 @@ log_entry(Time, Level, Format, Args) -->
     "\n".
 
 log_format(Format, Args) -->
-    format_(Format, Args).
-log_format(Format, Args) -->
-    {   \+ atom(Format) },
-    { phrase(format_("~q", [Format]), FormatChars) },
-    FormatChars,
-    " ",
-    { phrase(format_("~q", [Args]), ArgsChars) },
-    ArgsChars.
+    % Ensure Format is a character list for format_//2
+    { ( list_si(Format) -> FormatChars = Format ; phrase(format_("~w", [Format]), FormatChars) ) },
+    format_(FormatChars, Args).
 
 format_time(Time) -->
-    { member('Y'=Y, Time),
-      member(m=M, Time),
-      member(d=D, Time),
-      member('H'=H, Time),
-      member('M'=Min, Time),
-      member('S'=S, Time),
-      phrase(format_("~s-~s-~s ~s:~s:~s", [Y, M, D, H, Min, S]), Chars) },
-    Chars.
+    { catch(get_time_val(year, Time, Y), _, Y = '??'),
+      catch(get_time_val(month, Time, M), _, M = '??'),
+      catch(get_time_val(day, Time, D), _, D = '??'),
+      catch(get_time_val(hour, Time, H), _, H = '??'),
+      catch(get_time_val(minute, Time, Min), _, Min = '??'),
+      catch(get_time_val(second, Time, S), _, S = '??') },
+    format_time_comp(Y), "-", format_time_comp(M), "-", format_time_comp(D), " ",
+    format_time_comp(H), ":", format_time_comp(Min), ":", format_time_comp(S).
+
+get_time_val(Key, Time, Val) :-
+    (   (Key == year -> P = year(Val) ; Key == month -> P = month(Val) ; Key == day -> P = day(Val) ;
+         Key == hour -> P = hour(Val) ; Key == minute -> P = minute(Val) ; Key == second -> P = second(Val)),
+        member(P, Time) -> true
+    ;   (Key == year -> K = 'Y' ; Key == month -> K = m ; Key == day -> K = d ;
+         Key == hour -> K = 'H' ; Key == minute -> K = 'M' ; Key == second -> K = 'S'),
+        member(K=Val, Time) -> true
+    ;   Val = '??'
+    ).
+
+format_time_comp(V) -->
+    ( { list_si(V), \+ maplist(character_si, V), V \= [] } -> format_time_list(V)
+    ; { character_si(V) } -> [V]
+    ; format_("~w", [V]) ).
+
+format_time_list([]) --> [].
+format_time_list([D|Ds]) --> 
+    ( { integer(D) } -> format_("~w", [D])
+    ; { character_si(D) } -> [D]
+    ; format_("~w", [D]) ),
+    format_time_list(Ds).
 
 format_level(Level) -->
-    { phrase(format_("~w", [Level]), Chars) },
-    Chars.
+    format_("~w", [Level]).
 
 call_handler(Chars, Handler) :-
     call(Handler, Chars).
@@ -187,9 +216,12 @@ get_accumulated_logs(Logs) :-
 % Lazy evaluation: if term is call(Goal, Result), call it.
 evaluate_lazy(call(Goal, Result), Result) :-
     !,
-    (   (functor(Goal, Name, Arity), current_predicate(Name/Arity)) ->
-        call(Goal, Result)
-    ;   format("Warning: Lazy evaluation goal not found: ~q~n", [Goal]),
+    % Attempt call in current context, then user context.
+    (   catch(call(Goal, Result), _, fail) -> true
+    ;   catch(call(user:Goal, Result), _, fail) -> true
+    ;   % Handle module-qualified goals passed as terms
+        catch(Goal = M:G, _, fail), catch(call(M:G, Result), _, fail) -> true
+    ;   format("Warning: Lazy evaluation goal failed: ~q~n", [Goal]),
         Result = Goal
     ).
 evaluate_lazy(Result, Result).
