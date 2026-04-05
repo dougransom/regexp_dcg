@@ -19,13 +19,14 @@
     set_log_level/1,
     get_log_level/1,
     get_accumulated_logs/1,
-    console_handler/1,
-    stream_handler/2,
-    list_handler/1
+    console_handler/2,
+    stream_handler/3,
+    list_handler/2
 ]).
 
 :- use_module(library(charsio)).
 :- use_module(library(format)).
+:- use_module(library(time)).
 :- use_module(library(iso_ext)).
 :- use_module(library(lists)).
 :- use_module(library(dcgs)).
@@ -45,10 +46,10 @@ debug_instrumentation(_, _) :- true.
 user:term_expansion((:- debug_logs), (:- initialization(assertz(logs:debug_on)))).
 
 user:goal_expansion(debug_instrumentation(Fmt, Args), Expanded) :-
-    Expanded = (logs:debug_on -> (format(" [INSTRUMENTATION] ", []), format(Fmt, Args), nl) ; true).
+    Expanded = (catch(logs:debug_on, _, fail) -> (format(" [INSTRUMENTATION] ", []), format(Fmt, Args), nl) ; true).
 
 user:goal_expansion(debug_instrumentation(Msg), Expanded) :-
-    Expanded = (logs:debug_on -> format(" [INSTRUMENTATION] ~s~n", [Msg]) ; true).
+    Expanded = (catch(logs:debug_on, _, fail) -> format(" [INSTRUMENTATION] ~s~n", [Msg]) ; true).
 
 % Goal expansion to optimize calls to log_Level/1 and log_Level/2 at the call site.
 user:goal_expansion(Call, log(Level, Format, Args)) :-
@@ -140,12 +141,14 @@ log_f(Level, Format, Args) :-
         ), E, (phrase(format_("ERROR IN FREEZE (~w): ~q\n", [Level, E]), Chars)))
     )),
     debug_instrumentation("log_f: Chars variable created, calling emit_log"),
-    emit_log(Chars, Level).
+    current_time(Time),
+    emit_log(Level, Chars, Time).
 
 log_s(Level, Format, Args) :-
     debug_instrumentation("log_s: executing eagerly"),
     reset(prepare_chars_s(Level, Format, Args), Chars, _),
-    emit_log(Chars, Level).
+    current_time(Time),
+    emit_log(Level, Chars, Time).
 
 % Helper for log_s: computes the string and yields it back to the reset point.
 prepare_chars_s(Level, Format, Args) :-
@@ -161,11 +164,11 @@ prepare_chars_s(Level, Format, Args) :-
     ;   shift("FORMAT_ERROR\n")
     ).
 
-emit_log(Chars, Level) :-
-    debug_instrumentation("emit_log: checking handlers for Level: ~w", [Level]),
+emit_log(Level, Chars, Time) :-
+    debug_instrumentation("emit_log: checking handlers for Level: ~w at ~w", [Level, Time]),
     (   should_emit(Level, Handler),
         debug_instrumentation("emit_log: found handler ~w", [Handler]),
-        call_handler(Chars, Handler),
+        call_handler(Time, Chars, Handler),
         fail
     ;   true
     ).
@@ -190,15 +193,15 @@ log_format(Format, Args) -->
 format_level(Level) -->
     format_("~w", [Level]).
 
-call_handler(Chars, Handler) :-
-    call(Handler, Chars).
+call_handler(Time, Chars, Handler) :-
+    call(Handler, Time, Chars).
 
 % Default Handlers
-console_handler(Chars) :-
+console_handler(_Time, Chars) :-
     debug_instrumentation("console_handler: writing chars"),
     write_chars(Chars).
 
-stream_handler(Stream, Chars) :-
+stream_handler(Stream, _Time, Chars) :-
     debug_instrumentation("stream_handler: writing to ~w", [Stream]),
     write_chars(Stream, Chars).
 
@@ -216,7 +219,7 @@ write_chars(Stream, Chars) :-
 % list_logger
 :- dynamic(log_accumulator/1).
 
-list_handler(Chars) :-
+list_handler(_Time, Chars) :-
     debug_instrumentation("list_handler: accumulating chars"),
     assertz(log_accumulator(Chars)).
 
