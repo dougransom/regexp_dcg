@@ -17,9 +17,9 @@
     set_log_level/1,
     get_log_level/1,
     get_accumulated_logs/1,
-    console_handler/1,
-    stream_handler/2,
-    list_handler/1
+    console_handler/2,
+    stream_handler/3,
+    list_handler/2
 ]).
 
 :- use_module(library(charsio)).
@@ -114,7 +114,7 @@ log(Level, Format) :-
     log(Level, Format, []).
 
 log(Level, Format, Args) :-
-    (   should_emit(Level, _)
+    (   should_emit(Level, _)  % the legacy semantics of -> are desired here.  If there is at least one match, lets proceed.
     ->  evaluate_lazy(Format, EvaluatedFormat),
         debug_instrumentation("Producing log entry via phrase/2"),
         % Correctly distinguish between an argument list and a single string/term arg.
@@ -125,17 +125,17 @@ log(Level, Format, Args) :-
         maplist(evaluate_lazy, ArgsList, EvaluatedArgs),
         current_time(Time),
         (   catch(phrase(log_entry(Time, Level, EvaluatedFormat, EvaluatedArgs), FinalChars), _, fail)
-        ->  emit_log(FinalChars, Level),
+        ->  emit_log(Time, FinalChars, Level),
             debug_instrumentation("Log entry emitted successfully")
         ;   phrase(format_("[~w] FORMAT_ERROR: ~q ~q\n", [Level, EvaluatedFormat, EvaluatedArgs]), ErrorChars),
-            emit_log(ErrorChars, Level)
+            emit_log(Time, ErrorChars, Level)
         )
     ;   true
     ).
 
-emit_log(Chars, Level) :-
+emit_log(Time, Chars, Level) :-
     (   should_emit(Level, Handler),
-        call_handler(Chars, Handler),
+        call_handler(Time, Chars, Handler),
         fail
     ;   true
     ).
@@ -192,21 +192,21 @@ format_time_list([D|Ds]) -->
 format_level(Level) -->
     format_("~w", [Level]).
 
-call_handler(Chars, Handler) :-
-    call(Handler, Chars).
+call_handler(Time, Chars, Handler) :-
+    call(Handler, Time, Chars).
 
 % Default Handlers
-console_handler(Chars) :-
+console_handler(_Time, Chars) :-
     format("~s", [Chars]).
 
-stream_handler(Stream, Chars) :-
+stream_handler(Stream, _Time, Chars) :-
     format(Stream, "~s", [Chars]).
 
 % list_logger
 :- dynamic(log_accumulator/1).
 log_accumulator([]).
 
-list_handler(Chars) :-
+list_handler(_Time, Chars) :-
     assertz(log_accumulator(Chars)).
 
 get_accumulated_logs(Logs) :-
