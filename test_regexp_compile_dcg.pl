@@ -33,17 +33,17 @@ dformat(_Message) :-
 
 test("dcg for literal",
     (pattern_ast("abc", AST),
-    dformat("AST: ~w", [AST]),
+    dformat("\nAST: ~w", [AST]),
     ast_dcg(AST, _S0, _S1, DCG),
-    dformat("DCG: ~w", [DCG]),
-    dformat("Testing DCG phrase...", []),
+    dformat("\nDCG: ~w", [DCG]),
+    dformat("\nTesting DCG phrase...", []),
     phrase(DCG, "abc") -> 
-        dformat("DCG phrase succeeded", []) ; 
-        dformat("DCG phrase failed", [])
+        dformat("\nDCG phrase succeeded", []) ; 
+        dformat("\nDCG phrase failed", [])
     )).
 
 test("simple match",
     (dformat("Testing re_match with 'abc' against 'abc'", []),
     re_match("abc", "abc", Match),
-    dformat("Match result: ~w", [Match]),
+    dformat("\nMatch result: ~w", [Match]),
     assertion(Match == "abc"))).
