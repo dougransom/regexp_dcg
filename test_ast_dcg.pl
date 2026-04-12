@@ -17,11 +17,36 @@
         DCG=In  
         )).
 
-test("Test Or and Literals AST to DCG",
+test("Test Or Literals AST to DCG, nonveralapping matches",
     (
-    phrase(re_ast_chars(Ast),"abc|def"),
-    Ast = or(lit("abc"),lit("def")),
-    ast_dcg(Ast,DCG),
+    phrase(re_ast_chars(AST),"abc|def"),
+    format("\nAST: ~w~n", [AST]),
+    AST = or(lit("abc"),lit("def")),
+    format("\nAST again: ~w~n", [AST]),
+    ast_dcg(AST,DCG),
     format("\nDCG: ~w~n", [DCG])
     
+    )).
+
+test("Test Or Literals AST to DCG, longest matche",
+    (
+    phrase(re_ast_chars(AST),"abc123|abc"),
+    format("\nAST: ~w~n", [AST]),
+    ast_dcg(AST,DCG),
+    format("\nDCG: ~w~n", [DCG])
+    
+    )).
+
+test("Capture AST to DCG, one captures",
+ (phrase(re_ast_chars(AT),"(abc)"),
+    AT = concat([capture(lit("abc"))]),
+    ast_dcg(AT,DCG),
+    format("\nDCG: ~w~n", [DCG])
+    )).
+    
+test("Capture AST to DCG, two captures",
+ (phrase(re_ast_chars(AT),"(abc)(def)"),
+    AT = concat([capture(lit("abc")), capture(lit("def"))]),
+    ast_dcg(AT,DCG),
+    format("\nDCG: ~w~n", [DCG])
     )).
