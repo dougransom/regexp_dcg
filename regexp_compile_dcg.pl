@@ -28,16 +28,34 @@ re_match_groups(Pattern, Input, Match, Groups) :-
     state_match(SF, Match),
     state_groups(SF, Groups).
 
-% Pattern already an AST (is not a list or atom pattern)
+% Pattern already an AST
 pattern_ast(AST, AST) :-
-    nonvar(AST),
-    \+ (list_si(AST) ; atom_si(AST)),
+    is_ast(AST),
     !.
 
 % Pattern is a string/atom: tokenize + parse
 pattern_ast(Pattern, AST) :-
-    (   atom_si(Pattern) -> atom_chars(Pattern, Chars) ; Chars = Pattern   ),
+    to_chars(Pattern, Chars),
     phrase(re_ast_chars(AST), Chars).
+
+is_ast(lit(_)).
+is_ast(class(_)).
+is_ast(anchor(_)).
+is_ast(boundary(_)).
+is_ast(group(_)).
+is_ast(capture(_)).
+is_ast(lookahead(_)).
+is_ast(neg_lookahead(_)).
+is_ast(quant(_, _)).
+is_ast(postfix(_, _)).
+is_ast(star(_)).
+is_ast(plus(_)).
+is_ast(maybe(_)).
+is_ast(concat(_)).
+is_ast(concat(_, _)).
+is_ast(or(_, _)).
+is_ast(escaped(_)).
+is_ast(dot).
 
 state(_Full, _Groups, _Named, _Tree).
 
@@ -85,10 +103,14 @@ literal_match([C|Cs]) --> [C], literal_match(Cs).
 
 % Convert input to character list safely without SWI-specifics
 to_chars(Input, Chars) :-
-    (   atom_si(Input) -> atom_chars(Input, Chars)
-    ;   list_si(Input) -> Chars = Input
-    ;   domain_error(chars, Input)
-    ).
+    atom_si(Input),
+    !,
+    atom_chars(Input, Chars).
+to_chars(Input, Input) :-
+    list_si(Input),
+    !.
+to_chars(Input, _) :-
+    domain_error(chars, Input).
 
 /* ---------- Runtime DCG combinators ---------- */
 
