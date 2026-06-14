@@ -13,40 +13,39 @@
     (   In="abcdef",
         phrase(re_ast_chars(AST),In),
         AST = lit(In),
-        ast_dcg(Ast,DCG),
-        DCG=In  
+        ast_dcg(AST, Match, DCG),
+        phrase(DCG, In),
+        Match == In
         )).
 
 test("Test Or Literals AST to DCG, nonveralapping matches",
     (
     phrase(re_ast_chars(AST),"abc|def"),
-    format("\nAST: ~w~n", [AST]),
     AST = or(lit("abc"),lit("def")),
-    format("\nAST again: ~w~n", [AST]),
-    ast_dcg(AST,DCG),
-    format("\nDCG: ~w~n", [DCG])
-    
+    ast_dcg(AST, Match, DCG),
+    phrase(DCG, "abc"),
+    Match == "abc"
     )).
 
-test("Test Or Literals AST to DCG, longest matche",
+test("Test Or Literals AST to DCG, longest match",
     (
     phrase(re_ast_chars(AST),"abc123|abc"),
-    format("\nAST: ~w~n", [AST]),
-    ast_dcg(AST,DCG),
-    format("\nDCG: ~w~n", [DCG])
-    
+    ast_dcg(AST, Match, DCG),
+    phrase(DCG, "abc123xxx", _),
+    Match == "abc123"
     )).
 
+
 test("Capture AST to DCG, one captures",
- (phrase(re_ast_chars(AT),"(abc)"),
-    AT = concat([capture(lit("abc"))]),
-    ast_dcg(AT,DCG),
-    format("\nDCG: ~w~n", [DCG])
+ (  phrase(re_ast_chars(AST),"(abc)"),
+    ast_dcg(AST, Match, DCG),
+    phrase(DCG, "abc"),
+    Match == "abc"
     )).
     
 test("Capture AST to DCG, two captures",
- (phrase(re_ast_chars(AT),"(abc)(def)"),
-    AT = concat([capture(lit("abc")), capture(lit("def"))]),
-    ast_dcg(AT,DCG),
-    format("\nDCG: ~w~n", [DCG])
+ (  phrase(re_ast_chars(AST),"(abc)(def)"),
+    ast_dcg(AST, Match, DCG),
+    phrase(DCG, "abcdef"),
+    Match == "abcdef"
     )).
