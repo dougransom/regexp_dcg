@@ -7,5 +7,8 @@
 - **Framework**: We use the `pkg(testing)` package from `bakage`.
 - **Location**: Unit tests are located in `test_*.pl` files (e.g., [test_regexp_ast.pl](test_regexp_ast.pl)).
 - **Running Tests**:
-  - Run a `pkg(testing)` suite: `nice scryer-safe -g run_tests -g halt test_<name>.pl`
-  - Run other tests (e.g., logging): `nice scryer-safe -g main test_logs.pl` (or just `nice scryer-safe test_logs.pl` if it has a `main` entrypoint that halts).
+  - Run all tests via the [Makefile](Makefile): `make test`
+  - Run a specific test suite: `make test_<name>` (e.g. `make test_regexp_ast`)
+  - Run manually:
+    - `nice scryer-safe -g run_tests -g halt test_<name>.pl` (for `pkg(testing)` suites)
+    - `nice scryer-safe -g main test_logs.pl` (for custom `main` suites)

@@ -46,4 +46,4 @@ test("simple match",
     (dformat("Testing re_match with 'abc' against 'abc'", []),
     re_match("abc", "abc", Match),
     dformat("\nMatch result: ~w", [Match]),
-    assertion(Match == "abc"))).
+    Match == "abc")).
