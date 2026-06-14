@@ -1,6 +1,9 @@
 :- module(regexp_dcg, [
     re_match/3,
+    re_match_t/3,
     re_match_groups/4,
+    re_match_groups_t/5,
+    re_compile/2,
     pattern_ast/2,
     ast_dcg/4,
     ast_dcg_/4,
@@ -34,20 +37,45 @@
 :- use_module(library(lists)).
 :- use_module(library(dcgs)).
 
+% Compile a pattern into a reusable compiled goal structure
+re_compile(Pattern, compiled(Goal, GroupCount)) :-
+    pattern_ast(Pattern, AST),
+    ast_dcg_goal(AST, 0, GroupCount, Goal).
+
+pattern_compiled(compiled(Goal, GroupCount), Goal, GroupCount) :- !.
+pattern_compiled(Pattern, Goal, GroupCount) :-
+    pattern_ast(Pattern, AST),
+    ast_dcg_goal(AST, 0, GroupCount, Goal).
+
 % Most common: just get the full match
 re_match(Pattern, Input, Match) :-
     re_match_groups(Pattern, Input, Match, _Groups).
 
+% reif compatible re_match_t/3
+re_match_t(Pattern, Input, T) :-
+    (   re_match(Pattern, Input, _) ->
+        T = true
+    ;   T = false
+    ).
+
 % Richer: full match + numbered groups
 re_match_groups(Pattern, Input, Match, Groups) :-
-    pattern_ast(Pattern, AST),
-    ast_dcg_goal(AST, 0, GroupCount, Goal),
+    pattern_compiled(Pattern, Goal, GroupCount),
     length(Groups, GroupCount),
     to_chars(Input, Chars),
     S0 = state(Chars, Groups, [], []),
     phrase(call(Goal, S0, SF), Chars),
     state_match(SF, Match),
     state_groups(SF, Groups).
+
+% reif compatible re_match_groups_t/5
+re_match_groups_t(Pattern, Input, Match, Groups, T) :-
+    (   re_match_groups(Pattern, Input, Match0, Groups0) ->
+        T = true,
+        Match = Match0,
+        Groups = Groups0
+    ;   T = false
+    ).
 
 % Pattern already an AST
 pattern_ast(AST, AST) :-

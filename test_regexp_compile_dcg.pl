@@ -143,3 +143,38 @@ test("7. named group",
 test("8. inline flags",
     (re_match("(?i)abc", "ABC", Match),
     Match == "ABC")).
+
+test("reif compatibility: re_match_t true",
+    (re_match_t("abc", "abc", T),
+    T == true)).
+
+test("reif compatibility: re_match_t false",
+    (re_match_t("abc", "def", T),
+    T == false)).
+
+test("reif compatibility: re_match_groups_t true",
+    (re_match_groups_t("(abc)", "abc", Match, Groups, T),
+    T == true,
+    Match == "abc",
+    Groups == ["abc"])).
+
+test("reif compatibility: re_match_groups_t false",
+    (re_match_groups_t("(abc)", "def", Match, Groups, T),
+    T == false,
+    var(Match),
+    var(Groups))).
+
+test("compile pattern and match",
+    (re_compile("a*b", Compiled),
+    re_match(Compiled, "aaab", Match1),
+    Match1 == "aaab",
+    re_match_groups(Compiled, "aaab", Match2, Groups),
+    Match2 == "aaab",
+    Groups == [])).
+
+test("compile pattern and reif match",
+    (re_compile("a*b", Compiled),
+    re_match_t(Compiled, "aaab", T1),
+    T1 == true,
+    re_match_t(Compiled, "aaac", T2),
+    T2 == false)).
