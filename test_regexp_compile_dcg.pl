@@ -47,3 +47,99 @@ test("simple match",
     re_match("abc", "abc", Match),
     dformat("\nMatch result: ~w", [Match]),
     Match == "abc")).
+
+test("precedence: alternation vs concat",
+    (re_match("a|bc", "bc", Match),
+    Match == "bc")).
+
+test("precedence: grouping with alternation",
+    (re_match("(a|b)c", "ac", Match),
+    Match == "ac")).
+
+test("quantifier: greedy star",
+    (re_match("a*", "aaa", Match),
+    Match == "aaa")).
+
+test("quantifier: plus",
+    (re_match("a+", "aa", Match),
+    Match == "aa")).
+
+test("quantifier: question matches",
+    (re_match("a?", "a", Match),
+    Match == "a")).
+
+test("quantifier: question empty",
+    (re_match("a?", "", Match),
+    Match == "")).
+
+test("quantifier: exact repetition",
+    (re_match("a{3}", "aaa", Match),
+    Match == "aaa")).
+
+test("quantifier: range repetition",
+    (re_match("a{2,4}", "aaaa", Match),
+    Match == "aaaa")).
+
+test("capture: single group",
+    (re_match_groups("(abc)", "abc", Match, Groups),
+    Match == "abc",
+    Groups == ["abc"])).
+
+test("capture: nested groups",
+    (re_match_groups("(a(b)c)", "abc", Match, Groups),
+    Match == "abc",
+    Groups == ["abc", "b"])).
+
+test("edge: star on empty string",
+    (re_match("a*", "", Match),
+    Match == "")).
+
+test("edge: nested stars (a*)*",
+    (re_match("(a*)*", "a", Match),
+    Match == "a")).
+
+% Test cases for the 8 missing features to verify our current parsing/compiling limits
+
+test("1. character classes: simple",
+    (re_match("[abc]", "b", Match),
+    Match == "b")).
+
+test("1. character classes: negated",
+    (re_match("[^abc]", "d", Match),
+    Match == "d")).
+
+test("2. wildcard dot",
+    (re_match("a.c", "abc", Match),
+    Match == "abc")).
+
+test("3. builtin class: digit",
+    (re_match("\\d", "5", Match),
+    Match == "5")).
+
+test("3. builtin class: word",
+    (re_match("\\w", "x", Match),
+    Match == "x")).
+
+test("4. anchor: start of line",
+    (re_match("^a", "a", Match),
+    Match == "a")).
+
+test("4. anchor: end of line",
+    (re_match("a$", "a", Match),
+    Match == "a")).
+
+test("5. non-greedy quantifier",
+    (re_match("a*?", "a", Match),
+    Match == "a")).
+
+test("6. assertion: lookahead",
+    (re_match("a(?=b)b", "ab", Match),
+    Match == "ab")).
+
+test("7. named group",
+    (re_match("(?P<id>abc)", "abc", Match),
+    Match == "abc")).
+
+test("8. inline flags",
+    (re_match("(?i)abc", "ABC", Match),
+    Match == "ABC")).

@@ -202,6 +202,10 @@ tk(lbrace,   "{").
 tk(rbrace,   "}").
 tk(colon,    ":").
 tk(comma,    ",").
+tk(equals,   "=").
+tk(excl,     "!").
+tk(less_than,    "<").
+tk(greater_than, ">").
 
 
 look_ahead(T), [T] --> [T].
@@ -309,26 +313,16 @@ not_postfix_next_char --> call(eos)
 postfix_next_char --> look_ahead(D), { postfixchar(D) }.
 
 %% Define metacharacters and postfix characters using the expansion mechanism.
-generate_char_predicate(metachar, ".^$*+?()[]|\\{}:,").
+generate_char_predicate(metachar, ".^$*+?()[]|\\{}:,=!<>").
 generate_char_predicate(postfixchar, "*+?").
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% 3. TOKEN-LEVEL PARSER (DCG over tokens)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-re_expr_tokens(anchor(bol)) -->
-    [caret].
-
-re_expr_tokens(anchor(eol)) -->
-    [dollar].
-
-re_expr_tokens(boundary(word)) -->
-    [boundary(word)].
-
-re_expr_tokens(boundary(not_word)) -->
-    [boundary(not_word)].
-
 re_expr_tokens(AST) -->
     re_alt_tokens(AST).
+re_expr_tokens(lit([])) -->
+    [].
 
 re_alt_tokens(AST) -->
     re_concat_tokens(A),
@@ -356,6 +350,14 @@ re_atom_tokens(AST) -->
 
 re_atom_tokens(lit(Cs)) -->
     [lit(Cs)].
+re_atom_tokens(lit([=])) -->
+    [equals].
+re_atom_tokens(lit([!])) -->
+    [excl].
+re_atom_tokens(lit([<])) -->
+    [less_than].
+re_atom_tokens(lit([>])) -->
+    [greater_than].
 
 re_atom_tokens(escaped(C)) -->
     [escaped(C)].
@@ -366,6 +368,21 @@ re_atom_tokens(dot) -->
 %% Classes
 re_atom_tokens(class(Items)) -->
     [class(Items)].
+
+re_atom_tokens(builtin(Class)) -->
+    [builtin(Class)].
+
+re_atom_tokens(anchor(bol)) -->
+    [caret].
+
+re_atom_tokens(anchor(eol)) -->
+    [dollar].
+
+re_atom_tokens(boundary(word)) -->
+    [boundary(word)].
+
+re_atom_tokens(boundary(not_word)) -->
+    [boundary(not_word)].
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -379,15 +396,37 @@ group_prefix(noncapture) -->
     [question, colon].
 
 group_prefix(lookahead) -->
-    [question, '='].
+    [question, equals].
 
 group_prefix(neg_lookahead) -->
-    [question, '!'].
+    [question, excl].
+
+group_prefix(named_capture(Name)) -->
+    [question, lit(['P']), less_than, lit(NameChars), greater_than],
+    { atom_chars(Name, NameChars) }.
+
+group_prefix(flags(Flags)) -->
+    [question, lit(FlagChars)],
+    { all_flag_chars(FlagChars),
+      atom_chars(Flags, FlagChars) }.
+
+group_prefix(flags_group(Flags)) -->
+    [question, lit(FlagChars), colon],
+    { all_flag_chars(FlagChars),
+      atom_chars(Flags, FlagChars) }.
+
+all_flag_chars([]).
+all_flag_chars([C|Cs]) :-
+    member(C, ['i', 'm', 's', 'x', 'a', 'L', 'u']),
+    all_flag_chars(Cs).
 
 build_group_ast(capture, Sub, capture(Sub)).
 build_group_ast(noncapture, Sub, group(Sub)).
 build_group_ast(lookahead, Sub, lookahead(Sub)).
 build_group_ast(neg_lookahead, Sub, neg_lookahead(Sub)).
+build_group_ast(named_capture(Name), Sub, named_capture(Name, Sub)).
+build_group_ast(flags(Flags), lit([]), flags(Flags)).
+build_group_ast(flags_group(Flags), Sub, flags(Flags, Sub)).
 
 
 
@@ -414,8 +453,12 @@ postfix_op(question) --> [question].
 re_postfix_tokens(AST) -->
     re_atom_tokens(A),
     (   postfix_op(Op),
-        { AST = postfix(A, Op) }
+        (   [question], { AST = postfix(A, lazy(Op)) }
+        ;   { AST = postfix(A, Op) }
+        )
     ;   quantifier(Q),
-        { AST = quant(A, Q) }
+        (   [question], { AST = quant(A, lazy(Q)) }
+        ;   { AST = quant(A, Q) }
+        )
     ;   { AST = A }
     ).
