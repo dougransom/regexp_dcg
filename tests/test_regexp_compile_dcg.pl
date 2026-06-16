@@ -1,16 +1,16 @@
 % translate a regexp ast to a DCG for regexp pattern matching over strings.
 
-:- use_module(bakage).
+:- use_module('../bakage').
 :- use_module(pkg(testing)).
-:- use_module(regexp_ast).
-:- use_module(regexp_compile_dcg).
+:- use_module('../regexp_ast').
+:- use_module('../regexp_compile_dcg').
 :- use_module(library(debug)).
 :- use_module(library(pio)).
 :- use_module(library(dcgs)).
 :- dynamic(debug_mode/1).
 debug_mode(on).
 
-:- use_module(regexp_ast).   % your existing front-end
+:- use_module('../regexp_ast').   % your existing front-end
 
 
 

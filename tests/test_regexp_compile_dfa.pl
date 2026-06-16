@@ -1,8 +1,8 @@
 % Unit tests for the experimental DFA regex compiler and matcher.
 
-:- use_module(bakage).
+:- use_module('../bakage').
 :- use_module(pkg(testing)).
-:- use_module(regexp_compile_dfa).
+:- use_module('../regexp_compile_dfa').
 :- use_module(library(debug)).
 
 test("literal match",

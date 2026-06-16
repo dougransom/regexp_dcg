@@ -2,8 +2,8 @@
 :- use_module(library(format)).
 :- use_module(library(lists)).
 
-:- use_module(regexp_compile_dcg).
-:- use_module(regexp_compile_dfa).
+:- use_module('../regexp_compile_dcg').
+:- use_module('../regexp_compile_dfa').
 
 % 20 C tokens and their corresponding regex patterns
 c_tokens([

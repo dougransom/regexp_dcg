@@ -1,5 +1,5 @@
 :- module(test_logs, [run_tests/0, heavy_computation/1]).
-:- use_module(logs).
+:- use_module('../logs').
 :- use_module(library(format)).
 :- use_module(library(lists)).
 
