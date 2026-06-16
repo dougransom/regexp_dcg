@@ -1,6 +1,6 @@
-.PHONY: test test_ast_dcg test_curr_pred test_format test_logs test_regexp_ast test_regexp_compile_dcg test_regexp_compile_dfa test_si test_time test_token
+.PHONY: test test_ast_dcg test_curr_pred test_exports_match test_format test_logs test_regexp_ast test_regexp_compile_dcg test_regexp_compile_dfa test_si test_time test_token
 
-test: test_ast_dcg test_curr_pred test_format test_logs test_regexp_ast test_regexp_compile_dcg test_regexp_compile_dfa test_si test_time test_token
+test: test_ast_dcg test_curr_pred test_exports_match test_format test_logs test_regexp_ast test_regexp_compile_dcg test_regexp_compile_dfa test_si test_time test_token
 
 test_ast_dcg:
 	@echo "=== Running test_ast_dcg.pl ==="
@@ -37,6 +37,10 @@ test_regexp_compile_dfa:
 	nice scryer-safe -g run_tests -g halt tests/test_regexp_compile_dfa.pl
 	@echo ""
 
+test_exports_match:
+	@echo "=== Running test_exports_match.pl ==="
+	nice scryer-safe -g run_tests -g halt tests/test_exports_match.pl
+	@echo ""
 
 test_si:
 	@echo "=== Running test_si.pl ==="
