@@ -1,7 +1,7 @@
 # Project: Regex Parser & Recognizer
 - **Current Task:** Building a Python-style logging module (`logger.pl`).
 - **Goal:** Learn "vibe coding" by describing intent rather than syntax.
-- **Style Guidelines:** Refer to [prolog_guidelines.md](prolog_guidelines.md) and [covington_style.md](covington_style.md) for coding standards.
+- **Style Guidelines:** Refer to [prolog_guidelines.md](.agents/skills/scryer-prolog-standards/references/prolog_guidelines.md) and [covington_style.md](.agents/skills/scryer-prolog-standards/references/covington_style.md) for coding standards.
 
 ## Testing Practices
 - **Framework**: We use the `pkg(testing)` package from `bakage`.
