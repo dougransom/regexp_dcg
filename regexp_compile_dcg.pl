@@ -4,6 +4,9 @@
     re_match_groups/4,
     re_match_groups_t/5,
     re_compile/2,
+    re_match_dcg//2,
+    re_match_dcg//3,
+    re_match_dcg_state//4,
     pattern_ast/2,
     ast_dcg/4,
     ast_dcg_/4,
@@ -76,6 +79,27 @@ re_match_groups_t(Pattern, Input, Match, Groups, T) :-
         Groups = Groups0
     ;   T = false
     ).
+
+% DCG phrase matcher helpers
+
+re_match_dcg(Pattern, Match) -->
+    re_match_dcg(Pattern, Match, _Groups).
+
+re_match_dcg(Pattern, Match, Groups) -->
+    re_match_dcg_state(Pattern, Match, _S0, SF),
+    {
+        state_groups(SF, Groups)
+    }.
+
+re_match_dcg_state(Pattern, Match, S0, SF, L0, L) :-
+    pattern_compiled(Pattern, Goal, GroupCount),
+    (   var(S0) ->
+        length(Groups, GroupCount),
+        S0 = state(L0, Groups, [], [])
+    ;   S0 = state(L0, _, _, _)
+    ),
+    call(Goal, S0, SF, L0, L),
+    append(Match, L, L0).
 
 % Pattern already an AST
 pattern_ast(AST, AST) :-

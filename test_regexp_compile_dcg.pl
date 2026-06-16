@@ -178,3 +178,17 @@ test("compile pattern and reif match",
     T1 == true,
     re_match_t(Compiled, "aaac", T2),
     T2 == false)).
+
+test("dcg phrase match helper",
+    (phrase(re_match_dcg("a*b", Match), "aaabc", "c"),
+    Match == "aaab")).
+
+test("dcg phrase match groups helper",
+    (phrase(re_match_dcg("(a*)b", Match, Groups), "aaabc", "c"),
+    Match == "aaab",
+    Groups == ["aaa"])).
+
+test("dcg phrase match helper with compiled pattern",
+    (re_compile("a*b", Compiled),
+    phrase(re_match_dcg(Compiled, Match), "aaabc", "c"),
+    Match == "aaab")).
