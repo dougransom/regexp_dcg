@@ -121,3 +121,23 @@ test("compilation cache clearing",
      regexp_dfa:dfa_pattern_cache("c*d", _),
      regexp_dfa:re_clear_cache,
      \+ regexp_dfa:dfa_pattern_cache("c*d", _))).
+
+test("DFA re_match_groups throws domain_error",
+    (catch(regexp_dfa:re_match_groups("(abc)", "abc", _, _), Error, true),
+     nonvar(Error),
+     Error = error(domain_error(dfa_group_extraction, _), _))).
+
+test("DFA re_match_groups_t throws domain_error",
+    (catch(regexp_dfa:re_match_groups_t("(abc)", "abc", _, _, _), Error, true),
+     nonvar(Error),
+     Error = error(domain_error(dfa_group_extraction, _), _))).
+
+test("DFA re_match_dcg prefix matching",
+    (phrase(regexp_dfa:re_match_dcg("a*b", Match), "aaabc", "c"),
+     Match == "aaab")).
+
+test("DFA re_match_dcg with groups throws domain_error",
+    (catch(phrase(regexp_dfa:re_match_dcg("(a*)b", _, _), "aaabc", _), Error, true),
+     nonvar(Error),
+     Error = error(domain_error(dfa_group_extraction, _), _))).
+

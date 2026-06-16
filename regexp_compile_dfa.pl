@@ -1,7 +1,11 @@
 :- module(regexp_dfa, [
     re_match/3,
     re_match_t/3,
+    re_match_groups/4,
+    re_match_groups_t/5,
     re_compile/2,
+    re_match_dcg//2,
+    re_match_dcg//3,
     re_clear_cache/0
 ]).
 
@@ -36,6 +40,23 @@ re_match_t(Pattern, Input, T) :-
         T = true
     ;   T = false
     ).
+
+% Capturing groups are not supported by the DFA simulation engine.
+re_match_groups(Pattern, _Input, _Match, _Groups) :-
+    domain_error(dfa_group_extraction, Pattern).
+
+re_match_groups_t(Pattern, _Input, _Match, _Groups, _T) :-
+    domain_error(dfa_group_extraction, Pattern).
+
+% DCG prefix matching using the DFA engine: matches a prefix of L0.
+re_match_dcg(Pattern, Match, L0, L) :-
+    append(Match, L, L0),
+    re_match(Pattern, Match, Match).
+
+% Capturing groups are not supported in prefix matching.
+re_match_dcg(Pattern, _Match, _Groups) -->
+    { domain_error(dfa_group_extraction, Pattern) }.
+
 
 % Compile pattern explicitly to reusable NFA representation
 re_compile(Pattern, NFA) :-
