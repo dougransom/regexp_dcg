@@ -437,3 +437,28 @@ dcg_flags_group(Flags, GSub, S0, SF) -->
         S2 = state(Full2, Groups2, Named2, _),
         SF = state(Full2, Groups2, Named2, OldFlags)
     }.
+
+/*
+   ========================================================================
+   FAQ: Why are standard control operators (->, \+) used here instead of
+        pure reified predicates (library(reif))?
+   ========================================================================
+
+   1. Standard Negation (\+) in Character Classes:
+      Reifying a complex search check like match_class_list/2 (which handles
+      ranges, standard term comparisons, and built-in digit/word classes)
+      into a truth value (e.g., match_class_list_t/3) would be highly verbose
+      and slow due to meta-call and boolean logical conjunction overheads.
+      Since input characters are instantiated at matching time, standard
+      negation-by-failure (\+) is safe, sound, and extremely performant.
+
+   2. Control Flow (->) instead of if_/3:
+      Standard -> is used for ground/instantiated check conditions, such as
+      member(case_insensitive, Flags). When the condition is ground and
+      deterministic, -> behaves purely and does not prune any alternative
+      unification paths. In Scryer Prolog, it is compiled to a performant
+      VM instruction, avoiding the overhead of invoking reified auxiliary
+      predicates.
+*/
+
+ 
