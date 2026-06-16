@@ -7,6 +7,8 @@
     re_match_dcg//2,
     re_match_dcg//3,
     re_match_dcg_state//4,
+    re_clear_cache/0,
+    pattern_cache/3,
     pattern_ast/2,
     ast_dcg/4,
     ast_dcg_/4,
@@ -40,6 +42,8 @@
 :- use_module(library(lists)).
 :- use_module(library(dcgs)).
 
+:- dynamic(pattern_cache/3).
+
 % Compile a pattern into a reusable compiled goal structure
 re_compile(Pattern, compiled(Goal, GroupCount)) :-
     pattern_ast(Pattern, AST),
@@ -47,8 +51,17 @@ re_compile(Pattern, compiled(Goal, GroupCount)) :-
 
 pattern_compiled(compiled(Goal, GroupCount), Goal, GroupCount) :- !.
 pattern_compiled(Pattern, Goal, GroupCount) :-
-    pattern_ast(Pattern, AST),
-    ast_dcg_goal(AST, 0, GroupCount, Goal).
+    to_chars(Pattern, Key),
+    (   pattern_cache(Key, Goal0, GroupCount0) ->
+        Goal = Goal0,
+        GroupCount = GroupCount0
+    ;   pattern_ast(Pattern, AST),
+        ast_dcg_goal(AST, 0, GroupCount, Goal),
+        assertz(pattern_cache(Key, Goal, GroupCount))
+    ).
+
+re_clear_cache :-
+    retractall(pattern_cache(_, _, _)).
 
 % Most common: just get the full match
 re_match(Pattern, Input, Match) :-

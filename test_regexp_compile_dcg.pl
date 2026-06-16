@@ -192,3 +192,19 @@ test("dcg phrase match helper with compiled pattern",
     (re_compile("a*b", Compiled),
     phrase(re_match_dcg(Compiled, Match), "aaabc", "c"),
     Match == "aaab")).
+
+test("compilation cache matches",
+    (re_clear_cache,
+    re_match("c*d", "cccd", Match),
+    Match == "cccd",
+    % Check that the pattern exists in the cache database
+    regexp_dcg:to_chars("c*d", Key),
+    regexp_dcg:pattern_cache(Key, _, _))).
+
+test("compilation cache clearing",
+    (re_clear_cache,
+    re_match("c*d", "cccd", _Match),
+    regexp_dcg:to_chars("c*d", Key),
+    regexp_dcg:pattern_cache(Key, _, _),
+    re_clear_cache,
+    \+ regexp_dcg:pattern_cache(Key, _, _))).
