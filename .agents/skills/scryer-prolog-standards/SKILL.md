@@ -24,3 +24,45 @@ These guidelines define the coding standards, style rules, and structural practi
 - **DRY Principle**: Avoid code repetition. Use Prolog expansion mechanisms or assert statements.
 - **Logging**: Use the project's custom logging module (`logs.pl`) for diagnostics meant to be left in and activated at runtime.
 - **Standards Referencing**: See Covington rules in the references directory for further style details.
+
+## DocLog Documentation Conventions
+
+All public interface predicates and modules must be documented using **DocLog** conventions (which support Djot markup syntax).
+
+### 1. Module Documentation
+Every module must begin with a doclog block comment `/** ... */` detailing its purpose, usage examples, and high-level design:
+```prolog
+/**
+  Provides backtracking/DCG based regular expression compiler and matching.
+
+  This module compiles a regular expression AST into a Scryer Prolog DCG representation.
+*/
+:- module(regexp_dcg, [ ... ]).
+```
+
+### 2. Predicate Documentation
+Every exported predicate must have a doclog block immediately preceding its definition.
+- The block starts with `%%` followed by `%` lines.
+- The first line specifies the predicate signature with arguments and **mode indicators**:
+  - `+` for inputs
+  - `-` for outputs
+  - `?` for either
+- A blank line `%` separates the signature from the description.
+- Djot markup can be used within descriptions.
+
+#### Standard Predicate Example:
+```prolog
+%% re_match(+Pattern, +Input, -Match)
+%
+% Match the given regular expression `Pattern` against the `Input` string.
+% `Match` is unified with the full matched substring.
+```
+
+#### DCG Non-Terminal Example:
+For Definite Clause Grammar non-terminals, append `//` to the predicate signature line:
+```prolog
+%% re_match_dcg(+Pattern, -Match)//
+%
+% Match the given regular expression `Pattern` against the input stream.
+```
+

@@ -1,3 +1,10 @@
+/**
+  Provides a Deterministic Finite Automaton (DFA) based regular expression engine.
+
+  This module compiles regular expressions to an NFA structure and matches them
+  using a DFA simulation. Note that group extraction is not supported by the DFA engine
+  and will raise a domain error.
+*/
 :- module(regexp_dfa, [
     re_match/3,
     re_match_t/3,
@@ -17,7 +24,10 @@
 
 :- dynamic(dfa_pattern_cache/2).
 
-% Top-level interface: match pattern against input, unify Match with full input
+%% re_match(+Pattern, +Input, -Match)
+%
+% Match the regular expression `Pattern` against `Input`.
+% `Match` is unified with the matched substring of `Input`.
 re_match(Pattern, Input, Match) :-
     to_chars(Input, Chars),
     (   Pattern = nfa(_, _, _, _) ->
@@ -34,36 +44,55 @@ re_match(Pattern, Input, Match) :-
     dfa_match(NFA, Chars),
     Match = Input.
 
-% Reified matching
+%% re_match_t(+Pattern, +Input, ?Truth)
+%
+% Reified matching. `Truth` is unified with `true` if `Pattern` matches `Input`, and `false` otherwise.
 re_match_t(Pattern, Input, T) :-
     (   re_match(Pattern, Input, _) ->
         T = true
     ;   T = false
     ).
 
-% Capturing groups are not supported by the DFA simulation engine.
+%% re_match_groups(+Pattern, +Input, -Match, -Groups)
+%
+% Match the regular expression `Pattern` against `Input`.
+% Note: Capturing groups are not supported by the DFA engine and will raise a domain error.
 re_match_groups(Pattern, _Input, _Match, _Groups) :-
     domain_error(dfa_group_extraction, Pattern).
 
+%% re_match_groups_t(+Pattern, +Input, -Match, -Groups, ?Truth)
+%
+% Reified version of `re_match_groups/4`.
+% Note: Capturing groups are not supported by the DFA engine and will raise a domain error.
 re_match_groups_t(Pattern, _Input, _Match, _Groups, _T) :-
     domain_error(dfa_group_extraction, Pattern).
 
-% DCG prefix matching using the DFA engine: matches a prefix of L0.
+%% re_match_dcg(+Pattern, -Match)//
+%
+% DCG non-terminal prefix matcher. Matches a prefix of the input sequence
+% that conforms to the regular expression `Pattern`, unifying it with `Match`.
 re_match_dcg(Pattern, Match, L0, L) :-
     append(Match, L, L0),
     re_match(Pattern, Match, Match).
 
-% Capturing groups are not supported in prefix matching.
+%% re_match_dcg(+Pattern, -Match, -Groups)//
+%
+% DCG non-terminal prefix matcher.
+% Note: Capturing groups are not supported by the DFA engine and will raise a domain error.
 re_match_dcg(Pattern, _Match, _Groups) -->
     { domain_error(dfa_group_extraction, Pattern) }.
 
 
-% Compile pattern explicitly to reusable NFA representation
+%% re_compile(+Pattern, -Compiled)
+%
+% Compile the regular expression `Pattern` into a reusable NFA structure.
 re_compile(Pattern, NFA) :-
     pattern_ast(Pattern, AST),
     compile_ast_nfa(AST, NFA).
 
-% Clear cached patterns
+%% re_clear_cache
+%
+% Clear all compiled patterns currently stored in the dynamic `dfa_pattern_cache/2` database.
 re_clear_cache :-
     retractall(dfa_pattern_cache(_, _)).
 

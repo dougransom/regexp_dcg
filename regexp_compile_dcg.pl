@@ -1,3 +1,10 @@
+/**
+  Provides a Definite Clause Grammar (DCG) based regular expression engine.
+
+  This module compiles regular expressions to a pure Scryer Prolog DCG representation,
+  supporting standard regex matching, reified matching, group extraction, caching, and
+  DCG-based non-terminal parsing.
+*/
 :- module(regexp_dcg, [
     /* =========================================================================
        Public User Interface
@@ -57,7 +64,10 @@
 
 :- dynamic(pattern_cache/3).
 
-% Compile a pattern into a reusable compiled goal structure
+%% re_compile(+Pattern, -Compiled)
+%
+% Compile the regular expression `Pattern` (which can be a string, atom, or AST)
+% into a reusable `Compiled` structure containing the matching goal and group count.
 re_compile(Pattern, compiled(Goal, GroupCount)) :-
     pattern_ast(Pattern, AST),
     ast_dcg_goal(AST, 0, GroupCount, Goal).
@@ -73,21 +83,32 @@ pattern_compiled(Pattern, Goal, GroupCount) :-
         assertz(pattern_cache(Key, Goal, GroupCount))
     ).
 
+%% re_clear_cache
+%
+% Clear all compiled patterns currently stored in the dynamic `pattern_cache/3` database.
 re_clear_cache :-
     retractall(pattern_cache(_, _, _)).
 
-% Most common: just get the full match
+%% re_match(+Pattern, +Input, -Match)
+%
+% Match the regular expression `Pattern` against `Input`.
+% `Match` is unified with the matched substring of `Input`.
 re_match(Pattern, Input, Match) :-
     re_match_groups(Pattern, Input, Match, _Groups).
 
-% reif compatible re_match_t/3
+%% re_match_t(+Pattern, +Input, ?Truth)
+%
+% Reified matching. `Truth` is unified with `true` if `Pattern` matches `Input`, and `false` otherwise.
 re_match_t(Pattern, Input, T) :-
     (   re_match(Pattern, Input, _) ->
         T = true
     ;   T = false
     ).
 
-% Richer: full match + numbered groups
+%% re_match_groups(+Pattern, +Input, -Match, -Groups)
+%
+% Match the regular expression `Pattern` against `Input`.
+% `Match` is unified with the matched substring, and `Groups` is a list of captured group substrings.
 re_match_groups(Pattern, Input, Match, Groups) :-
     pattern_compiled(Pattern, Goal, GroupCount),
     length(Groups, GroupCount),
@@ -97,7 +118,10 @@ re_match_groups(Pattern, Input, Match, Groups) :-
     state_match(SF, Match),
     state_groups(SF, Groups).
 
-% reif compatible re_match_groups_t/5
+%% re_match_groups_t(+Pattern, +Input, -Match, -Groups, ?Truth)
+%
+% Reified version of `re_match_groups/4`. `Truth` is unified with `true` if `Pattern` matches `Input`,
+% and `false` otherwise.
 re_match_groups_t(Pattern, Input, Match, Groups, T) :-
     (   re_match_groups(Pattern, Input, Match0, Groups0) ->
         T = true,
@@ -108,9 +132,17 @@ re_match_groups_t(Pattern, Input, Match, Groups, T) :-
 
 % DCG phrase matcher helpers
 
+%% re_match_dcg(+Pattern, -Match)//
+%
+% DCG non-terminal prefix matcher. Matches a prefix of the input sequence
+% that conforms to the regular expression `Pattern`, unifying it with `Match`.
 re_match_dcg(Pattern, Match) -->
     re_match_dcg(Pattern, Match, _Groups).
 
+%% re_match_dcg(+Pattern, -Match, -Groups)//
+%
+% DCG non-terminal prefix matcher. Matches a prefix of the input sequence conforming to `Pattern`,
+% unifying it with `Match` and extracting captured `Groups`.
 re_match_dcg(Pattern, Match, Groups) -->
     re_match_dcg_state(Pattern, Match, _S0, SF),
     {
