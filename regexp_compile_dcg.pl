@@ -1,39 +1,51 @@
 :- module(regexp_dcg, [
-    re_match/3,
-    re_match_t/3,
-    re_match_groups/4,
-    re_match_groups_t/5,
-    re_compile/2,
-    re_match_dcg//2,
-    re_match_dcg//3,
-    re_match_dcg_state//4,
-    re_clear_cache/0,
-    pattern_cache/3,
-    pattern_ast/2,
-    ast_dcg/4,
-    ast_dcg_/4,
-    dcg_lit//3,
-    dcg_concat//3,
-    dcg_or//4,
-    dcg_capture//4,
-    dcg_star//3,
-    dcg_plus//3,
-    dcg_question//3,
-    dcg_quant//5,
-    dcg_dot//2,
-    dcg_bol/4,
-    dcg_eol/4,
-    dcg_builtin//3,
-    dcg_class//3,
-    dcg_lookahead/5,
-    dcg_neg_lookahead/5,
-    dcg_star_lazy//3,
-    dcg_plus_lazy//3,
-    dcg_question_lazy//3,
-    dcg_quant_lazy//5,
-    dcg_named_capture//5,
-    dcg_flags/5,
-    dcg_flags_group//4
+    /* =========================================================================
+       Public User Interface
+       These predicates define the main API for external users of the library.
+       ========================================================================= */
+    re_match/3,              % Match pattern against input, unify Match with full match
+    re_match_t/3,            % Reified matching (returns true/false)
+    re_match_groups/4,       % Match pattern against input, extract captured groups
+    re_match_groups_t/5,     % Reified group matching (returns true/false)
+    re_compile/2,            % Compile pattern to a reusable compiled structure
+    re_match_dcg//2,         % DCG non-terminal prefix matcher (no group extraction)
+    re_match_dcg//3,         % DCG non-terminal prefix matcher (with group extraction)
+    re_clear_cache/0,        % Clear compiled pattern cache database
+
+    /* =========================================================================
+       Internal & Testing Interface
+       Exported purely for dynamic goal resolution (call/N) and isolated unit tests.
+       NOT intended for direct use by users of this library.
+       ========================================================================= */
+    re_match_dcg_state//4,   % Internal state helper for DCG matching
+    pattern_cache/3,         % Caching dynamic predicate schema
+    pattern_ast/2,           % AST parsing utility
+    ast_dcg/4,               % Core AST-to-DCG compiler predicate
+    ast_dcg_/4,              % AST-to-DCG compiler helper
+
+    % --- Runtime Combinators (Constructed in Compiled Goals) ---
+    dcg_lit//3,              % Match literal character sequence
+    dcg_concat//3,           % Match concatenated sub-expressions
+    dcg_or//4,               % Match choice/alternation sub-expressions
+    dcg_capture//4,          % Match capturing group
+    dcg_star//3,             % Match greedy Kleene star quantifier
+    dcg_plus//3,             % Match greedy one-or-more quantifier
+    dcg_question//3,         % Match greedy optional quantifier
+    dcg_quant//5,            % Match greedy repetition quantifier
+    dcg_dot//2,              % Match wildcard character dot
+    dcg_bol/4,               % Match beginning-of-line anchor
+    dcg_eol/4,               % Match end-of-line anchor
+    dcg_builtin//3,          % Match character from builtin class (e.g. \d)
+    dcg_class//3,            % Match custom character class list
+    dcg_lookahead/5,         % Match lookahead assertion (positive)
+    dcg_neg_lookahead/5,     % Match lookahead assertion (negative)
+    dcg_star_lazy//3,        % Match non-greedy Kleene star quantifier
+    dcg_plus_lazy//3,        % Match non-greedy one-or-more quantifier
+    dcg_question_lazy//3,    % Match non-greedy optional quantifier
+    dcg_quant_lazy//5,       % Match non-greedy repetition quantifier
+    dcg_named_capture//5,    % Match named capturing group
+    dcg_flags/5,             % Match inline flag toggles (e.g. (?i))
+    dcg_flags_group//4       % Match inline flag scoped sub-expressions
 ]).
 
 :- use_module(regexp_ast).
