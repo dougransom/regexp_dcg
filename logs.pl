@@ -34,6 +34,7 @@
 :- use_module(library(reif)).
 :- use_module(library(freeze)).
 :- use_module(library(cont)).
+:- use_module(library(error)).
 
 :- dynamic(handler/2). % handler(Level, Closure)
 :- dynamic(global_log_level/1).

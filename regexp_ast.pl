@@ -16,6 +16,7 @@
 
 :- use_module(library(dcgs)).
 :- use_module(library(lists)).
+:- use_module(library(dif)).
 
 % Reusable expansion to turn a string into O(1) facts for a predicate.
 user:term_expansion(generate_char_predicate(Name, String), [PluralFact|Clauses]) :-
@@ -254,7 +255,7 @@ posix_name(Name) -->
 
 posix_name_chars([C|Cs]) -->
     [C],
-    { C \= 0': }, 
+    { dif(C, ':') }, 
     posix_name_chars(Cs).
 
 posix_name_chars([]) -->
@@ -270,7 +271,7 @@ class_char(C) -->
 
 class_char(C) -->
     [C],
-    { C \= 0'] }.      % don't allow ']' inside
+    { dif(C, ']') }.      % don't allow ']' inside
 
 
 re_literal_run(Cs) -->

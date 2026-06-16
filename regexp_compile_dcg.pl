@@ -41,6 +41,7 @@
 :- use_module(library(si)).
 :- use_module(library(lists)).
 :- use_module(library(dcgs)).
+:- use_module(library(error)).
 
 :- dynamic(pattern_cache/3).
 
@@ -194,6 +195,7 @@ ast_dcg_goal(postfix(Expr, question), C0, CF, regexp_dcg:dcg_question(GExpr)) :-
 ast_dcg_goal(quant(Expr, mn(M, N)), C0, CF, regexp_dcg:dcg_quant(GExpr, M, N)) :-
     ast_dcg_goal(Expr, C0, CF, GExpr).
 ast_dcg_goal(dot, C, C, regexp_dcg:dcg_dot).
+ast_dcg_goal(escaped(Char), C, C, regexp_dcg:dcg_lit([Char])).
 ast_dcg_goal(anchor(bol), C, C, regexp_dcg:dcg_bol).
 ast_dcg_goal(anchor(eol), C, C, regexp_dcg:dcg_eol).
 ast_dcg_goal(builtin(Class), C, C, regexp_dcg:dcg_builtin(Class)).

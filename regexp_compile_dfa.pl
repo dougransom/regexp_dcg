@@ -8,6 +8,7 @@
 :- use_module(library(lists)).
 :- use_module(library(dcgs)).
 :- use_module(library(si)).
+:- use_module(library(error)).
 :- use_module(regexp_ast, [re_ast_chars/3]).
 
 :- dynamic(dfa_pattern_cache/2).
@@ -15,7 +16,9 @@
 % Top-level interface: match pattern against input, unify Match with full input
 re_match(Pattern, Input, Match) :-
     to_chars(Input, Chars),
-    (   dfa_pattern_cache(Pattern, NFA) ->
+    (   Pattern = nfa(_, _, _, _) ->
+        NFA = Pattern
+    ;   dfa_pattern_cache(Pattern, NFA) ->
         true
     ;   pattern_ast(Pattern, AST),
         compile_ast_nfa(AST, NFA),
