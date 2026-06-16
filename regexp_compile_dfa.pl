@@ -71,6 +71,10 @@ re_match_groups_t(Pattern, _Input, _Match, _Groups, _T) :-
 %
 % DCG non-terminal prefix matcher. Matches a prefix of the input sequence
 % that conforms to the regular expression `Pattern`, unifying it with `Match`.
+re_match_dcg(nfa(Start, Accept, States, Transitions), Match, L0, L) :-
+    !,
+    append(Match, L, L0),
+    re_match(nfa(Start, Accept, States, Transitions), Match, Match).
 re_match_dcg(Pattern, Match, L0, L) :-
     append(Match, L, L0),
     re_match(Pattern, Match, Match).
@@ -79,6 +83,9 @@ re_match_dcg(Pattern, Match, L0, L) :-
 %
 % DCG non-terminal prefix matcher.
 % Note: Capturing groups are not supported by the DFA engine and will raise a domain error.
+re_match_dcg(nfa(Start, Accept, States, Transitions), _Match, _Groups) -->
+    !,
+    { domain_error(dfa_group_extraction, nfa(Start, Accept, States, Transitions)) }.
 re_match_dcg(Pattern, _Match, _Groups) -->
     { domain_error(dfa_group_extraction, Pattern) }.
 

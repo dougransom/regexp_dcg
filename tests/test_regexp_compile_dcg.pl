@@ -193,6 +193,13 @@ test("dcg phrase match helper with compiled pattern",
     phrase(re_match_dcg(Compiled, Match), "aaabc", "c"),
     Match == "aaab")).
 
+test("dcg phrase match helper with compiled pattern and groups",
+    (re_compile("(a*)b", Compiled),
+    phrase(re_match_dcg(Compiled, Match, Groups), "aaabc", "c"),
+    Match == "aaab",
+    Groups == ["aaa"])).
+
+
 test("compilation cache matches",
     (re_clear_cache,
     re_match("c*d", "cccd", Match),

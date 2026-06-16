@@ -136,6 +136,9 @@ re_match_groups_t(Pattern, Input, Match, Groups, T) :-
 %
 % DCG non-terminal prefix matcher. Matches a prefix of the input sequence
 % that conforms to the regular expression `Pattern`, unifying it with `Match`.
+re_match_dcg(compiled(Goal, GroupCount), Match) -->
+    !,
+    re_match_dcg(compiled(Goal, GroupCount), Match, _Groups).
 re_match_dcg(Pattern, Match) -->
     re_match_dcg(Pattern, Match, _Groups).
 
@@ -143,6 +146,12 @@ re_match_dcg(Pattern, Match) -->
 %
 % DCG non-terminal prefix matcher. Matches a prefix of the input sequence conforming to `Pattern`,
 % unifying it with `Match` and extracting captured `Groups`.
+re_match_dcg(compiled(Goal, GroupCount), Match, Groups) -->
+    !,
+    re_match_dcg_state(compiled(Goal, GroupCount), Match, _S0, SF),
+    {
+        state_groups(SF, Groups)
+    }.
 re_match_dcg(Pattern, Match, Groups) -->
     re_match_dcg_state(Pattern, Match, _S0, SF),
     {

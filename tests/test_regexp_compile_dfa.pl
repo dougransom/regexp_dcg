@@ -141,3 +141,9 @@ test("DFA re_match_dcg with groups throws domain_error",
      nonvar(Error),
      Error = error(domain_error(dfa_group_extraction, _), _))).
 
+test("DFA re_match_dcg prefix matching with compiled pattern",
+    (regexp_dfa:re_compile("a*b", Compiled),
+     phrase(regexp_dfa:re_match_dcg(Compiled, Match), "aaabc", "c"),
+     Match == "aaab")).
+
+
