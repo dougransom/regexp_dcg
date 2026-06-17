@@ -249,4 +249,10 @@ main :-
               phrase((..., re_match_dcg("aa", Match39), ...), "bbbbaaccccc"),
               ["Match"], [Match39]),
 
+    run_query(Stream, "40. Nested Captures 4-Deep (3 Top-Level)", "Extract groups from a pattern of three captures containing nested captures 4 deep.",
+              "phrase(re_match_dcg(\"(a(b(c(d))))(e(f(g(h))))(i(j(k(l))))\", Match, Groups), \"abcdefghijkl\")",
+              phrase(re_match_dcg("(a(b(c(d))))(e(f(g(h))))(i(j(k(l))))", Match40, Groups40), "abcdefghijkl"),
+              ["Match", "Groups"], [Match40, Groups40]),
+
     close(Stream).
+

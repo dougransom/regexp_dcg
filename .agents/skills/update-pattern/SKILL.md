@@ -39,3 +39,13 @@ Whenever a new regular expression pattern feature is implemented, you must add c
      phrase((..., re_match_dcg("aa", Match), ...), "bbbbaaccccc")
      ```
 
+4. **Update the Introduction Documentation**:
+   When you add a new pattern test in `test_regexp_compile_dcg.pl`, you must also add a corresponding example query to `generate_intro_md.pl`.
+   - Add a `run_query` statement before `close(Stream).` in `generate_intro_md.pl`.
+   - Regenerate the documentation by running the script:
+     ```bash
+     nice scryer-safe -g main -g halt generate_intro_md.pl
+     ```
+   - Verify that the new query and its actual Scryer Prolog output (including bindings) are correctly added to [examples/regexp_intro.md](file:///home/doug/code/regexp/examples/regexp_intro.md).
+
+

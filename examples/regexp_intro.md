@@ -416,3 +416,14 @@ Match pattern inside input using phrase/2 (requires matching remaining suffix).
 ;  false.
 ```
 
+### 40. Nested Captures 4-Deep (3 Top-Level)
+
+Extract groups from a pattern of three captures containing nested captures 4 deep.
+
+```prolog
+?- phrase(re_match_dcg("(a(b(c(d))))(e(f(g(h))))(i(j(k(l))))", Match, Groups), "abcdefghijkl").
+   Match = "abcdefghijkl"
+   Groups = ["abcd", "bcd", "cd", "d", "efgh", "fgh", "gh", "h", "ijkl", "jkl", "kl", "l"]
+;  false.
+```
+
