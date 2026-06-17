@@ -225,4 +225,10 @@ test("unanchored match using phrase/2 (no rest)",
     (phrase((..., re_match_dcg("aa", Match), ...), "bbbbaaccccc"),
      Match == "aa")).
 
+test("captures nested 4 deep (3 top-level)",
+    (phrase(re_match_dcg("(a(b(c(d))))(e(f(g(h))))(i(j(k(l))))", Match, Groups), "abcdefghijkl"),
+     Match == "abcdefghijkl",
+     Groups == ["abcd", "bcd", "cd", "d", "efgh", "fgh", "gh", "h", "ijkl", "jkl", "kl", "l"])).
+
+
 

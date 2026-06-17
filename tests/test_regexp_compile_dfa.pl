@@ -146,4 +146,14 @@ test("DFA re_match_dcg prefix matching with compiled pattern",
      phrase(regexp_dfa:re_match_dcg(Compiled, Match), "aaabc", "c"),
      Match == "aaab")).
 
+test("DFA captures nested 4 deep (3 top-level)",
+    (regexp_dfa:re_match("(a(b(c(d))))(e(f(g(h))))(i(j(k(l))))", "abcdefghijkl", Match),
+     Match == "abcdefghijkl")).
+
+test("DFA captures nested 4 deep (3 top-level) throws domain_error on group extraction",
+    (catch(regexp_dfa:re_match_groups("(a(b(c(d))))(e(f(g(h))))(i(j(k(l))))", "abcdefghijkl", _, _), Error, true),
+     nonvar(Error),
+     Error = error(domain_error(dfa_group_extraction, _), _))).
+
+
 
