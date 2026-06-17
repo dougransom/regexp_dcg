@@ -4,6 +4,9 @@
   This module compiles regular expressions to an NFA structure and matches them
   using a DFA simulation. Note that group extraction is not supported by the DFA engine
   and will raise a domain error.
+
+  For the list of supported regular expression patterns, see the module documentation
+  for `regexp_compile_dcg` (in [regexp_compile_dcg.pl](file:///home/doug/code/regexp/regexp_compile_dcg.pl)).
 */
 :- module(regexp_dfa, [
     re_match/3,
