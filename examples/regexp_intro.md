@@ -26,7 +26,7 @@ Compile pattern into a DCG and match a string.
 Basic matching of a literal pattern.
 
 ```prolog
-?- re_match("abc", "abc", Match).
+?- phrase(re_match_dcg("abc", Match), "abc").
    Match = "abc"
 ;  false.
 ```
@@ -36,7 +36,7 @@ Basic matching of a literal pattern.
 Matching either sub-expression in alternation.
 
 ```prolog
-?- re_match("a|bc", "bc", Match).
+?- phrase(re_match_dcg("a|bc", Match), "bc").
    Match = "bc"
 ;  false.
 ```
@@ -46,7 +46,7 @@ Matching either sub-expression in alternation.
 Explicit precedence using grouping parentheses.
 
 ```prolog
-?- re_match("(a|b)c", "ac", Match).
+?- phrase(re_match_dcg("(a|b)c", Match), "ac").
    Match = "ac"
 ;  false.
 ```
@@ -56,7 +56,7 @@ Explicit precedence using grouping parentheses.
 Match zero or more times greedily.
 
 ```prolog
-?- re_match("a*", "aaa", Match).
+?- phrase(re_match_dcg("a*", Match), "aaa").
    Match = "aaa"
 ;  false.
 ```
@@ -66,7 +66,7 @@ Match zero or more times greedily.
 Match one or more times greedily.
 
 ```prolog
-?- re_match("a+", "aa", Match).
+?- phrase(re_match_dcg("a+", Match), "aa").
    Match = "aa"
 ;  false.
 ```
@@ -76,7 +76,7 @@ Match one or more times greedily.
 Match zero or one time greedily (optional matches).
 
 ```prolog
-?- re_match("a?", "a", Match).
+?- phrase(re_match_dcg("a?", Match), "a").
    Match = "a"
 ;  false.
 ```
@@ -86,7 +86,7 @@ Match zero or one time greedily (optional matches).
 Match zero or one time greedily (empty match).
 
 ```prolog
-?- re_match("a?", "", Match).
+?- phrase(re_match_dcg("a?", Match), "").
    Match = ""
 ;  false.
 ```
@@ -96,7 +96,7 @@ Match zero or one time greedily (empty match).
 Match exactly N times.
 
 ```prolog
-?- re_match("a{3}", "aaa", Match).
+?- phrase(re_match_dcg("a{3}", Match), "aaa").
    Match = "aaa"
 ;  false.
 ```
@@ -106,7 +106,7 @@ Match exactly N times.
 Match between N and M times greedily.
 
 ```prolog
-?- re_match("a{2,4}", "aaaa", Match).
+?- phrase(re_match_dcg("a{2,4}", Match), "aaaa").
    Match = "aaaa"
 ;  false.
 ```
@@ -116,7 +116,7 @@ Match between N and M times greedily.
 Extract substrings captured by groups.
 
 ```prolog
-?- re_match_groups("(abc)", "abc", Match, Groups).
+?- phrase(re_match_dcg("(abc)", Match, Groups), "abc").
    Match = "abc"
    Groups = ["abc"]
 ;  false.
@@ -127,7 +127,7 @@ Extract substrings captured by groups.
 Extract substrings captured by nested groups.
 
 ```prolog
-?- re_match_groups("(a(b)c)", "abc", Match, Groups).
+?- phrase(re_match_dcg("(a(b)c)", Match, Groups), "abc").
    Match = "abc"
    Groups = ["abc", "b"]
 ;  false.
@@ -138,7 +138,7 @@ Extract substrings captured by nested groups.
 Edge case: greedy star matching empty string.
 
 ```prolog
-?- re_match("a*", "", Match).
+?- phrase(re_match_dcg("a*", Match), "").
    Match = ""
 ;  false.
 ```
@@ -148,7 +148,7 @@ Edge case: greedy star matching empty string.
 Edge case: nested star operator.
 
 ```prolog
-?- re_match("(a*)*", "a", Match).
+?- phrase(re_match_dcg("(a*)*", Match), "a").
    Match = "a"
 ;  false.
 ```
@@ -158,7 +158,7 @@ Edge case: nested star operator.
 Match any single character listed in brackets.
 
 ```prolog
-?- re_match("[abc]", "b", Match).
+?- phrase(re_match_dcg("[abc]", Match), "b").
    Match = "b"
 ;  false.
 ```
@@ -168,7 +168,7 @@ Match any single character listed in brackets.
 Match any single character not listed in brackets.
 
 ```prolog
-?- re_match("[^abc]", "d", Match).
+?- phrase(re_match_dcg("[^abc]", Match), "d").
    Match = "d"
 ;  false.
 ```
@@ -178,7 +178,7 @@ Match any single character not listed in brackets.
 Match any single character except newline.
 
 ```prolog
-?- re_match("a.c", "abc", Match).
+?- phrase(re_match_dcg("a.c", Match), "abc").
    Match = "abc"
 ;  false.
 ```
@@ -188,7 +188,7 @@ Match any single character except newline.
 Match any digit character via `\d`.
 
 ```prolog
-?- re_match("\\d", "5", Match).
+?- phrase(re_match_dcg("\\d", Match), "5").
    Match = "5"
 ;  false.
 ```
@@ -198,7 +198,7 @@ Match any digit character via `\d`.
 Match any alphanumeric character plus underscore via `\w`.
 
 ```prolog
-?- re_match("\\w", "x", Match).
+?- phrase(re_match_dcg("\\w", Match), "x").
    Match = "x"
 ;  false.
 ```
@@ -208,7 +208,7 @@ Match any alphanumeric character plus underscore via `\w`.
 Match beginning of the input string via `^`.
 
 ```prolog
-?- re_match("^a", "a", Match).
+?- phrase(re_match_dcg("^a", Match), "a").
    Match = "a"
 ;  false.
 ```
@@ -218,7 +218,7 @@ Match beginning of the input string via `^`.
 Match end of the input string via `$`.
 
 ```prolog
-?- re_match("a$", "a", Match).
+?- phrase(re_match_dcg("a$", Match), "a").
    Match = "a"
 ;  false.
 ```
@@ -228,7 +228,7 @@ Match end of the input string via `$`.
 Match minimal number of repetitions via `*?`.
 
 ```prolog
-?- re_match("a*?", "a", Match).
+?- phrase(re_match_dcg("a*?", Match), "a").
    Match = "a"
 ;  false.
 ```
@@ -238,7 +238,7 @@ Match minimal number of repetitions via `*?`.
 Match pattern only if followed by lookahead sub-expression.
 
 ```prolog
-?- re_match("a(?=b)b", "ab", Match).
+?- phrase(re_match_dcg("a(?=b)b", Match), "ab").
    Match = "ab"
 ;  false.
 ```
@@ -248,7 +248,7 @@ Match pattern only if followed by lookahead sub-expression.
 Syntax support for named capturing groups.
 
 ```prolog
-?- re_match("(?P<id>abc)", "abc", Match).
+?- phrase(re_match_dcg("(?P<id>abc)", Match), "abc").
    Match = "abc"
 ;  false.
 ```
@@ -258,7 +258,7 @@ Syntax support for named capturing groups.
 Enable case-insensitivity using inline flags.
 
 ```prolog
-?- re_match("(?i)abc", "ABC", Match).
+?- phrase(re_match_dcg("(?i)abc", Match), "ABC").
    Match = "ABC"
 ;  false.
 ```
@@ -392,6 +392,27 @@ Clear the cache database and verify no patterns remain.
 
 ```prolog
 ?- re_clear_cache, re_match("c*d", "cccd", Match), re_clear_cache, \+ regexp_dcg:pattern_cache(_, _, _).
+;  false.
+```
+
+### 38. Unanchored Match (showing rest of input)
+
+Match pattern inside input using phrase/3.
+
+```prolog
+?- phrase((any_chars, re_match_dcg("aa", Match)), "bbbbaaccccc", Rest).
+   Match = "aa"
+   Rest = "ccccc"
+;  false.
+```
+
+### 39. Unanchored Match (no rest of input)
+
+Match pattern inside input using phrase/2 (requires matching remaining suffix).
+
+```prolog
+?- phrase((any_chars, re_match_dcg("aa", Match), any_chars), "bbbbaaccccc").
+   Match = "aa"
 ;  false.
 ```
 

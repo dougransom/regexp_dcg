@@ -43,105 +43,105 @@ test("dcg for literal",
     )).
 
 test("simple match",
-    (dformat("Testing re_match with 'abc' against 'abc'", []),
-    re_match("abc", "abc", Match),
+    (dformat("Testing re_match_dcg with 'abc' against 'abc'", []),
+    phrase(re_match_dcg("abc", Match), "abc"),
     dformat("\nMatch result: ~w", [Match]),
     Match == "abc")).
 
 test("precedence: alternation vs concat",
-    (re_match("a|bc", "bc", Match),
+    (phrase(re_match_dcg("a|bc", Match), "bc"),
     Match == "bc")).
 
 test("precedence: grouping with alternation",
-    (re_match("(a|b)c", "ac", Match),
+    (phrase(re_match_dcg("(a|b)c", Match), "ac"),
     Match == "ac")).
 
 test("quantifier: greedy star",
-    (re_match("a*", "aaa", Match),
+    (phrase(re_match_dcg("a*", Match), "aaa"),
     Match == "aaa")).
 
 test("quantifier: plus",
-    (re_match("a+", "aa", Match),
+    (phrase(re_match_dcg("a+", Match), "aa"),
     Match == "aa")).
 
 test("quantifier: question matches",
-    (re_match("a?", "a", Match),
+    (phrase(re_match_dcg("a?", Match), "a"),
     Match == "a")).
 
 test("quantifier: question empty",
-    (re_match("a?", "", Match),
+    (phrase(re_match_dcg("a?", Match), ""),
     Match == "")).
 
 test("quantifier: exact repetition",
-    (re_match("a{3}", "aaa", Match),
+    (phrase(re_match_dcg("a{3}", Match), "aaa"),
     Match == "aaa")).
 
 test("quantifier: range repetition",
-    (re_match("a{2,4}", "aaaa", Match),
+    (phrase(re_match_dcg("a{2,4}", Match), "aaaa"),
     Match == "aaaa")).
 
 test("capture: single group",
-    (re_match_groups("(abc)", "abc", Match, Groups),
+    (phrase(re_match_dcg("(abc)", Match, Groups), "abc"),
     Match == "abc",
     Groups == ["abc"])).
 
 test("capture: nested groups",
-    (re_match_groups("(a(b)c)", "abc", Match, Groups),
+    (phrase(re_match_dcg("(a(b)c)", Match, Groups), "abc"),
     Match == "abc",
     Groups == ["abc", "b"])).
 
 test("edge: star on empty string",
-    (re_match("a*", "", Match),
+    (phrase(re_match_dcg("a*", Match), ""),
     Match == "")).
 
 test("edge: nested stars (a*)*",
-    (re_match("(a*)*", "a", Match),
+    (phrase(re_match_dcg("(a*)*", Match), "a"),
     Match == "a")).
 
 % Test cases for the 8 missing features to verify our current parsing/compiling limits
 
 test("1. character classes: simple",
-    (re_match("[abc]", "b", Match),
+    (phrase(re_match_dcg("[abc]", Match), "b"),
     Match == "b")).
 
 test("1. character classes: negated",
-    (re_match("[^abc]", "d", Match),
+    (phrase(re_match_dcg("[^abc]", Match), "d"),
     Match == "d")).
 
 test("2. wildcard dot",
-    (re_match("a.c", "abc", Match),
+    (phrase(re_match_dcg("a.c", Match), "abc"),
     Match == "abc")).
 
 test("3. builtin class: digit",
-    (re_match("\\d", "5", Match),
+    (phrase(re_match_dcg("\\d", Match), "5"),
     Match == "5")).
 
 test("3. builtin class: word",
-    (re_match("\\w", "x", Match),
+    (phrase(re_match_dcg("\\w", Match), "x"),
     Match == "x")).
 
 test("4. anchor: start of line",
-    (re_match("^a", "a", Match),
+    (phrase(re_match_dcg("^a", Match), "a"),
     Match == "a")).
 
 test("4. anchor: end of line",
-    (re_match("a$", "a", Match),
+    (phrase(re_match_dcg("a$", Match), "a"),
     Match == "a")).
 
 test("5. non-greedy quantifier",
-    (re_match("a*?", "a", Match),
+    (phrase(re_match_dcg("a*?", Match), "a"),
     Match == "a")).
 
 test("6. assertion: lookahead",
-    (re_match("a(?=b)b", "ab", Match),
+    (phrase(re_match_dcg("a(?=b)b", Match), "ab"),
     Match == "ab")).
 
 test("7. named group",
-    (re_match("(?P<id>abc)", "abc", Match),
+    (phrase(re_match_dcg("(?P<id>abc)", Match), "abc"),
     Match == "abc")).
 
 test("8. inline flags",
-    (re_match("(?i)abc", "ABC", Match),
+    (phrase(re_match_dcg("(?i)abc", Match), "ABC"),
     Match == "ABC")).
 
 test("reif compatibility: re_match_t true",
@@ -215,3 +215,16 @@ test("compilation cache clearing",
     regexp_dcg:pattern_cache(Key, _, _),
     re_clear_cache,
     \+ regexp_dcg:pattern_cache(Key, _, _))).
+
+test("unanchored match using phrase/3 (shows rest)",
+    (phrase((any_chars, re_match_dcg("aa", Match)), "bbbbaaccccc", Rest),
+     Match == "aa",
+     Rest == "ccccc")).
+
+test("unanchored match using phrase/2 (no rest)",
+    (phrase((any_chars, re_match_dcg("aa", Match), any_chars), "bbbbaaccccc"),
+     Match == "aa")).
+
+any_chars --> [].
+any_chars --> [_], any_chars.
+
