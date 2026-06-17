@@ -80,11 +80,14 @@ test("quantifier: range repetition",
     (phrase(re_match_dcg("a{2,4}", Match), "aaaa"),
     Match == "aaaa")).
 
+% Capturing groups are ordered by group-number order (left-to-right based on their opening parenthesis).
+% Definition: https://docs.oracle.com/javase/tutorial/essential/regex/groups.html
 test("capture: single group",
     (phrase(re_match_dcg("(abc)", Match, Groups), "abc"),
     Match == "abc",
     Groups == ["abc"])).
 
+% The outer group starts first, followed by the inner group.
 test("capture: nested groups",
     (phrase(re_match_dcg("(a(b)c)", Match, Groups), "abc"),
     Match == "abc",
@@ -225,6 +228,9 @@ test("unanchored match using phrase/2 (no rest)",
     (phrase((..., re_match_dcg("aa", Match), ...), "bbbbaaccccc"),
      Match == "aa")).
 
+% 3 top-level capture structures, each nested 4 levels deep. Capturing groups are ordered
+% in group-number order (left-to-right based on their opening parenthesis).
+% Definition: https://docs.oracle.com/javase/tutorial/essential/regex/groups.html
 test("captures nested 4 deep (3 top-level)",
     (phrase(re_match_dcg("(a(b(c(d))))(e(f(g(h))))(i(j(k(l))))", Match, Groups), "abcdefghijkl"),
      Match == "abcdefghijkl",

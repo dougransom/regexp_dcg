@@ -113,7 +113,7 @@ Match between N and M times greedily.
 
 ### 11. Single Group Capture
 
-Extract substrings captured by groups.
+Extract substrings captured by groups. Captured groups are returned in group-number order (left-to-right based on the position of their opening parentheses). See: https://docs.oracle.com/javase/tutorial/essential/regex/groups.html
 
 ```prolog
 ?- phrase(re_match_dcg("(abc)", Match, Groups), "abc").
@@ -124,7 +124,7 @@ Extract substrings captured by groups.
 
 ### 12. Nested Group Capture
 
-Extract substrings captured by nested groups.
+Extract substrings captured by nested groups. The groups are returned in group-number order (left-to-right based on the position of their opening parentheses), so the outer group comes first. See: https://docs.oracle.com/javase/tutorial/essential/regex/groups.html
 
 ```prolog
 ?- phrase(re_match_dcg("(a(b)c)", Match, Groups), "abc").
@@ -285,7 +285,7 @@ Retrieve matching truth value in logically pure context (False case).
 
 ### 28. Reified Group Matching (True)
 
-Reified matching with captured groups (True case).
+Reified matching with captured groups (True case). Captured groups are returned in group-number order (left-to-right based on the position of their opening parentheses). See: https://docs.oracle.com/javase/tutorial/essential/regex/groups.html
 
 ```prolog
 ?- re_match_groups_t("(abc)", "abc", Match, Groups, T).
@@ -297,7 +297,7 @@ Reified matching with captured groups (True case).
 
 ### 29. Reified Group Matching (False)
 
-Reified matching with captured groups (False case).
+Reified matching with captured groups (False case). Groups are ordered in group-number order if a match is found. See: https://docs.oracle.com/javase/tutorial/essential/regex/groups.html
 
 ```prolog
 ?- re_match_groups_t("(abc)", "def", Match, Groups, T).
@@ -341,7 +341,7 @@ Use DCG interface `re_match_dcg//2` inside phrase/2.
 
 ### 33. DCG Phrase Matcher with Groups
 
-Use DCG interface `re_match_dcg//3` with groups inside phrase/2.
+Use DCG interface `re_match_dcg//3` with groups inside phrase/2. Captured groups are returned in group-number order (left-to-right based on the position of their opening parentheses). See: https://docs.oracle.com/javase/tutorial/essential/regex/groups.html
 
 ```prolog
 ?- phrase(re_match_dcg("(a*)b", Match, Groups), "aaabc", "c").
@@ -363,7 +363,7 @@ Use `re_match_dcg//2` with a pre-compiled pattern.
 
 ### 35. DCG Phrase Matcher with Compiled Pattern and Groups
 
-Use `re_match_dcg//3` with a pre-compiled pattern and group extraction.
+Use `re_match_dcg//3` with a pre-compiled pattern and group extraction. Captured groups are returned in group-number order (left-to-right based on the position of their opening parentheses). See: https://docs.oracle.com/javase/tutorial/essential/regex/groups.html
 
 ```prolog
 ?- re_compile("(a*)b", Compiled), phrase(re_match_dcg(Compiled, Match, Groups), "aaabc", "c").
@@ -418,7 +418,7 @@ Match pattern inside input using phrase/2 (requires matching remaining suffix).
 
 ### 40. Nested Captures 4-Deep (3 Top-Level)
 
-Extract groups from a pattern of three captures containing nested captures 4 deep.
+Extract groups from a pattern of three captures containing nested captures 4 deep. Captured groups are returned in group-number order (left-to-right based on the position of their opening parentheses). Nested groups follow their enclosing group. See: https://docs.oracle.com/javase/tutorial/essential/regex/groups.html
 
 ```prolog
 ?- phrase(re_match_dcg("(a(b(c(d))))(e(f(g(h))))(i(j(k(l))))", Match, Groups), "abcdefghijkl").

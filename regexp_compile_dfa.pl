@@ -59,14 +59,18 @@ re_match_t(Pattern, Input, T) :-
 %% re_match_groups(+Pattern, +Input, -Match, -Groups)
 %
 % Match the regular expression `Pattern` against `Input`.
-% Note: Capturing groups are not supported by the DFA engine and will raise a domain error.
+% Note: Capturing groups would normally be ordered in group-number order (left-to-right based on
+% the order of their opening parentheses). See: https://docs.oracle.com/javase/tutorial/essential/regex/groups.html
+% However, capturing groups are not supported by the DFA engine and will raise a domain error.
 re_match_groups(Pattern, _Input, _Match, _Groups) :-
     domain_error(dfa_group_extraction, Pattern).
 
 %% re_match_groups_t(+Pattern, +Input, -Match, -Groups, ?Truth)
 %
 % Reified version of `re_match_groups/4`.
-% Note: Capturing groups are not supported by the DFA engine and will raise a domain error.
+% Note: Capturing groups would normally be ordered in group-number order (left-to-right based on
+% the order of their opening parentheses). See: https://docs.oracle.com/javase/tutorial/essential/regex/groups.html
+% However, capturing groups are not supported by the DFA engine and will raise a domain error.
 re_match_groups_t(Pattern, _Input, _Match, _Groups, _T) :-
     domain_error(dfa_group_extraction, Pattern).
 
@@ -85,7 +89,9 @@ re_match_dcg(Pattern, Match, L0, L) :-
 %% re_match_dcg(+Pattern, -Match, -Groups)//
 %
 % DCG non-terminal prefix matcher.
-% Note: Capturing groups are not supported by the DFA engine and will raise a domain error.
+% Note: Capturing groups would normally be ordered in group-number order (left-to-right based on
+% the order of their opening parentheses). See: https://docs.oracle.com/javase/tutorial/essential/regex/groups.html
+% However, capturing groups are not supported by the DFA engine and will raise a domain error.
 re_match_dcg(nfa(Start, Accept, States, Transitions), _Match, _Groups) -->
     !,
     { domain_error(dfa_group_extraction, nfa(Start, Accept, States, Transitions)) }.

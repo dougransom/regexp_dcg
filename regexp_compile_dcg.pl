@@ -137,7 +137,9 @@ re_match_t(Pattern, Input, T) :-
 %% re_match_groups(+Pattern, +Input, -Match, -Groups)
 %
 % Match the regular expression `Pattern` against `Input`.
-% `Match` is unified with the matched substring, and `Groups` is a list of captured group substrings.
+% `Match` is unified with the matched substring, and `Groups` is a list of captured group substrings,
+% ordered in group-number order (left-to-right based on the order of their opening parentheses).
+% Definition: https://docs.oracle.com/javase/tutorial/essential/regex/groups.html
 re_match_groups(Pattern, Input, Match, Groups) :-
     pattern_compiled(Pattern, Goal, GroupCount),
     length(Groups, GroupCount),
@@ -150,7 +152,8 @@ re_match_groups(Pattern, Input, Match, Groups) :-
 %% re_match_groups_t(+Pattern, +Input, -Match, -Groups, ?Truth)
 %
 % Reified version of `re_match_groups/4`. `Truth` is unified with `true` if `Pattern` matches `Input`,
-% and `false` otherwise.
+% and `false` otherwise. Captured groups in `Groups` are ordered in group-number order.
+% Definition: https://docs.oracle.com/javase/tutorial/essential/regex/groups.html
 re_match_groups_t(Pattern, Input, Match, Groups, T) :-
     (   re_match_groups(Pattern, Input, Match0, Groups0) ->
         T = true,
@@ -175,6 +178,9 @@ re_match_dcg(Pattern, Match) -->
 %
 % DCG non-terminal prefix matcher. Matches a prefix of the input sequence conforming to `Pattern`,
 % unifying it with `Match` and extracting captured `Groups`.
+% `Groups` is a list of captured group substrings, ordered in group-number order
+% (left-to-right based on the order of their opening parentheses).
+% Definition: https://docs.oracle.com/javase/tutorial/essential/regex/groups.html
 re_match_dcg(compiled(Goal, GroupCount), Match, Groups) -->
     !,
     re_match_dcg_state(compiled(Goal, GroupCount), Match, _S0, SF),

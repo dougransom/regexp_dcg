@@ -104,12 +104,12 @@ main :-
               phrase(re_match_dcg("a{2,4}", Match10), "aaaa"),
               ["Match"], [Match10]),
 
-    run_query(Stream, "11. Single Group Capture", "Extract substrings captured by groups.",
+    run_query(Stream, "11. Single Group Capture", "Extract substrings captured by groups. Captured groups are returned in group-number order (left-to-right based on the position of their opening parentheses). See: https://docs.oracle.com/javase/tutorial/essential/regex/groups.html",
               "phrase(re_match_dcg(\"(abc)\", Match, Groups), \"abc\")",
               phrase(re_match_dcg("(abc)", Match11, Groups11), "abc"),
               ["Match", "Groups"], [Match11, Groups11]),
 
-    run_query(Stream, "12. Nested Group Capture", "Extract substrings captured by nested groups.",
+    run_query(Stream, "12. Nested Group Capture", "Extract substrings captured by nested groups. The groups are returned in group-number order (left-to-right based on the position of their opening parentheses), so the outer group comes first. See: https://docs.oracle.com/javase/tutorial/essential/regex/groups.html",
               "phrase(re_match_dcg(\"(a(b)c)\", Match, Groups), \"abc\")",
               phrase(re_match_dcg("(a(b)c)", Match12, Groups12), "abc"),
               ["Match", "Groups"], [Match12, Groups12]),
@@ -189,12 +189,12 @@ main :-
               re_match_t("abc", "def", T27),
               ["T"], [T27]),
 
-    run_query(Stream, "28. Reified Group Matching (True)", "Reified matching with captured groups (True case).",
+    run_query(Stream, "28. Reified Group Matching (True)", "Reified matching with captured groups (True case). Captured groups are returned in group-number order (left-to-right based on the position of their opening parentheses). See: https://docs.oracle.com/javase/tutorial/essential/regex/groups.html",
               "re_match_groups_t(\"(abc)\", \"abc\", Match, Groups, T)",
               re_match_groups_t("(abc)", "abc", Match28, Groups28, T28),
               ["Match", "Groups", "T"], [Match28, Groups28, T28]),
 
-    run_query(Stream, "29. Reified Group Matching (False)", "Reified matching with captured groups (False case).",
+    run_query(Stream, "29. Reified Group Matching (False)", "Reified matching with captured groups (False case). Groups are ordered in group-number order if a match is found. See: https://docs.oracle.com/javase/tutorial/essential/regex/groups.html",
               "re_match_groups_t(\"(abc)\", \"def\", Match, Groups, T)",
               re_match_groups_t("(abc)", "def", Match29, Groups29, T29),
               ["Match", "Groups", "T"], [Match29, Groups29, T29]),
@@ -214,7 +214,7 @@ main :-
               phrase(re_match_dcg("a*b", Match32), "aaabc", "c"),
               ["Match"], [Match32]),
 
-    run_query(Stream, "33. DCG Phrase Matcher with Groups", "Use DCG interface `re_match_dcg//3` with groups inside phrase/2.",
+    run_query(Stream, "33. DCG Phrase Matcher with Groups", "Use DCG interface `re_match_dcg//3` with groups inside phrase/2. Captured groups are returned in group-number order (left-to-right based on the position of their opening parentheses). See: https://docs.oracle.com/javase/tutorial/essential/regex/groups.html",
               "phrase(re_match_dcg(\"(a*)b\", Match, Groups), \"aaabc\", \"c\")",
               phrase(re_match_dcg("(a*)b", Match33, Groups33), "aaabc", "c"),
               ["Match", "Groups"], [Match33, Groups33]),
@@ -224,7 +224,7 @@ main :-
               (re_compile("a*b", Compiled34), phrase(re_match_dcg(Compiled34, Match34), "aaabc", "c")),
               ["Compiled", "Match"], [Compiled34, Match34]),
 
-    run_query(Stream, "35. DCG Phrase Matcher with Compiled Pattern and Groups", "Use `re_match_dcg//3` with a pre-compiled pattern and group extraction.",
+    run_query(Stream, "35. DCG Phrase Matcher with Compiled Pattern and Groups", "Use `re_match_dcg//3` with a pre-compiled pattern and group extraction. Captured groups are returned in group-number order (left-to-right based on the position of their opening parentheses). See: https://docs.oracle.com/javase/tutorial/essential/regex/groups.html",
               "re_compile(\"(a*)b\", Compiled), phrase(re_match_dcg(Compiled, Match, Groups), \"aaabc\", \"c\")",
               (re_compile("(a*)b", Compiled35), phrase(re_match_dcg(Compiled35, Match35, Groups35), "aaabc", "c")),
               ["Compiled", "Match", "Groups"], [Compiled35, Match35, Groups35]),
@@ -249,7 +249,7 @@ main :-
               phrase((..., re_match_dcg("aa", Match39), ...), "bbbbaaccccc"),
               ["Match"], [Match39]),
 
-    run_query(Stream, "40. Nested Captures 4-Deep (3 Top-Level)", "Extract groups from a pattern of three captures containing nested captures 4 deep.",
+    run_query(Stream, "40. Nested Captures 4-Deep (3 Top-Level)", "Extract groups from a pattern of three captures containing nested captures 4 deep. Captured groups are returned in group-number order (left-to-right based on the position of their opening parentheses). Nested groups follow their enclosing group. See: https://docs.oracle.com/javase/tutorial/essential/regex/groups.html",
               "phrase(re_match_dcg(\"(a(b(c(d))))(e(f(g(h))))(i(j(k(l))))\", Match, Groups), \"abcdefghijkl\")",
               phrase(re_match_dcg("(a(b(c(d))))(e(f(g(h))))(i(j(k(l))))", Match40, Groups40), "abcdefghijkl"),
               ["Match", "Groups"], [Match40, Groups40]),
