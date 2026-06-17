@@ -2,10 +2,7 @@
 :- use_module(library(format)).
 :- use_module(library(si)).
 :- use_module(library(lists)).
-
-% Helper DCG rule for unanchored/search matching
-any_chars --> [].
-any_chars --> [_], any_chars.
+:- use_module(library(dcgs)).
 
 % Custom value printer to match repl output format
 print_val(Stream, Val) :-
@@ -243,13 +240,13 @@ main :-
               [], []),
 
     run_query(Stream, "38. Unanchored Match (showing rest of input)", "Match pattern inside input using phrase/3.",
-              "phrase((any_chars, re_match_dcg(\"aa\", Match)), \"bbbbaaccccc\", Rest)",
-              phrase((any_chars, re_match_dcg("aa", Match38)), "bbbbaaccccc", Rest38),
+              "phrase((..., re_match_dcg(\"aa\", Match)), \"bbbbaaccccc\", Rest)",
+              phrase((..., re_match_dcg("aa", Match38)), "bbbbaaccccc", Rest38),
               ["Match", "Rest"], [Match38, Rest38]),
 
     run_query(Stream, "39. Unanchored Match (no rest of input)", "Match pattern inside input using phrase/2 (requires matching remaining suffix).",
-              "phrase((any_chars, re_match_dcg(\"aa\", Match), any_chars), \"bbbbaaccccc\")",
-              phrase((any_chars, re_match_dcg("aa", Match39), any_chars), "bbbbaaccccc"),
+              "phrase((..., re_match_dcg(\"aa\", Match), ...), \"bbbbaaccccc\")",
+              phrase((..., re_match_dcg("aa", Match39), ...), "bbbbaaccccc"),
               ["Match"], [Match39]),
 
     close(Stream).

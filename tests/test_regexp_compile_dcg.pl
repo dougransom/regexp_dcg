@@ -217,14 +217,12 @@ test("compilation cache clearing",
     \+ regexp_dcg:pattern_cache(Key, _, _))).
 
 test("unanchored match using phrase/3 (shows rest)",
-    (phrase((any_chars, re_match_dcg("aa", Match)), "bbbbaaccccc", Rest),
+    (phrase((..., re_match_dcg("aa", Match)), "bbbbaaccccc", Rest),
      Match == "aa",
      Rest == "ccccc")).
 
 test("unanchored match using phrase/2 (no rest)",
-    (phrase((any_chars, re_match_dcg("aa", Match), any_chars), "bbbbaaccccc"),
+    (phrase((..., re_match_dcg("aa", Match), ...), "bbbbaaccccc"),
      Match == "aa")).
 
-any_chars --> [].
-any_chars --> [_], any_chars.
 

@@ -400,7 +400,7 @@ Clear the cache database and verify no patterns remain.
 Match pattern inside input using phrase/3.
 
 ```prolog
-?- phrase((any_chars, re_match_dcg("aa", Match)), "bbbbaaccccc", Rest).
+?- phrase((..., re_match_dcg("aa", Match)), "bbbbaaccccc", Rest).
    Match = "aa"
    Rest = "ccccc"
 ;  false.
@@ -411,7 +411,7 @@ Match pattern inside input using phrase/3.
 Match pattern inside input using phrase/2 (requires matching remaining suffix).
 
 ```prolog
-?- phrase((any_chars, re_match_dcg("aa", Match), any_chars), "bbbbaaccccc").
+?- phrase((..., re_match_dcg("aa", Match), ...), "bbbbaaccccc").
    Match = "aa"
 ;  false.
 ```

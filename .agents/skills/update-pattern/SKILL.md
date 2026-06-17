@@ -29,12 +29,13 @@ Whenever a new regular expression pattern feature is implemented, you must add c
    ```
 
 3. **Unanchored / Middle-of-String Matching**:
-   To test matching when a pattern is not at the beginning of the input, combine the pattern with the helper `any_chars//0` rule.
+   To test matching when a pattern is not at the beginning of the input, combine the pattern with the native `...` (three dots) DCG rule from `library(dcgs)`.
    - For showing the rest of the input (using `phrase/3`):
      ```prolog
-     phrase((any_chars, re_match_dcg("aa", Match)), "bbbbaaccccc", Rest)
+     phrase((..., re_match_dcg("aa", Match)), "bbbbaaccccc", Rest)
      ```
    - For not showing the rest of the input (using `phrase/2`):
      ```prolog
-     phrase((any_chars, re_match_dcg("aa", Match), any_chars), "bbbbaaccccc")
+     phrase((..., re_match_dcg("aa", Match), ...), "bbbbaaccccc")
      ```
+
