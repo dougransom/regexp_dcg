@@ -22,4 +22,4 @@ This skill provides guidelines and steps for extending regular expression patter
    Ensure that the module documentation in `regexp_compile_dfa.pl` continues to reference the updated list in `regexp_compile_dcg.pl`.
 
 5. **Write Unit Tests**:
-   Add comprehensive test coverage in the relevant test files (`tests/test_regexp_ast.pl`, `tests/test_regexp_compile_dcg.pl`, etc.) to verify both positive and negative matching scenarios.
+   Add comprehensive test coverage in the relevant test files (`tests/test_regexp_ast.pl`, `tests/test_regexp_compile_shared.pl`, etc.) to verify both positive and negative matching scenarios.

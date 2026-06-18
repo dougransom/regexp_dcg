@@ -427,3 +427,15 @@ Extract groups from a pattern of three captures containing nested captures 4 dee
 ;  false.
 ```
 
+### 41. Named Capturing Groups Matching
+
+Match pattern and extract named capturing groups using re_match_named/4 and lookup using re_group/3.
+
+```prolog
+?- re_match_named("(?P<first>[a-z]+) ([a-z]+) (?P<last>[a-z]+)", "john middle doe", Match, Named), re_group(Named, first, First).
+   Match = "john middle doe"
+   Named = [last-[d,o,e],first-[j,o,h,n]]
+   First = "john"
+;  false.
+```
+

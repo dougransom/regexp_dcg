@@ -16,7 +16,10 @@
     re_compile/2,
     re_match_dcg//2,
     re_match_dcg//3,
-    re_clear_cache/0
+    re_clear_cache/0,
+    re_match_named/4,
+    re_match_named_t/5,
+    re_group/3
 ]).
 
 :- use_module(library(lists)).
@@ -73,6 +76,24 @@ re_match_groups(Pattern, _Input, _Match, _Groups) :-
 % However, capturing groups are not supported by the DFA engine and will raise a domain error.
 re_match_groups_t(Pattern, _Input, _Match, _Groups, _T) :-
     domain_error(dfa_group_extraction, Pattern).
+
+%% re_match_named(+Pattern, +Input, -Match, -NamedGroups)
+%
+% Note: Capturing groups are not supported by the DFA engine and will raise a domain error.
+re_match_named(Pattern, _Input, _Match, _NamedGroups) :-
+    domain_error(dfa_group_extraction, Pattern).
+
+%% re_match_named_t(+Pattern, +Input, -Match, -NamedGroups, ?Truth)
+%
+% Note: Capturing groups are not supported by the DFA engine and will raise a domain error.
+re_match_named_t(Pattern, _Input, _Match, _NamedGroups, _T) :-
+    domain_error(dfa_group_extraction, Pattern).
+
+%% re_group(+NamedGroups, +Name, -Value)
+%
+% Retrieve the value of a named capturing group by its `Name`.
+re_group(NamedGroups, Name, Value) :-
+    member(Name-Value, NamedGroups).
 
 %% re_match_dcg(+Pattern, -Match)//
 %

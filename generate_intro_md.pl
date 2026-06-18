@@ -254,5 +254,10 @@ main :-
               phrase(re_match_dcg("(a(b(c(d))))(e(f(g(h))))(i(j(k(l))))", Match40, Groups40), "abcdefghijkl"),
               ["Match", "Groups"], [Match40, Groups40]),
 
+    run_query(Stream, "41. Named Capturing Groups Matching", "Match pattern and extract named capturing groups using re_match_named/4 and lookup using re_group/3.",
+              "re_match_named(\"(?P<first>[a-z]+) ([a-z]+) (?P<last>[a-z]+)\", \"john middle doe\", Match, Named), re_group(Named, first, First)",
+              (re_match_named("(?P<first>[a-z]+) ([a-z]+) (?P<last>[a-z]+)", "john middle doe", Match41, Named41), re_group(Named41, first, First41)),
+              ["Match", "Named", "First"], [Match41, Named41, First41]),
+
     close(Stream).
 

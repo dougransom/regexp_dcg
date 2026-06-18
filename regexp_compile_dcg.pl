@@ -47,6 +47,9 @@
     re_match_dcg//2,         % DCG non-terminal prefix matcher (no group extraction)
     re_match_dcg//3,         % DCG non-terminal prefix matcher (with group extraction)
     re_clear_cache/0,        % Clear compiled pattern cache database
+    re_match_named/4,        % Match pattern, extract named captured groups
+    re_match_named_t/5,      % Reified named group matching
+    re_group/3,              % Lookup captured group by name
 
     /* =========================================================================
        Internal & Testing Interface
@@ -161,6 +164,38 @@ re_match_groups_t(Pattern, Input, Match, Groups, T) :-
         Groups = Groups0
     ;   T = false
     ).
+
+%% re_match_named(+Pattern, +Input, -Match, -NamedGroups)
+%
+% Match the regular expression `Pattern` against `Input`.
+% `Match` is unified with the matched substring, and `NamedGroups` is unified with a list
+% of `Name-Value` pairs (where Name is an atom and Value is a string of chars) representing
+% the matched named capturing groups.
+re_match_named(Pattern, Input, Match, NamedGroups) :-
+    pattern_compiled(Pattern, Goal, GroupCount),
+    length(Groups, GroupCount),
+    to_chars(Input, Chars),
+    S0 = state(Chars, Groups, [], []),
+    phrase(call(Goal, S0, SF), Chars),
+    state_match(SF, Match),
+    state_named(SF, NamedGroups).
+
+%% re_match_named_t(+Pattern, +Input, -Match, -NamedGroups, ?Truth)
+%
+% Reified version of `re_match_named/4`.
+re_match_named_t(Pattern, Input, Match, NamedGroups, T) :-
+    (   re_match_named(Pattern, Input, Match0, NamedGroups0) ->
+        T = true,
+        Match = Match0,
+        NamedGroups = NamedGroups0
+    ;   T = false
+    ).
+
+%% re_group(+NamedGroups, +Name, -Value)
+%
+% Retrieve the value of a named capturing group by its `Name`.
+re_group(NamedGroups, Name, Value) :-
+    member(Name-Value, NamedGroups).
 
 % DCG phrase matcher helpers
 
