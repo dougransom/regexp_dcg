@@ -32,9 +32,9 @@ dformat(_Message) :-
     debug_mode(off).
 
 test("dcg for literal",
-    (pattern_ast("abc", AST),
+    (regexp_dcg:pattern_ast("abc", AST),
     dformat("\nAST: ~w", [AST]),
-    ast_dcg(AST, _S0, _S1, DCG),
+    regexp_dcg:ast_dcg(AST, _S0, _S1, DCG),
     dformat("\nDCG: ~w", [DCG]),
     dformat("\nTesting DCG phrase...", []),
     phrase(DCG, "abc") -> 

@@ -26,7 +26,7 @@ Compile pattern into a DCG and match a string.
 Basic matching of a literal pattern.
 
 ```prolog
-?- phrase(re_match_dcg("abc", Match), "abc").
+?- phrase(re_match("abc", Match), "abc").
    Match = "abc"
 ;  false.
 ```
@@ -36,7 +36,7 @@ Basic matching of a literal pattern.
 Matching either sub-expression in alternation.
 
 ```prolog
-?- phrase(re_match_dcg("a|bc", Match), "bc").
+?- phrase(re_match("a|bc", Match), "bc").
    Match = "bc"
 ;  false.
 ```
@@ -46,7 +46,7 @@ Matching either sub-expression in alternation.
 Explicit precedence using grouping parentheses.
 
 ```prolog
-?- phrase(re_match_dcg("(a|b)c", Match), "ac").
+?- phrase(re_match("(a|b)c", Match), "ac").
    Match = "ac"
 ;  false.
 ```
@@ -56,7 +56,7 @@ Explicit precedence using grouping parentheses.
 Match zero or more times greedily.
 
 ```prolog
-?- phrase(re_match_dcg("a*", Match), "aaa").
+?- phrase(re_match("a*", Match), "aaa").
    Match = "aaa"
 ;  false.
 ```
@@ -66,7 +66,7 @@ Match zero or more times greedily.
 Match one or more times greedily.
 
 ```prolog
-?- phrase(re_match_dcg("a+", Match), "aa").
+?- phrase(re_match("a+", Match), "aa").
    Match = "aa"
 ;  false.
 ```
@@ -76,7 +76,7 @@ Match one or more times greedily.
 Match zero or one time greedily (optional matches).
 
 ```prolog
-?- phrase(re_match_dcg("a?", Match), "a").
+?- phrase(re_match("a?", Match), "a").
    Match = "a"
 ;  false.
 ```
@@ -86,7 +86,7 @@ Match zero or one time greedily (optional matches).
 Match zero or one time greedily (empty match).
 
 ```prolog
-?- phrase(re_match_dcg("a?", Match), "").
+?- phrase(re_match("a?", Match), "").
    Match = ""
 ;  false.
 ```
@@ -96,7 +96,7 @@ Match zero or one time greedily (empty match).
 Match exactly N times.
 
 ```prolog
-?- phrase(re_match_dcg("a{3}", Match), "aaa").
+?- phrase(re_match("a{3}", Match), "aaa").
    Match = "aaa"
 ;  false.
 ```
@@ -106,7 +106,7 @@ Match exactly N times.
 Match between N and M times greedily.
 
 ```prolog
-?- phrase(re_match_dcg("a{2,4}", Match), "aaaa").
+?- phrase(re_match("a{2,4}", Match), "aaaa").
    Match = "aaaa"
 ;  false.
 ```
@@ -116,7 +116,7 @@ Match between N and M times greedily.
 Extract substrings captured by groups. Captured groups are returned in group-number order (left-to-right based on the position of their opening parentheses). See: https://docs.oracle.com/javase/tutorial/essential/regex/groups.html
 
 ```prolog
-?- phrase(re_match_dcg("(abc)", Match, Groups), "abc").
+?- phrase(re_match_groups("(abc)", Match, Groups), "abc").
    Match = "abc"
    Groups = ["abc"]
 ;  false.
@@ -127,7 +127,7 @@ Extract substrings captured by groups. Captured groups are returned in group-num
 Extract substrings captured by nested groups. The groups are returned in group-number order (left-to-right based on the position of their opening parentheses), so the outer group comes first. See: https://docs.oracle.com/javase/tutorial/essential/regex/groups.html
 
 ```prolog
-?- phrase(re_match_dcg("(a(b)c)", Match, Groups), "abc").
+?- phrase(re_match_groups("(a(b)c)", Match, Groups), "abc").
    Match = "abc"
    Groups = ["abc", "b"]
 ;  false.
@@ -138,7 +138,7 @@ Extract substrings captured by nested groups. The groups are returned in group-n
 Edge case: greedy star matching empty string.
 
 ```prolog
-?- phrase(re_match_dcg("a*", Match), "").
+?- phrase(re_match("a*", Match), "").
    Match = ""
 ;  false.
 ```
@@ -148,7 +148,7 @@ Edge case: greedy star matching empty string.
 Edge case: nested star operator.
 
 ```prolog
-?- phrase(re_match_dcg("(a*)*", Match), "a").
+?- phrase(re_match("(a*)*", Match), "a").
    Match = "a"
 ;  false.
 ```
@@ -158,7 +158,7 @@ Edge case: nested star operator.
 Match any single character listed in brackets.
 
 ```prolog
-?- phrase(re_match_dcg("[abc]", Match), "b").
+?- phrase(re_match("[abc]", Match), "b").
    Match = "b"
 ;  false.
 ```
@@ -168,7 +168,7 @@ Match any single character listed in brackets.
 Match any single character not listed in brackets.
 
 ```prolog
-?- phrase(re_match_dcg("[^abc]", Match), "d").
+?- phrase(re_match("[^abc]", Match), "d").
    Match = "d"
 ;  false.
 ```
@@ -178,7 +178,7 @@ Match any single character not listed in brackets.
 Match any single character except newline.
 
 ```prolog
-?- phrase(re_match_dcg("a.c", Match), "abc").
+?- phrase(re_match("a.c", Match), "abc").
    Match = "abc"
 ;  false.
 ```
@@ -188,7 +188,7 @@ Match any single character except newline.
 Match any digit character via `\d`.
 
 ```prolog
-?- phrase(re_match_dcg("\\d", Match), "5").
+?- phrase(re_match("\\d", Match), "5").
    Match = "5"
 ;  false.
 ```
@@ -198,7 +198,7 @@ Match any digit character via `\d`.
 Match any alphanumeric character plus underscore via `\w`.
 
 ```prolog
-?- phrase(re_match_dcg("\\w", Match), "x").
+?- phrase(re_match("\\w", Match), "x").
    Match = "x"
 ;  false.
 ```
@@ -208,7 +208,7 @@ Match any alphanumeric character plus underscore via `\w`.
 Match beginning of the input string via `^`.
 
 ```prolog
-?- phrase(re_match_dcg("^a", Match), "a").
+?- phrase(re_match("^a", Match), "a").
    Match = "a"
 ;  false.
 ```
@@ -218,7 +218,7 @@ Match beginning of the input string via `^`.
 Match end of the input string via `$`.
 
 ```prolog
-?- phrase(re_match_dcg("a$", Match), "a").
+?- phrase(re_match("a$", Match), "a").
    Match = "a"
 ;  false.
 ```
@@ -228,7 +228,7 @@ Match end of the input string via `$`.
 Match minimal number of repetitions via `*?`.
 
 ```prolog
-?- phrase(re_match_dcg("a*?", Match), "a").
+?- phrase(re_match("a*?", Match), "a").
    Match = "a"
 ;  false.
 ```
@@ -238,7 +238,7 @@ Match minimal number of repetitions via `*?`.
 Match pattern only if followed by lookahead sub-expression.
 
 ```prolog
-?- phrase(re_match_dcg("a(?=b)b", Match), "ab").
+?- phrase(re_match("a(?=b)b", Match), "ab").
    Match = "ab"
 ;  false.
 ```
@@ -248,7 +248,7 @@ Match pattern only if followed by lookahead sub-expression.
 Syntax support for named capturing groups.
 
 ```prolog
-?- phrase(re_match_dcg("(?P<id>abc)", Match), "abc").
+?- phrase(re_match("(?P<id>abc)", Match), "abc").
    Match = "abc"
 ;  false.
 ```
@@ -258,127 +258,72 @@ Syntax support for named capturing groups.
 Enable case-insensitivity using inline flags.
 
 ```prolog
-?- phrase(re_match_dcg("(?i)abc", Match), "ABC").
+?- phrase(re_match("(?i)abc", Match), "ABC").
    Match = "ABC"
 ;  false.
 ```
 
-### 26. Reified Matching (True)
-
-Retrieve matching truth value in logically pure context (True case).
-
-```prolog
-?- re_match_t("abc", "abc", T).
-   T = true
-;  false.
-```
-
-### 27. Reified Matching (False)
-
-Retrieve matching truth value in logically pure context (False case).
-
-```prolog
-?- re_match_t("abc", "def", T).
-   T = false
-;  false.
-```
-
-### 28. Reified Group Matching (True)
-
-Reified matching with captured groups (True case). Captured groups are returned in group-number order (left-to-right based on the position of their opening parentheses). See: https://docs.oracle.com/javase/tutorial/essential/regex/groups.html
-
-```prolog
-?- re_match_groups_t("(abc)", "abc", Match, Groups, T).
-   Match = "abc"
-   Groups = ["abc"]
-   T = true
-;  false.
-```
-
-### 29. Reified Group Matching (False)
-
-Reified matching with captured groups (False case). Groups are ordered in group-number order if a match is found. See: https://docs.oracle.com/javase/tutorial/essential/regex/groups.html
-
-```prolog
-?- re_match_groups_t("(abc)", "def", Match, Groups, T).
-   Match = _
-   Groups = _
-   T = false
-;  false.
-```
-
-### 30. Compile and Match
+### 26. Compile and Match
 
 Manually compile a pattern and execute matching.
 
 ```prolog
-?- re_compile("a*b", Compiled), re_match(Compiled, "aaab", Match).
+?- re_compile("a*b", Compiled), phrase(re_match(Compiled, Match), "aaab").
    Compiled = compiled(regexp_dcg:dcg_concat([regexp_dcg:dcg_star(regexp_dcg:dcg_lit([a])),regexp_dcg:dcg_lit([b])]),0)
    Match = "aaab"
 ;  false.
 ```
 
-### 31. Compile and Reified Match
+### 27. DCG Phrase Matcher Helper
 
-Manually compile a pattern and execute reified matching.
-
-```prolog
-?- re_compile("a*b", Compiled), re_match_t(Compiled, "aaab", T).
-   Compiled = compiled(regexp_dcg:dcg_concat([regexp_dcg:dcg_star(regexp_dcg:dcg_lit([a])),regexp_dcg:dcg_lit([b])]),0)
-   T = true
-;  false.
-```
-
-### 32. DCG Phrase Matcher Helper
-
-Use DCG interface `re_match_dcg//2` inside phrase/2.
+Use DCG interface `re_match//2` inside phrase/3.
 
 ```prolog
-?- phrase(re_match_dcg("a*b", Match), "aaabc", "c").
+?- phrase(re_match("a*b", Match), "aaabc", "c").
    Match = "aaab"
 ;  false.
 ```
 
-### 33. DCG Phrase Matcher with Groups
+### 28. DCG Phrase Matcher with Groups
 
-Use DCG interface `re_match_dcg//3` with groups inside phrase/2. Captured groups are returned in group-number order (left-to-right based on the position of their opening parentheses). See: https://docs.oracle.com/javase/tutorial/essential/regex/groups.html
+Use DCG interface `re_match_groups//3` with groups inside phrase/3. Captured groups are returned in group-number order (left-to-right based on the position of their opening parentheses). See: https://docs.oracle.com/javase/tutorial/essential/regex/groups.html
 
 ```prolog
-?- phrase(re_match_dcg("(a*)b", Match, Groups), "aaabc", "c").
+?- phrase(re_match_groups("(a*)b", Match, Groups), "aaabc", "c").
    Match = "aaab"
    Groups = ["aaa"]
 ;  false.
 ```
 
-### 34. DCG Phrase Matcher with Compiled Pattern
+### 29. DCG Phrase Matcher with Compiled Pattern
 
-Use `re_match_dcg//2` with a pre-compiled pattern.
+Use `re_match//2` with a pre-compiled pattern.
 
 ```prolog
-?- re_compile("a*b", Compiled), phrase(re_match_dcg(Compiled, Match), "aaabc", "c").
+?- re_compile("a*b", Compiled), phrase(re_match(Compiled, Match), "aaabc", "c").
    Compiled = compiled(regexp_dcg:dcg_concat([regexp_dcg:dcg_star(regexp_dcg:dcg_lit([a])),regexp_dcg:dcg_lit([b])]),0)
    Match = "aaab"
 ;  false.
 ```
 
-### 35. DCG Phrase Matcher with Compiled Pattern and Groups
+### 30. DCG Phrase Matcher with Compiled Pattern and Groups
 
-Use `re_match_dcg//3` with a pre-compiled pattern and group extraction. Captured groups are returned in group-number order (left-to-right based on the position of their opening parentheses). See: https://docs.oracle.com/javase/tutorial/essential/regex/groups.html
+Use `re_match_groups//3` with a pre-compiled pattern and group extraction. Captured groups are returned in group-number order (left-to-right based on the position of their opening parentheses). See: https://docs.oracle.com/javase/tutorial/essential/regex/groups.html
 
 ```prolog
-?- re_compile("(a*)b", Compiled), phrase(re_match_dcg(Compiled, Match, Groups), "aaabc", "c").
+?- re_compile("(a*)b", Compiled), phrase(re_match_groups(Compiled, Match, Groups), "aaabc", "c").
    Compiled = compiled(regexp_dcg:dcg_concat([regexp_dcg:dcg_capture(0,regexp_dcg:dcg_star(regexp_dcg:dcg_lit([a]))),regexp_dcg:dcg_lit([b])]),1)
    Match = "aaab"
    Groups = ["aaa"]
 ;  false.
 ```
 
-### 36. Compilation Cache Matching
+### 31. Compilation Cache Matching
 
 Access and verify the internal compilation cache.
 
 ```prolog
-?- re_clear_cache, re_match("c*d", "cccd", Match), regexp_dcg:to_chars("c*d", Key), regexp_dcg:pattern_cache(Key, Goal, GroupCount).
+?- re_clear_cache, phrase(re_match("c*d", Match), "cccd"), regexp_dcg:to_chars("c*d", Key), regexp_dcg:pattern_cache(Key, Goal, GroupCount).
    Match = "cccd"
    Key = "c*d"
    Goal = regexp_dcg:dcg_concat([regexp_dcg:dcg_star(regexp_dcg:dcg_lit([c])),regexp_dcg:dcg_lit([d])])
@@ -386,53 +331,53 @@ Access and verify the internal compilation cache.
 ;  false.
 ```
 
-### 37. Compilation Cache Clearing
+### 32. Compilation Cache Clearing
 
 Clear the cache database and verify no patterns remain.
 
 ```prolog
-?- re_clear_cache, re_match("c*d", "cccd", Match), re_clear_cache, \+ regexp_dcg:pattern_cache(_, _, _).
+?- re_clear_cache, phrase(re_match("c*d", Match), "cccd"), re_clear_cache, \+ regexp_dcg:pattern_cache(_, _, _).
 ;  false.
 ```
 
-### 38. Unanchored Match (showing rest of input)
+### 33. Unanchored Match (showing rest of input)
 
 Match pattern inside input using phrase/3.
 
 ```prolog
-?- phrase((..., re_match_dcg("aa", Match)), "bbbbaaccccc", Rest).
+?- phrase((..., re_match("aa", Match)), "bbbbaaccccc", Rest).
    Match = "aa"
    Rest = "ccccc"
 ;  false.
 ```
 
-### 39. Unanchored Match (no rest of input)
+### 34. Unanchored Match (no rest of input)
 
 Match pattern inside input using phrase/2 (requires matching remaining suffix).
 
 ```prolog
-?- phrase((..., re_match_dcg("aa", Match), ...), "bbbbaaccccc").
+?- phrase((..., re_match("aa", Match), ...), "bbbbaaccccc").
    Match = "aa"
 ;  false.
 ```
 
-### 40. Nested Captures 4-Deep (3 Top-Level)
+### 35. Nested Captures 4-Deep (3 Top-Level)
 
 Extract groups from a pattern of three captures containing nested captures 4 deep. Captured groups are returned in group-number order (left-to-right based on the position of their opening parentheses). Nested groups follow their enclosing group. See: https://docs.oracle.com/javase/tutorial/essential/regex/groups.html
 
 ```prolog
-?- phrase(re_match_dcg("(a(b(c(d))))(e(f(g(h))))(i(j(k(l))))", Match, Groups), "abcdefghijkl").
+?- phrase(re_match_groups("(a(b(c(d))))(e(f(g(h))))(i(j(k(l))))", Match, Groups), "abcdefghijkl").
    Match = "abcdefghijkl"
    Groups = ["abcd", "bcd", "cd", "d", "efgh", "fgh", "gh", "h", "ijkl", "jkl", "kl", "l"]
 ;  false.
 ```
 
-### 41. Named Capturing Groups Matching
+### 36. Named Capturing Groups Matching
 
-Match pattern and extract named capturing groups using re_match_named/4 and lookup using re_group/3.
+Match pattern and extract named capturing groups using re_match_named//3 and lookup using re_group/3.
 
 ```prolog
-?- re_match_named("(?P<first>[a-z]+) ([a-z]+) (?P<last>[a-z]+)", "john middle doe", Match, Named), re_group(Named, first, First).
+?- phrase(re_match_named("(?P<first>[a-z]+) ([a-z]+) (?P<last>[a-z]+)", Match, Named), "john middle doe"), re_group(Named, first, First).
    Match = "john middle doe"
    Named = [last-[d,o,e],first-[j,o,h,n]]
    First = "john"

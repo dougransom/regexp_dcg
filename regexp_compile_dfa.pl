@@ -9,16 +9,12 @@
   for `regexp_compile_dcg` (in [regexp_compile_dcg.pl](file:///home/doug/code/regexp/regexp_compile_dcg.pl)).
 */
 :- module(regexp_dfa, [
-    re_match/3,
-    re_match_t/3,
-    re_match_groups/4,
-    re_match_groups_t/5,
     re_compile/2,
-    re_match_dcg//2,
-    re_match_dcg//3,
     re_clear_cache/0,
-    re_match_named/4,
-    re_match_named_t/5,
+    re_match//1,
+    re_match//2,
+    re_match_groups//3,
+    re_match_named//3,
     re_group/3
 ]).
 
@@ -30,15 +26,22 @@
 
 :- dynamic(dfa_pattern_cache/2).
 
-%% re_match(+Pattern, +Input, -Match)
+%% re_match(+Pattern)//
 %
-% Match the regular expression `Pattern` against `Input`.
-% `Match` is unified with the matched substring of `Input`.
-re_match(Pattern, Input, Match) :-
-    to_chars(Input, Chars),
-    (   Pattern = nfa(_, _, _, _) ->
-        NFA = Pattern
-    ;   dfa_pattern_cache(Pattern, NFA) ->
+% DCG non-terminal prefix matcher. Matches a prefix of the input sequence conforming to `Pattern`.
+re_match(Pattern) -->
+    re_match(Pattern, _Match).
+
+%% re_match(+Pattern, -Match)//
+%
+% DCG non-terminal prefix matcher. Matches a prefix of the input sequence conforming to `Pattern`,
+% unifying `Match` with the matched character sequence.
+re_match(nfa(Start, Accept, States, Transitions), Match, L0, L) :-
+    !,
+    append(Match, L, L0),
+    dfa_match_chars(nfa(Start, Accept, States, Transitions), Match).
+re_match(Pattern, Match, L0, L) :-
+    (   dfa_pattern_cache(Pattern, NFA) ->
         true
     ;   pattern_ast(Pattern, AST),
         compile_ast_nfa(AST, NFA),
@@ -47,78 +50,36 @@ re_match(Pattern, Input, Match) :-
         ;   true
         )
     ),
-    dfa_match(NFA, Chars),
-    Match = Input.
+    append(Match, L, L0),
+    dfa_match_chars(NFA, Match).
 
-%% re_match_t(+Pattern, +Input, ?Truth)
-%
-% Reified matching. `Truth` is unified with `true` if `Pattern` matches `Input`, and `false` otherwise.
-re_match_t(Pattern, Input, T) :-
-    (   re_match(Pattern, Input, _) ->
-        T = true
-    ;   T = false
-    ).
+dfa_match_chars(NFA, Match) :-
+    to_chars(Match, Chars),
+    dfa_match(NFA, Chars).
 
-%% re_match_groups(+Pattern, +Input, -Match, -Groups)
-%
-% Match the regular expression `Pattern` against `Input`.
-% Note: Capturing groups would normally be ordered in group-number order (left-to-right based on
-% the order of their opening parentheses). See: https://docs.oracle.com/javase/tutorial/essential/regex/groups.html
-% However, capturing groups are not supported by the DFA engine and will raise a domain error.
-re_match_groups(Pattern, _Input, _Match, _Groups) :-
-    domain_error(dfa_group_extraction, Pattern).
-
-%% re_match_groups_t(+Pattern, +Input, -Match, -Groups, ?Truth)
-%
-% Reified version of `re_match_groups/4`.
-% Note: Capturing groups would normally be ordered in group-number order (left-to-right based on
-% the order of their opening parentheses). See: https://docs.oracle.com/javase/tutorial/essential/regex/groups.html
-% However, capturing groups are not supported by the DFA engine and will raise a domain error.
-re_match_groups_t(Pattern, _Input, _Match, _Groups, _T) :-
-    domain_error(dfa_group_extraction, Pattern).
-
-%% re_match_named(+Pattern, +Input, -Match, -NamedGroups)
+%% re_match_groups(+Pattern, -Match, -Groups)//
 %
 % Note: Capturing groups are not supported by the DFA engine and will raise a domain error.
-re_match_named(Pattern, _Input, _Match, _NamedGroups) :-
-    domain_error(dfa_group_extraction, Pattern).
+re_match_groups(nfa(Start, Accept, States, Transitions), _Match, _Groups) -->
+    !,
+    { domain_error(dfa_group_extraction, nfa(Start, Accept, States, Transitions)) }.
+re_match_groups(Pattern, _Match, _Groups) -->
+    { domain_error(dfa_group_extraction, Pattern) }.
 
-%% re_match_named_t(+Pattern, +Input, -Match, -NamedGroups, ?Truth)
+%% re_match_named(+Pattern, -Match, -NamedGroups)//
 %
 % Note: Capturing groups are not supported by the DFA engine and will raise a domain error.
-re_match_named_t(Pattern, _Input, _Match, _NamedGroups, _T) :-
-    domain_error(dfa_group_extraction, Pattern).
+re_match_named(nfa(Start, Accept, States, Transitions), _Match, _NamedGroups) -->
+    !,
+    { domain_error(dfa_group_extraction, nfa(Start, Accept, States, Transitions)) }.
+re_match_named(Pattern, _Match, _NamedGroups) -->
+    { domain_error(dfa_group_extraction, Pattern) }.
 
 %% re_group(+NamedGroups, +Name, -Value)
 %
 % Retrieve the value of a named capturing group by its `Name`.
 re_group(NamedGroups, Name, Value) :-
     member(Name-Value, NamedGroups).
-
-%% re_match_dcg(+Pattern, -Match)//
-%
-% DCG non-terminal prefix matcher. Matches a prefix of the input sequence
-% that conforms to the regular expression `Pattern`, unifying it with `Match`.
-re_match_dcg(nfa(Start, Accept, States, Transitions), Match, L0, L) :-
-    !,
-    append(Match, L, L0),
-    re_match(nfa(Start, Accept, States, Transitions), Match, Match).
-re_match_dcg(Pattern, Match, L0, L) :-
-    append(Match, L, L0),
-    re_match(Pattern, Match, Match).
-
-%% re_match_dcg(+Pattern, -Match, -Groups)//
-%
-% DCG non-terminal prefix matcher.
-% Note: Capturing groups would normally be ordered in group-number order (left-to-right based on
-% the order of their opening parentheses). See: https://docs.oracle.com/javase/tutorial/essential/regex/groups.html
-% However, capturing groups are not supported by the DFA engine and will raise a domain error.
-re_match_dcg(nfa(Start, Accept, States, Transitions), _Match, _Groups) -->
-    !,
-    { domain_error(dfa_group_extraction, nfa(Start, Accept, States, Transitions)) }.
-re_match_dcg(Pattern, _Match, _Groups) -->
-    { domain_error(dfa_group_extraction, Pattern) }.
-
 
 %% re_compile(+Pattern, -Compiled)
 %

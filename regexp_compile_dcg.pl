@@ -37,54 +37,16 @@
 :- module(regexp_dcg, [
     /* =========================================================================
        Public User Interface
-       These predicates define the main API for external users of the library.
+       All matching predicates are pure DCG non-terminals.
+       Use with phrase/2 or phrase/3.
        ========================================================================= */
-    re_match/3,              % Match pattern against input, unify Match with full match
-    re_match_t/3,            % Reified matching (returns true/false)
-    re_match_groups/4,       % Match pattern against input, extract captured groups
-    re_match_groups_t/5,     % Reified group matching (returns true/false)
     re_compile/2,            % Compile pattern to a reusable compiled structure
-    re_match_dcg//2,         % DCG non-terminal prefix matcher (no group extraction)
-    re_match_dcg//3,         % DCG non-terminal prefix matcher (with group extraction)
     re_clear_cache/0,        % Clear compiled pattern cache database
-    re_match_named/4,        % Match pattern, extract named captured groups
-    re_match_named_t/5,      % Reified named group matching
-    re_group/3,              % Lookup captured group by name
-
-    /* =========================================================================
-       Internal & Testing Interface
-       Exported purely for dynamic goal resolution (call/N) and isolated unit tests.
-       NOT intended for direct use by users of this library.
-       ========================================================================= */
-    re_match_dcg_state//4,   % Internal state helper for DCG matching
-    pattern_cache/3,         % Caching dynamic predicate schema
-    pattern_ast/2,           % AST parsing utility
-    ast_dcg/4,               % Core AST-to-DCG compiler predicate
-    ast_dcg_/4,              % AST-to-DCG compiler helper
-
-    % --- Runtime Combinators (Constructed in Compiled Goals) ---
-    dcg_lit//3,              % Match literal character sequence
-    dcg_concat//3,           % Match concatenated sub-expressions
-    dcg_or//4,               % Match choice/alternation sub-expressions
-    dcg_capture//4,          % Match capturing group
-    dcg_star//3,             % Match greedy Kleene star quantifier
-    dcg_plus//3,             % Match greedy one-or-more quantifier
-    dcg_question//3,         % Match greedy optional quantifier
-    dcg_quant//5,            % Match greedy repetition quantifier
-    dcg_dot//2,              % Match wildcard character dot
-    dcg_bol/4,               % Match beginning-of-line anchor
-    dcg_eol/4,               % Match end-of-line anchor
-    dcg_builtin//3,          % Match character from builtin class (e.g. \d)
-    dcg_class//3,            % Match custom character class list
-    dcg_lookahead/5,         % Match lookahead assertion (positive)
-    dcg_neg_lookahead/5,     % Match lookahead assertion (negative)
-    dcg_star_lazy//3,        % Match non-greedy Kleene star quantifier
-    dcg_plus_lazy//3,        % Match non-greedy one-or-more quantifier
-    dcg_question_lazy//3,    % Match non-greedy optional quantifier
-    dcg_quant_lazy//5,       % Match non-greedy repetition quantifier
-    dcg_named_capture//5,    % Match named capturing group
-    dcg_flags/5,             % Match inline flag toggles (e.g. (?i))
-    dcg_flags_group//4       % Match inline flag scoped sub-expressions
+    re_match//1,             % DCG non-terminal prefix matcher (matches pattern)
+    re_match//2,             % DCG non-terminal prefix matcher (unifies Match substring)
+    re_match_groups//3,      % DCG non-terminal prefix matcher (unifies Match & Groups)
+    re_match_named//3,       % DCG non-terminal prefix matcher (unifies Match & NamedGroups)
+    re_group/3               % Lookup captured group by name
 ]).
 
 :- use_module(regexp_ast).
@@ -121,112 +83,63 @@ pattern_compiled(Pattern, Goal, GroupCount) :-
 re_clear_cache :-
     retractall(pattern_cache(_, _, _)).
 
-%% re_match(+Pattern, +Input, -Match)
+%% re_match(+Pattern)//
 %
-% Match the regular expression `Pattern` against `Input`.
-% `Match` is unified with the matched substring of `Input`.
-re_match(Pattern, Input, Match) :-
-    re_match_groups(Pattern, Input, Match, _Groups).
+% DCG non-terminal prefix matcher. Matches a prefix of the input sequence
+% that conforms to the regular expression `Pattern`.
+re_match(Pattern) -->
+    re_match(Pattern, _Match).
 
-%% re_match_t(+Pattern, +Input, ?Truth)
+%% re_match(+Pattern, -Match)//
 %
-% Reified matching. `Truth` is unified with `true` if `Pattern` matches `Input`, and `false` otherwise.
-re_match_t(Pattern, Input, T) :-
-    (   re_match(Pattern, Input, _) ->
-        T = true
-    ;   T = false
-    ).
+% DCG non-terminal prefix matcher. Matches a prefix of the input sequence
+% that conforms to the regular expression `Pattern`, unifying `Match` with the matched characters.
+re_match(compiled(Goal, GroupCount), Match) -->
+    !,
+    re_match_groups(compiled(Goal, GroupCount), Match, _Groups).
+re_match(Pattern, Match) -->
+    re_match_groups(Pattern, Match, _Groups).
 
-%% re_match_groups(+Pattern, +Input, -Match, -Groups)
+%% re_match_groups(+Pattern, -Match, -Groups)//
 %
-% Match the regular expression `Pattern` against `Input`.
-% `Match` is unified with the matched substring, and `Groups` is a list of captured group substrings,
-% ordered in group-number order (left-to-right based on the order of their opening parentheses).
+% DCG non-terminal prefix matcher. Matches a prefix of the input sequence conforming to `Pattern`,
+% unifying `Match` with the matched characters and `Groups` with the list of captured group substrings,
+% ordered in group-number order (left-to-right based on their opening parentheses).
 % Definition: https://docs.oracle.com/javase/tutorial/essential/regex/groups.html
-re_match_groups(Pattern, Input, Match, Groups) :-
-    pattern_compiled(Pattern, Goal, GroupCount),
-    length(Groups, GroupCount),
-    to_chars(Input, Chars),
-    S0 = state(Chars, Groups, [], []),
-    phrase(call(Goal, S0, SF), Chars),
-    state_match(SF, Match),
-    state_groups(SF, Groups).
+re_match_groups(compiled(Goal, GroupCount), Match, Groups) -->
+    !,
+    re_match_dcg_state(compiled(Goal, GroupCount), Match, _S0, SF),
+    {
+        state_groups(SF, Groups)
+    }.
+re_match_groups(Pattern, Match, Groups) -->
+    re_match_dcg_state(Pattern, Match, _S0, SF),
+    {
+        state_groups(SF, Groups)
+    }.
 
-%% re_match_groups_t(+Pattern, +Input, -Match, -Groups, ?Truth)
+%% re_match_named(+Pattern, -Match, -NamedGroups)//
 %
-% Reified version of `re_match_groups/4`. `Truth` is unified with `true` if `Pattern` matches `Input`,
-% and `false` otherwise. Captured groups in `Groups` are ordered in group-number order.
-% Definition: https://docs.oracle.com/javase/tutorial/essential/regex/groups.html
-re_match_groups_t(Pattern, Input, Match, Groups, T) :-
-    (   re_match_groups(Pattern, Input, Match0, Groups0) ->
-        T = true,
-        Match = Match0,
-        Groups = Groups0
-    ;   T = false
-    ).
-
-%% re_match_named(+Pattern, +Input, -Match, -NamedGroups)
-%
-% Match the regular expression `Pattern` against `Input`.
-% `Match` is unified with the matched substring, and `NamedGroups` is unified with a list
-% of `Name-Value` pairs (where Name is an atom and Value is a string of chars) representing
-% the matched named capturing groups.
-re_match_named(Pattern, Input, Match, NamedGroups) :-
-    pattern_compiled(Pattern, Goal, GroupCount),
-    length(Groups, GroupCount),
-    to_chars(Input, Chars),
-    S0 = state(Chars, Groups, [], []),
-    phrase(call(Goal, S0, SF), Chars),
-    state_match(SF, Match),
-    state_named(SF, NamedGroups).
-
-%% re_match_named_t(+Pattern, +Input, -Match, -NamedGroups, ?Truth)
-%
-% Reified version of `re_match_named/4`.
-re_match_named_t(Pattern, Input, Match, NamedGroups, T) :-
-    (   re_match_named(Pattern, Input, Match0, NamedGroups0) ->
-        T = true,
-        Match = Match0,
-        NamedGroups = NamedGroups0
-    ;   T = false
-    ).
+% DCG non-terminal prefix matcher. Matches a prefix of the input sequence conforming to `Pattern`,
+% unifying `Match` with the matched characters and `NamedGroups` with a list of Name-Value pairs
+% representing the matched named capturing groups.
+re_match_named(compiled(Goal, GroupCount), Match, NamedGroups) -->
+    !,
+    re_match_dcg_state(compiled(Goal, GroupCount), Match, _S0, SF),
+    {
+        state_named(SF, NamedGroups)
+    }.
+re_match_named(Pattern, Match, NamedGroups) -->
+    re_match_dcg_state(Pattern, Match, _S0, SF),
+    {
+        state_named(SF, NamedGroups)
+    }.
 
 %% re_group(+NamedGroups, +Name, -Value)
 %
 % Retrieve the value of a named capturing group by its `Name`.
 re_group(NamedGroups, Name, Value) :-
     member(Name-Value, NamedGroups).
-
-% DCG phrase matcher helpers
-
-%% re_match_dcg(+Pattern, -Match)//
-%
-% DCG non-terminal prefix matcher. Matches a prefix of the input sequence
-% that conforms to the regular expression `Pattern`, unifying it with `Match`.
-re_match_dcg(compiled(Goal, GroupCount), Match) -->
-    !,
-    re_match_dcg(compiled(Goal, GroupCount), Match, _Groups).
-re_match_dcg(Pattern, Match) -->
-    re_match_dcg(Pattern, Match, _Groups).
-
-%% re_match_dcg(+Pattern, -Match, -Groups)//
-%
-% DCG non-terminal prefix matcher. Matches a prefix of the input sequence conforming to `Pattern`,
-% unifying it with `Match` and extracting captured `Groups`.
-% `Groups` is a list of captured group substrings, ordered in group-number order
-% (left-to-right based on the order of their opening parentheses).
-% Definition: https://docs.oracle.com/javase/tutorial/essential/regex/groups.html
-re_match_dcg(compiled(Goal, GroupCount), Match, Groups) -->
-    !,
-    re_match_dcg_state(compiled(Goal, GroupCount), Match, _S0, SF),
-    {
-        state_groups(SF, Groups)
-    }.
-re_match_dcg(Pattern, Match, Groups) -->
-    re_match_dcg_state(Pattern, Match, _S0, SF),
-    {
-        state_groups(SF, Groups)
-    }.
 
 re_match_dcg_state(Pattern, Match, S0, SF, L0, L) :-
     pattern_compiled(Pattern, Goal, GroupCount),

@@ -12,16 +12,12 @@ module_exports(File, Exports) :-
 test("Public user interfaces are identical in both modules",
     (   % Expected public API predicates
         PublicInterface = [
-            re_match/3,
-            re_match_t/3,
-            re_match_groups/4,
-            re_match_groups_t/5,
             re_compile/2,
-            re_match_dcg//2,
-            re_match_dcg//3,
             re_clear_cache/0,
-            re_match_named/4,
-            re_match_named_t/5,
+            re_match//1,
+            re_match//2,
+            re_match_groups//3,
+            re_match_named//3,
             re_group/3
         ],
         % Read exports from both files (assuming execution from root directory)
