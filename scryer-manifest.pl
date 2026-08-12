@@ -1,11 +1,9 @@
 name("regexp").
-% Optional. The file that will be imported when this package is used.
-main_file("main.pl").
-% The license of the package
+% Main module entry point imported when using pkg(regexp)
+main_file("regexp_dcg.pl").
+% Package license
 license(name("Unlicense"), path("./UNLICENSE")).
-% Optional
+% Package dependencies
 dependencies([
-    % A git url to clone
     dependency("testing", git("https://github.com/bakaq/testing.pl.git"))
-    % A git url to clone at a specific branch
-  ]).
+]).
