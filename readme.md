@@ -6,7 +6,51 @@ A pure, ISO-compliant Definite Clause Grammar (DCG) regular expression engine de
 
 The primary goal of this project is to provide a portable, pure, ISO-compliant Regular Expression (`REGEXP`) matching library for Scryer Prolog and other ISO Prolog systems (such as Trealla Prolog, Tau Prolog, GNU Prolog, Ciao, etc.) using pure DCG non-terminals without relying on system-dependent primitives.  
 
+---
 
+## Packaging & Installation
+
+Bakage is **optional**. Because `regexp_dcg` is written in pure ISO Prolog, you can use it either with Bakage or by directly importing the files into any Prolog project.
+
+### Option 1: With Bakage Package Manager ([`bakage`](https://github.com/bakaq/bakage))
+
+1. **Add to `scryer-manifest.pl`**:
+   ```prolog
+   dependencies([
+       dependency("regexp", git("https://github.com/dougransom/regexp_dcg.git"))
+   ]).
+   ```
+
+2. **Install Dependencies**:
+   ```bash
+   scryer-prolog bakage.pl -- install
+   ```
+
+3. **Import in Prolog Code**:
+   ```prolog
+   :- use_module(bakage).
+   :- use_module(pkg(regexp)).
+
+   ?- phrase(re_match("[a-z]+", Match), "hello").
+   ```
+
+### Option 2: Without Bakage (Direct Import / Git Clone)
+
+1. **Clone or Download the Repository**:
+   ```bash
+   git clone https://github.com/dougransom/regexp_dcg.git
+   ```
+
+2. **Direct Import via `use_module/1`**:
+   Import `regexp_dcg.pl` using its relative path (or place `regexp_dcg.pl` and `regexp_ast.pl` in your source directory / `SCRYER_PATH`):
+
+   ```prolog
+   :- use_module('path/to/regexp_dcg/regexp_dcg').
+
+   ?- phrase(re_match("[a-z]+", Match), "hello").
+   ```
+
+---
 
 ## Primary Interface (`regexp_dcg`)
 
