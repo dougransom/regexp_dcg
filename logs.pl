@@ -1,3 +1,51 @@
+/**
+  ### Purpose of the `logs` Module
+
+  The `logs` module provides a flexible, multi-handler logging and instrumentation framework for ISO Prolog.
+  It supports level-filtered log emission (`debug`, `info`, `warning`, `error`, `critical`),
+  pluggable log handlers (console, stream/file, in-memory list), and compile-time goal expansion
+  for zero-overhead debug instrumentation.
+
+  ---
+
+  ### Usage Examples
+
+  #### 1. Basic Logging
+  ```prolog
+  :- use_module(logs).
+
+  example :-
+      log_info("Application started with count: ~d", [42]),
+      log_warning("High memory usage detected"),
+      log_error("Failed to parse pattern ~s", ["a**"]).
+  ```
+
+  #### 2. Registering Log Handlers
+  By default, log messages are dispatched to registered handlers:
+  - `add_handler(console_handler)`: Prints formatted logs to stdout.
+  - `add_handler(list_handler)`: Stores log terms in memory; retrieve via `get_accumulated_logs(Logs)`.
+  - `add_handler(stream_handler(Stream))`: Writes log output to a file/stream.
+  - `remove_handlers`: Clears all registered handlers.
+
+  #### 3. Filtering Log Levels
+  - `set_log_level(debug)` — Enable all log messages down to debug.
+  - `set_log_level(info)`  — Default level (suppresses debug).
+  - `set_log_level(error)` — Suppress debug, info, and warning logs.
+
+  ---
+
+  ### Enabling & Disabling Debug Instrumentation (`debug_instrumentation`)
+
+  The module provides `debug_instrumentation(Format, Args)` goals that can be embedded throughout performance-sensitive code.
+
+  #### How to Enable:
+  1. **Compile-time directive**: Add `:- debug_logs.` at the top of your file.
+  2. **Runtime assertion**: Call `assertz(logs:debug_on).` before running goals.
+
+  #### How to Disable:
+  1. **Omit directive**: If `:- debug_logs.` is omitted and `logs:debug_on` is not asserted, `debug_instrumentation/2` automatically expands to `true` during macro expansion, incurring **zero runtime performance penalty**.
+  2. **Runtime retract**: Call `retractall(logs:debug_on).` to disable dynamic instrumentation.
+*/
 :- module(logs, [
     log/2,
     log/3,
