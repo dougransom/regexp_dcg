@@ -1,5 +1,5 @@
 /**
-  Provides a Definite Clause Grammar (DCG) regular expression engine for Scryer Prolog.
+  Provides a Definite Clause Grammar (DCG) regular expression engine for ISO Prolog systems.
 
   This module transforms regular expression strings into pure, executable DCG non-terminal
   expressions that match character sequences directly within Prolog grammars.
@@ -53,7 +53,7 @@
 
   ### Multilingual & International Character Support
 
-  Scryer Prolog string literals (`double_quotes`) represent sequences of native Unicode character code points (`chars`).
+  In ISO Prolog systems treating `double_quotes` as character lists (`chars`), strings represent sequences of native character code points.
   Exact literal matching, wildcards (`.`), custom character classes (`[α-ω]`), capturing groups, Emojis, and non-Latin scripts (e.g. Greek, CJK, Klingon script PUA) work out of the box.
 
   > [!NOTE]

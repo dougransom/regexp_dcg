@@ -1,6 +1,12 @@
-.PHONY: test test_ast_dcg test_curr_pred test_exports_match test_format test_logs test_regexp_ast test_regexp_dcg test_regexp_compile_dfa test_si test_time test_re_token test_international
+.PHONY: test test_ast_dcg test_curr_pred test_exports_match test_format test_logs test_regexp_ast test_regexp_dcg test_regexp_compile_dfa test_si test_time test_re_token test_international docs
 
 test: test_ast_dcg test_curr_pred test_exports_match test_format test_logs test_regexp_ast test_regexp_dcg test_regexp_compile_dfa test_si test_time test_re_token test_international
+
+docs:
+	@echo "=== Generating docs/regexp_intro.md ==="
+	nice scryer-safe -g main -g halt generate_intro_md.pl
+	@echo "Docs successfully updated."
+	@echo ""
 
 test_ast_dcg:
 	@echo "=== Running test_ast_dcg.pl ==="

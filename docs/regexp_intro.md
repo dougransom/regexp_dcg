@@ -1,6 +1,6 @@
-# Using Regular Expression Patterns in Scryer Prolog
+# Using Regular Expression Patterns in Prolog
 
-This document provides examples and expected Scryer Prolog toplevel outputs for all supported regular expression features in this library.
+This document provides examples and expected Prolog toplevel outputs for all supported regular expression features in this library.
 
 To load the backtracking regular expression engine, run:
 ```prolog

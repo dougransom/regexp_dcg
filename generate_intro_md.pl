@@ -47,8 +47,8 @@ run_query(Stream, Title, Desc, QueryStr, Goal, VarNames, VarValues) :-
 
 main :-
     open('docs/regexp_intro.md', write, Stream),
-    format(Stream, "# Using Regular Expression Patterns in Scryer Prolog~n~n", []),
-    format(Stream, "This document provides examples and expected Scryer Prolog toplevel outputs for all supported regular expression features in this library.~n~n", []),
+    format(Stream, "# Using Regular Expression Patterns in Prolog~n~n", []),
+    format(Stream, "This document provides examples and expected Prolog toplevel outputs for all supported regular expression features in this library.~n~n", []),
     format(Stream, "To load the backtracking regular expression engine, run:~n", []),
     format(Stream, "```prolog~n?- use_module(regexp_dcg).~n   true.~n```~n~n", []),
     format(Stream, "## Pattern Examples~n~n", []),

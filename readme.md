@@ -1,6 +1,10 @@
-# Regular Expression Engine for Scryer Prolog (`regexp_dcg`)
+# Regular Expression Engine for Scryer Prolog and ISO Prolog Systems (`regexp_dcg`)
 
-A pure, ISO-compliant Definite Clause Grammar (DCG) regular expression engine for [Scryer Prolog](https://github.com/mthom/scryer-prolog).
+A pure, ISO-compliant Definite Clause Grammar (DCG) regular expression engine designed for [Scryer Prolog](https://github.com/mthom/scryer-prolog) and other ISO-compliant Prolog implementations.
+
+### Project Goals
+
+The primary goal of this project is to provide a portable, pure, ISO-compliant Regular Expression (`REGEXP`) matching library for Scryer Prolog and other ISO Prolog systems (such as Trealla Prolog, Tau Prolog, GNU Prolog, Ciao, etc.) using pure DCG non-terminals without relying on system-dependent primitives.
 
 This library transforms regular expression strings into pure Prolog DCG non-terminals, enabling seamless regex pattern matching directly within Prolog grammars and `phrase/2` / `phrase/3` calls.
 
@@ -70,7 +74,7 @@ The library is structured into modular layers:
   Parses raw regular expression character lists into an Abstract Syntax Tree (AST) representation (`lit/1`, `class/1`, `group/1`, `star/1`, etc.). Implements tokenizers (`re_token//1`) and POSIX class parsing.
 
 - **[`ast_dcg.pl`](file:///home/doug/code/regexp/ast_dcg.pl)** (DCG Code Generator):
-  Transforms parsed AST terms into pure Scryer Prolog DCG matching goals constructed from pure combinators (`dcg_lit`, `dcg_concat`, `dcg_or`, `dcg_star`, etc.).
+  Transforms parsed AST terms into pure ISO Prolog DCG matching goals constructed from pure combinators (`dcg_lit`, `dcg_concat`, `dcg_or`, `dcg_star`, etc.).
 
 - **[`regexp_compile_dfa.pl`](file:///home/doug/code/regexp/regexp_compile_dfa.pl)** (Experimental DFA Engine):
   An experimental NFA/DFA engine for benchmarking and comparing performance against the primary DCG engine.
@@ -79,7 +83,7 @@ The library is structured into modular layers:
 
 ## Multilingual & International Character Support
 
-Because Scryer Prolog represents strings (`double_quotes`) as lists of native Unicode code point character atoms (`chars`), this library supports international character matching out of the box:
+In ISO Prolog systems treating `double_quotes` as character lists (`chars`), strings represent sequences of native character code points. This library supports international character matching out of the box:
 
 - **Exact Literals**: Accented Latin (`"café"`), Greek (`"αβγ"`), Chinese Hanzi (`"你好"`), Emojis (`"🚀😀"`), and Klingon script (`""` PUA / `"Qapla'"`).
 - **Wildcard `.`**: Correctly matches 1 Unicode character (code point).
