@@ -49,3 +49,45 @@ test("Capture AST to DCG, two captures",
     phrase(DCG, "abcdef"),
     Match == "abcdef"
     )).
+
+% =============================================================================
+% 日本語テストケース (Japanese Language Test Cases)
+% =============================================================================
+
+test("リテラルASTからDCGへの変換テスト",
+    (   In="あいうえおか",
+        phrase(re_ast_chars(AST),In),
+        AST = lit(In),
+        ast_dcg(AST, Match, DCG),
+        phrase(DCG, In),
+        Match == In
+    )).
+
+test("ORリテラルASTからDCGへの変換テスト（重複しないマッチ）",
+    (   phrase(re_ast_chars(AST),"さくら|ふじ"),
+        AST = or(lit("さくら"),lit("ふじ")),
+        ast_dcg(AST, Match, DCG),
+        phrase(DCG, "さくら"),
+        Match == "さくら"
+    )).
+
+test("ORリテラルASTからDCGへの変換テスト（最長マッチ）",
+    (   phrase(re_ast_chars(AST),"とうきょう123|とうきょう"),
+        ast_dcg(AST, Match, DCG),
+        phrase(DCG, "とうきょう123xxx", _),
+        Match == "とうきょう123"
+    )).
+
+test("キャプチャASTからDCGへの変換テスト（1つのキャプチャ）",
+    (   phrase(re_ast_chars(AST),"(きょうと)"),
+        ast_dcg(AST, Match, DCG),
+        phrase(DCG, "きょうと"),
+        Match == "きょうと"
+    )).
+
+test("キャプチャASTからDCGへの変換テスト（2つのキャプチャ）",
+    (   phrase(re_ast_chars(AST),"(きょうと)(おおさか)"),
+        ast_dcg(AST, Match, DCG),
+        phrase(DCG, "きょうとおおさか"),
+        Match == "きょうとおおさか"
+    )).

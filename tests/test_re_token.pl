@@ -62,3 +62,26 @@ test("CharClass Tokens: negated class",
     (   phrase(re_tokens(T), "[^abc]"),
         T = [class(neg([char(a),char(b),char(c)]))]
     )).
+
+% =============================================================================
+% 日本語テストケース (Japanese Language Test Cases)
+% =============================================================================
+
+test("リテラルテスト - コロンを含む文字列（3つのトークン）",
+    (   In="あい:うえ",
+        phrase(re_tokens(T),In),
+        T = [lit("あい"),colon,lit("うえ")]
+    )).
+
+test("リテラルテスト - 1文字と後置演算子が続くリテラル文字列",
+    (   In="あいうえお?か",
+        phrase(re_token(T),In,_),
+        T=lit("あいうえ")
+    )).
+
+test("リテラルテスト - トークンからリテラル文字列を生成",
+    (   T=lit("あいうえおか"),
+        var(Str),
+        phrase(re_token(T),Str),
+        Str="あいうえおか"
+    )).
