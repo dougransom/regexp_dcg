@@ -1,9 +1,26 @@
 /**
-  Provides a Definite Clause Grammar (DCG) based regular expression engine.
+  Provides a Definite Clause Grammar (DCG) regular expression engine for Scryer Prolog.
 
-  This module compiles regular expressions to a pure Scryer Prolog DCG representation,
-  supporting standard regex matching, reified matching, group extraction, caching, and
-  DCG-based non-terminal parsing.
+  This module transforms regular expression strings into pure, executable DCG non-terminal
+  expressions that match character sequences directly within Prolog grammars.
+
+  ### Matching Paradigms
+
+  1. **Direct & Embedded DCG Non-Terminal Matching (`re_match//1-2`, `re_match_groups//3`, `re_match_named//3`)**:
+     Use matching non-terminals directly inside `phrase/2`, `phrase/3`, or embedded within custom DCG grammar rules:
+     ```prolog
+     ?- phrase(re_match("a*b", Match), "aaabc", Rest).
+     % Match = "aaab", Rest = "c"
+     ```
+     Patterns passed directly to match predicates are automatically compiled into DCG goals and cached for subsequent calls.
+
+  2. **Pre-Compiling Patterns (`re_compile/2`)**:
+     Compile a regular expression pattern string into a reusable compiled DCG structure:
+     ```prolog
+     ?- re_compile("a*b", Compiled),
+        phrase(re_match(Compiled, Match), "aaab").
+     ```
+     This avoids parsing overhead when matching the same pattern repeatedly across multiple inputs.
 
   ### Supported Regular Expression Syntax
 
@@ -33,6 +50,14 @@
   | | `(?!...)` | Negative lookahead assertion. |
   | **Flags** | `(?flags)` | Inline flags setting: `i` (case-insensitive), `m` (multi-line), `s` (dot-all), `x` (verbose), etc. |
   | | `(?flags:...)` | Flags applied locally to a sub-expression group. |
+
+  ### Multilingual & International Character Support
+
+  Scryer Prolog string literals (`double_quotes`) represent sequences of native Unicode character code points (`chars`).
+  Exact literal matching, wildcards (`.`), custom character classes (`[α-ω]`), capturing groups, Emojis, and non-Latin scripts (e.g. Greek, CJK, Klingon script PUA) work out of the box.
+
+  > [!NOTE]
+  > **Case-Insensitivity Limitation (`(?i)`)**: Inline flag `(?i)` case folding is currently scoped to ASCII characters (`'A'-'Z'` $\leftrightarrow$ `'a'-'z'`). Non-ASCII international uppercase/lowercase foldings (e.g. `'É'` $\leftrightarrow$ `'é'`) are not automatically folded by `(?i)`.
 */
 :- module(regexp_dcg, [
     /* =========================================================================
@@ -40,13 +65,13 @@
        All matching predicates are pure DCG non-terminals.
        Use with phrase/2 or phrase/3.
        ========================================================================= */
-    re_compile/2,            % Compile pattern to a reusable compiled structure
-    re_clear_cache/0,        % Clear compiled pattern cache database
     re_match//1,             % DCG non-terminal prefix matcher (matches pattern)
     re_match//2,             % DCG non-terminal prefix matcher (unifies Match substring)
     re_match_groups//3,      % DCG non-terminal prefix matcher (unifies Match & Groups)
     re_match_named//3,       % DCG non-terminal prefix matcher (unifies Match & NamedGroups)
-    re_group/3               % Lookup captured group by name
+    re_group/3,              % Lookup captured group by name
+    re_compile/2,            % Compile pattern to a reusable compiled structure
+    re_clear_cache/0         % Clear compiled pattern cache database
 ]).
 
 :- use_module(regexp_ast).
@@ -57,6 +82,18 @@
 :- use_module(library(error)).
 
 :- dynamic(pattern_cache/3).
+
+/**
+  ### Naming Conventions & State Threading
+
+  This module follows standard Prolog difference-list and state-threading conventions:
+  - `L0`, `L1`, ..., `L`: Input character sequence difference lists (threaded implicitly via DCG `-->` rules or explicitly via `phrase/3`). `L0` is the initial list before matching; `L` is the remaining list after matching.
+  - `S0`, `S1`, ..., `SF`: Engine state structure `state(Full, Groups, Named, Tree)` threaded through match combinators (`S0` = initial state, `SF` = final state).
+  - `C0`, `C1`, ..., `CF`: Integer counter threading (used at compile time for numbering capture group indices from initial count `C0` to final count `CF`).
+
+  Reference:
+  - DCGs & Difference Lists in Prolog: https://www.metalevel.at/prolog/dcg
+*/
 
 %% re_compile(+Pattern, -Compiled)
 %
@@ -88,15 +125,12 @@ re_clear_cache :-
 % DCG non-terminal prefix matcher. Matches a prefix of the input sequence
 % that conforms to the regular expression `Pattern`.
 re_match(Pattern) -->
-    re_match(Pattern, _Match).
+    re_match_groups(Pattern, _Match, _Groups).
 
 %% re_match(+Pattern, -Match)//
 %
 % DCG non-terminal prefix matcher. Matches a prefix of the input sequence
 % that conforms to the regular expression `Pattern`, unifying `Match` with the matched characters.
-re_match(compiled(Goal, GroupCount), Match) -->
-    !,
-    re_match_groups(compiled(Goal, GroupCount), Match, _Groups).
 re_match(Pattern, Match) -->
     re_match_groups(Pattern, Match, _Groups).
 
@@ -106,12 +140,6 @@ re_match(Pattern, Match) -->
 % unifying `Match` with the matched characters and `Groups` with the list of captured group substrings,
 % ordered in group-number order (left-to-right based on their opening parentheses).
 % Definition: https://docs.oracle.com/javase/tutorial/essential/regex/groups.html
-re_match_groups(compiled(Goal, GroupCount), Match, Groups) -->
-    !,
-    re_match_dcg_state(compiled(Goal, GroupCount), Match, _S0, SF),
-    {
-        state_groups(SF, Groups)
-    }.
 re_match_groups(Pattern, Match, Groups) -->
     re_match_dcg_state(Pattern, Match, _S0, SF),
     {
@@ -123,12 +151,6 @@ re_match_groups(Pattern, Match, Groups) -->
 % DCG non-terminal prefix matcher. Matches a prefix of the input sequence conforming to `Pattern`,
 % unifying `Match` with the matched characters and `NamedGroups` with a list of Name-Value pairs
 % representing the matched named capturing groups.
-re_match_named(compiled(Goal, GroupCount), Match, NamedGroups) -->
-    !,
-    re_match_dcg_state(compiled(Goal, GroupCount), Match, _S0, SF),
-    {
-        state_named(SF, NamedGroups)
-    }.
 re_match_named(Pattern, Match, NamedGroups) -->
     re_match_dcg_state(Pattern, Match, _S0, SF),
     {
@@ -153,6 +175,7 @@ re_match_dcg_state(Pattern, Match, S0, SF, L0, L) :-
 
 % Pattern already an AST
 pattern_ast(AST, AST) :-
+    nonvar(AST),
     is_ast(AST),
     !.
 
@@ -270,7 +293,11 @@ seq_ast_dcg([H|T], C0, CF, [G|Gs]) :-
 literal_match([]) --> [].
 literal_match([C|Cs]) --> [C], literal_match(Cs).
 
-% Convert input to character list safely without SWI-specifics (list_si checked first!)
+% Convert input to character list safely without SWI-specifics (var check first!)
+to_chars(Input, _) :-
+    var(Input),
+    !,
+    instantiation_error(to_chars/2).
 to_chars(Input, Input) :-
     list_si(Input),
     !.

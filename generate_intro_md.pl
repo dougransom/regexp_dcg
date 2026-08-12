@@ -1,4 +1,4 @@
-:- use_module(regexp_compile_dcg).
+:- use_module(regexp_dcg).
 :- use_module(library(format)).
 :- use_module(library(si)).
 :- use_module(library(lists)).
@@ -46,16 +46,16 @@ run_query(Stream, Title, Desc, QueryStr, Goal, VarNames, VarValues) :-
     format(Stream, "```~n~n", []).
 
 main :-
-    open('examples/regexp_intro.md', write, Stream),
+    open('docs/regexp_intro.md', write, Stream),
     format(Stream, "# Using Regular Expression Patterns in Scryer Prolog~n~n", []),
     format(Stream, "This document provides examples and expected Scryer Prolog toplevel outputs for all supported regular expression features in this library.~n~n", []),
     format(Stream, "To load the backtracking regular expression engine, run:~n", []),
-    format(Stream, "```prolog~n?- use_module(regexp_compile_dcg).~n   true.~n```~n~n", []),
+    format(Stream, "```prolog~n?- use_module(regexp_dcg).~n   true.~n```~n~n", []),
     format(Stream, "## Pattern Examples~n~n", []),
 
     run_query(Stream, "1. DCG for Literal", "Compile pattern into a DCG and match a string.",
-              "pattern_ast(\"abc\", AST), ast_dcg(AST, _S0, _S1, DCG), phrase(DCG, \"abc\")",
-              (pattern_ast("abc", AST), ast_dcg(AST, _S0, _S1, DCG), phrase(DCG, "abc")),
+              "regexp_dcg:pattern_ast(\"abc\", AST), regexp_dcg:ast_dcg(AST, _S0, _S1, DCG), phrase(DCG, \"abc\")",
+              (regexp_dcg:pattern_ast("abc", AST), regexp_dcg:ast_dcg(AST, _S0, _S1, DCG), phrase(DCG, "abc")),
               ["AST", "DCG"], [AST, DCG]),
 
     run_query(Stream, "2. Simple Match", "Basic matching of a literal pattern.",
@@ -232,5 +232,42 @@ main :-
               "phrase(re_match_named(\"(?P<first>[a-z]+) ([a-z]+) (?P<last>[a-z]+)\", Match, Named), \"john middle doe\"), re_group(Named, first, First)",
               (phrase(re_match_named("(?P<first>[a-z]+) ([a-z]+) (?P<last>[a-z]+)", Match36, Named36), "john middle doe"), re_group(Named36, first, First36)),
               ["Match", "Named", "First"], [Match36, Named36, First36]),
+
+    format(Stream, "## Multilingual & International Examples~n~n", []),
+
+    run_query(Stream, "37. International: French Accented Text", "Match accented Latin characters.",
+              "phrase(re_match(\"café\", Match), \"café et croissant\", Rest)",
+              phrase(re_match("café", Match37), "café et croissant", Rest37),
+              ["Match", "Rest"], [Match37, Rest37]),
+
+    run_query(Stream, "38. International: Greek Characters & Quantifiers", "Match Greek characters with Kleene plus quantifiers.",
+              "phrase(re_match(\"α+β+\", Match), \"αααβββ123\", Rest)",
+              phrase(re_match("α+β+", Match38), "αααβββ123", Rest38),
+              ["Match", "Rest"], [Match38, Rest38]),
+
+    run_query(Stream, "39. International: Greek Character Range", "Match characters using Unicode Greek range `[α-ω]`.",
+              "phrase(re_match(\"[α-ω]+\", Match), \"αβγδεxyz\", Rest)",
+              phrase(re_match("[α-ω]+", Match39), "αβγδεxyz", Rest39),
+              ["Match", "Rest"], [Match39, Rest39]),
+
+    run_query(Stream, "40. International: Asian Character Set (Chinese Hanzi)", "Match Chinese characters with named capturing groups.",
+              "phrase(re_match_named(\"(?P<greeting>你好)-(?P<target>世界)\", Match, Named), \"你好-世界\")",
+              phrase(re_match_named("(?P<greeting>你好)-(?P<target>世界)", Match40, Named40), "你好-世界"),
+              ["Match", "Named"], [Match40, Named40]),
+
+    run_query(Stream, "41. International: Asian Character Set (Japanese Hiragana)", "Match Japanese Hiragana characters.",
+              "phrase(re_match(\"こんにちは\", Match), \"こんにちは世界\", Rest)",
+              phrase(re_match("こんにちは", Match41), "こんにちは世界", Rest41),
+              ["Match", "Rest"], [Match41, Rest41]),
+
+    run_query(Stream, "42. International: Klingon Script PUA", "Match Klingon script characters in Unicode Private Use Area (tlhIngan Hol).",
+              "phrase(re_match(\"\", Match), \" Hol\", Rest)",
+              phrase(re_match("", Match42), " Hol", Rest42),
+              ["Match", "Rest"], [Match42, Rest42]),
+
+    run_query(Stream, "43. International: Emoji Characters & Quantifiers", "Match Emoji characters with quantifiers.",
+              "phrase(re_match(\"🚀+😀+\", Match), \"🚀🚀😀😀😀!foo\", Rest)",
+              phrase(re_match("🚀+😀+", Match43), "🚀🚀😀😀😀!foo", Rest43),
+              ["Match", "Rest"], [Match43, Rest43]),
 
     close(Stream).

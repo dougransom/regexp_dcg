@@ -5,17 +5,20 @@
   using a DFA simulation. Note that group extraction is not supported by the DFA engine
   and will raise a domain error.
 
+  This module is experimental, for comparing performance vs the DCG-based engine. This 
+  module may be deprecated in the future.
+
   For the list of supported regular expression patterns, see the module documentation
-  for `regexp_compile_dcg` (in [regexp_compile_dcg.pl](file:///home/doug/code/regexp/regexp_compile_dcg.pl)).
+  for `regexp_dcg` (in [regexp_dcg.pl](file:///home/doug/code/regexp/regexp_dcg.pl)).
 */
 :- module(regexp_dfa, [
-    re_compile/2,
-    re_clear_cache/0,
     re_match//1,
     re_match//2,
     re_match_groups//3,
     re_match_named//3,
-    re_group/3
+    re_group/3,
+    re_compile/2,
+    re_clear_cache/0
 ]).
 
 :- use_module(library(lists)).
@@ -36,12 +39,14 @@ re_match(Pattern) -->
 %
 % DCG non-terminal prefix matcher. Matches a prefix of the input sequence conforming to `Pattern`,
 % unifying `Match` with the matched character sequence.
-re_match(nfa(Start, Accept, States, Transitions), Match, L0, L) :-
+re_match(Pattern, Match, L0, L) :-
+    nonvar(Pattern),
+    Pattern = nfa(Start, Accept, States, Transitions),
     !,
     append(Match, L, L0),
     dfa_match_chars(nfa(Start, Accept, States, Transitions), Match).
 re_match(Pattern, Match, L0, L) :-
-    (   dfa_pattern_cache(Pattern, NFA) ->
+    (   (nonvar(Pattern), dfa_pattern_cache(Pattern, NFA)) ->
         true
     ;   pattern_ast(Pattern, AST),
         compile_ast_nfa(AST, NFA),
@@ -60,7 +65,8 @@ dfa_match_chars(NFA, Match) :-
 %% re_match_groups(+Pattern, -Match, -Groups)//
 %
 % Note: Capturing groups are not supported by the DFA engine and will raise a domain error.
-re_match_groups(nfa(Start, Accept, States, Transitions), _Match, _Groups) -->
+re_match_groups(Pattern, _Match, _Groups) -->
+    { nonvar(Pattern), Pattern = nfa(Start, Accept, States, Transitions) },
     !,
     { domain_error(dfa_group_extraction, nfa(Start, Accept, States, Transitions)) }.
 re_match_groups(Pattern, _Match, _Groups) -->
@@ -69,7 +75,8 @@ re_match_groups(Pattern, _Match, _Groups) -->
 %% re_match_named(+Pattern, -Match, -NamedGroups)//
 %
 % Note: Capturing groups are not supported by the DFA engine and will raise a domain error.
-re_match_named(nfa(Start, Accept, States, Transitions), _Match, _NamedGroups) -->
+re_match_named(Pattern, _Match, _NamedGroups) -->
+    { nonvar(Pattern), Pattern = nfa(Start, Accept, States, Transitions) },
     !,
     { domain_error(dfa_group_extraction, nfa(Start, Accept, States, Transitions)) }.
 re_match_named(Pattern, _Match, _NamedGroups) -->
@@ -96,6 +103,7 @@ re_clear_cache :-
 
 % Helper: convert pattern to AST
 pattern_ast(AST, AST) :-
+    nonvar(AST),
     is_ast(AST),
     !.
 pattern_ast(Pattern, AST) :-
@@ -492,6 +500,10 @@ char_equal_ci(C1, C2) :-
     char_lower(C1, L),
     char_lower(C2, L).
 
+to_chars(Input, _) :-
+    var(Input),
+    !,
+    instantiation_error(to_chars/2).
 to_chars(Input, Input) :-
     list_si(Input),
     !.

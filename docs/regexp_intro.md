@@ -4,7 +4,7 @@ This document provides examples and expected Scryer Prolog toplevel outputs for 
 
 To load the backtracking regular expression engine, run:
 ```prolog
-?- use_module(regexp_compile_dcg).
+?- use_module(regexp_dcg).
    true.
 ```
 
@@ -15,7 +15,7 @@ To load the backtracking regular expression engine, run:
 Compile pattern into a DCG and match a string.
 
 ```prolog
-?- pattern_ast("abc", AST), ast_dcg(AST, _S0, _S1, DCG), phrase(DCG, "abc").
+?- regexp_dcg:pattern_ast("abc", AST), regexp_dcg:ast_dcg(AST, _S0, _S1, DCG), phrase(DCG, "abc").
    AST = lit([a,b,c])
    DCG = call(regexp_dcg:dcg_lit([a,b,c]),state(A,B,C,[case_insensitive|D]),state(A,B,C,[case_insensitive|D]))
 ;  false.
@@ -381,6 +381,85 @@ Match pattern and extract named capturing groups using re_match_named//3 and loo
    Match = "john middle doe"
    Named = [last-[d,o,e],first-[j,o,h,n]]
    First = "john"
+;  false.
+```
+
+## Multilingual & International Examples
+
+### 37. International: French Accented Text
+
+Match accented Latin characters.
+
+```prolog
+?- phrase(re_match("café", Match), "café et croissant", Rest).
+   Match = "café"
+   Rest = " et croissant"
+;  false.
+```
+
+### 38. International: Greek Characters & Quantifiers
+
+Match Greek characters with Kleene plus quantifiers.
+
+```prolog
+?- phrase(re_match("α+β+", Match), "αααβββ123", Rest).
+   Match = "αααβββ"
+   Rest = "123"
+;  false.
+```
+
+### 39. International: Greek Character Range
+
+Match characters using Unicode Greek range `[α-ω]`.
+
+```prolog
+?- phrase(re_match("[α-ω]+", Match), "αβγδεxyz", Rest).
+   Match = "αβγδε"
+   Rest = "xyz"
+;  false.
+```
+
+### 40. International: Asian Character Set (Chinese Hanzi)
+
+Match Chinese characters with named capturing groups.
+
+```prolog
+?- phrase(re_match_named("(?P<greeting>你好)-(?P<target>世界)", Match, Named), "你好-世界").
+   Match = "你好-世界"
+   Named = [target-[世,界],greeting-[你,好]]
+;  false.
+```
+
+### 41. International: Asian Character Set (Japanese Hiragana)
+
+Match Japanese Hiragana characters.
+
+```prolog
+?- phrase(re_match("こんにちは", Match), "こんにちは世界", Rest).
+   Match = "こんにちは"
+   Rest = "世界"
+;  false.
+```
+
+### 42. International: Klingon Script PUA
+
+Match Klingon script characters in Unicode Private Use Area (tlhIngan Hol).
+
+```prolog
+?- phrase(re_match("", Match), " Hol", Rest).
+   Match = ""
+   Rest = " Hol"
+;  false.
+```
+
+### 43. International: Emoji Characters & Quantifiers
+
+Match Emoji characters with quantifiers.
+
+```prolog
+?- phrase(re_match("🚀+😀+", Match), "🚀🚀😀😀😀!foo", Rest).
+   Match = "🚀🚀😀😀😀"
+   Rest = "!foo"
 ;  false.
 ```
 

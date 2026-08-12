@@ -243,3 +243,14 @@ shared_test(Engine, "named capture: mixed named and unnamed",
         Engine:re_group(Named, last, "doe"),
         \+ Engine:re_group(Named, middle, _)
     )).
+
+shared_test(Engine, "error: unbound pattern raises instantiation_error",
+    (catch(phrase(Engine:re_match(_Var, _Match), "abc"), Error, true),
+     nonvar(Error),
+     Error = error(instantiation_error, _))).
+
+shared_test(Engine, "error: invalid pattern type raises domain_error",
+    (catch(phrase(Engine:re_match(123, _Match), "abc"), Error, true),
+     nonvar(Error),
+     Error = error(domain_error(chars, 123), _))).
+

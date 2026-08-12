@@ -1,6 +1,6 @@
-.PHONY: test test_ast_dcg test_curr_pred test_exports_match test_format test_logs test_regexp_ast test_regexp_compile_dcg test_regexp_compile_dfa test_si test_time test_token
+.PHONY: test test_ast_dcg test_curr_pred test_exports_match test_format test_logs test_regexp_ast test_regexp_dcg test_regexp_compile_dfa test_si test_time test_re_token test_international
 
-test: test_ast_dcg test_curr_pred test_exports_match test_format test_logs test_regexp_ast test_regexp_compile_dcg test_regexp_compile_dfa test_si test_time test_token
+test: test_ast_dcg test_curr_pred test_exports_match test_format test_logs test_regexp_ast test_regexp_dcg test_regexp_compile_dfa test_si test_time test_re_token test_international
 
 test_ast_dcg:
 	@echo "=== Running test_ast_dcg.pl ==="
@@ -27,9 +27,9 @@ test_regexp_ast:
 	nice scryer-safe -g run_tests -g halt tests/test_regexp_ast.pl
 	@echo ""
 
-test_regexp_compile_dcg:
-	@echo "=== Running test_regexp_compile_dcg.pl ==="
-	nice scryer-safe -g run_tests -g halt tests/test_regexp_compile_dcg.pl
+test_regexp_dcg:
+	@echo "=== Running test_regexp_dcg.pl ==="
+	nice scryer-safe -g run_tests -g halt tests/test_regexp_dcg.pl
 	@echo ""
 
 test_regexp_compile_dfa:
@@ -52,7 +52,12 @@ test_time:
 	nice scryer-safe -g main tests/test_time.pl
 	@echo ""
 
-test_token:
-	@echo "=== Running test_token.pl ==="
-	nice scryer-safe -g run_tests -g halt tests/test_token.pl
+test_re_token:
+	@echo "=== Running test_re_token.pl ==="
+	nice scryer-safe -g run_tests -g halt tests/test_re_token.pl
+	@echo ""
+
+test_international:
+	@echo "=== Running test_international.pl ==="
+	nice scryer-safe -g run_tests -g halt tests/test_international.pl
 	@echo ""
