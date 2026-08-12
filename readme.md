@@ -4,11 +4,9 @@ A pure, ISO-compliant Definite Clause Grammar (DCG) regular expression engine de
 
 ### Project Goals
 
-The primary goal of this project is to provide a portable, pure, ISO-compliant Regular Expression (`REGEXP`) matching library for Scryer Prolog and other ISO Prolog systems (such as Trealla Prolog, Tau Prolog, GNU Prolog, Ciao, etc.) using pure DCG non-terminals without relying on system-dependent primitives.
+The primary goal of this project is to provide a portable, pure, ISO-compliant Regular Expression (`REGEXP`) matching library for Scryer Prolog and other ISO Prolog systems (such as Trealla Prolog, Tau Prolog, GNU Prolog, Ciao, etc.) using pure DCG non-terminals without relying on system-dependent primitives.  
 
-This library transforms regular expression strings into pure Prolog DCG non-terminals, enabling seamless regex pattern matching directly within Prolog grammars and `phrase/2` / `phrase/3` calls.
 
----
 
 ## Primary Interface (`regexp_dcg`)
 
@@ -95,6 +93,39 @@ In ISO Prolog systems treating `double_quotes` as character lists (`chars`), str
 - **Multilingual Example Script**: See [`examples/international/multilingual_matching.pl`](file:///home/doug/code/regexp/examples/international/multilingual_matching.pl).
 
 ---
+
+## TOML Light Parser Example (`examples/toml/`)
+
+The repository includes a complete **TOML Light Parser Example** under [`examples/toml/`](file:///home/doug/code/regexp/examples/toml/), demonstrating how `regexp_dcg` functions as a clean tokenizer combined with Prolog DCG grammars to parse configuration files into structured AST terms.
+
+### Features Supported
+
+- **Keys & Values**: `title = "My App"`, `count = 42`, `debug = true`
+- **Arrays**: `ports = [8000, 8001, 8002]`, `names = ["a", "b", "c"]`
+- **Tables**: `[server]` (headers and scope management)
+- **Dotted Keys**: `database.host = "db.local"`, `database.port = 5432`
+- **Inline Tables**: `owner = { name = "Doug", email = "doug@example.com" }`
+- **Comments**: `# This is a comment`
+
+### Demonstration Highlights
+
+1. **Regex Tokenizer ([`examples/toml/toml_tokenizer.pl`](file:///home/doug/code/regexp/examples/toml/toml_tokenizer.pl))**:
+   Demonstrates `regexp_dcg` features:
+   - **Bare Keys**: `[A-Za-z0-9_-]+`
+   - **Quoted Strings**: `"([^"\\]|\\.)*"`
+   - **Numbers**: Integers & Floats (`-?[0-9]+(\.[0-9]+)?`)
+   - **Booleans**: `true|false`
+   - **Comments**: `#.*$`
+   - **Quantifiers & Alternation**: Greedy/non-greedy quantifiers, character classes, whitespace skipping.
+2. **DCG Grammar & AST Builder ([`examples/toml/toml_parser.pl`](file:///home/doug/code/regexp/examples/toml/toml_parser.pl))**:
+   Recursive DCG rules building AST terms (`toml([kv(...), table(...), comment(...)])`) handling multi-line files and nested table scopes.
+3. **Sample File & Runner ([`examples/toml/sample.toml`](file:///home/doug/code/regexp/examples/toml/sample.toml) & [`examples/toml/parse_sample.pl`](file:///home/doug/code/regexp/examples/toml/parse_sample.pl))**:
+   Execute the TOML parser pipeline inside the `examples/toml` directory:
+   ```bash
+   cd examples/toml
+   scryer-prolog parse_sample.pl -g main
+   ```
+   (or: `nice scryer-safe parse_sample.pl -g main`)
 
 ## Documentation & Test Suite
 

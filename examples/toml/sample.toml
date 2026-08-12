@@ -1,0 +1,17 @@
+title = "My App"
+count = 42
+debug = true
+
+ports = [8000, 8001, 8002]
+names = ["a", "b", "c"]
+
+[server]
+host = "localhost"
+port = 8080
+
+database.host = "db.local"
+database.port = 5432
+
+owner = { name = "Doug", email = "doug@example.com" }
+
+# This is a comment
