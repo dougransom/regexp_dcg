@@ -289,11 +289,13 @@ Match pattern only if followed by lookahead sub-expression.
 
 ### 24. Named Group Capture
 
-Syntax support for named capturing groups.
+Syntax support for named capturing groups using re_match//2 for full pattern matching, and re_match_named//3 with re_group/3 to extract named captured subgroups.
 
 ```prolog
-?- phrase(re_match("(?P<id>abc)", Match), "abc").
-   Match = "abc"
+?- phrase(re_match_named("(?P<first>[a-z]+) ([a-z]+) (?P<last>[a-z]+)", Match, Named), "john middle doe"), re_group(Named, first, First).
+   Match = "john middle doe"
+   Named = [last-[d,o,e],first-[j,o,h,n]]
+   First = "john"
 ;  false.
 ```
 

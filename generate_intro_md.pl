@@ -191,10 +191,10 @@ main :-
               phrase(re_match("a(?=b)b", Match23), "ab"),
               ["Match"], [Match23]),
 
-    run_query(Stream, "24. Named Group Capture", "Syntax support for named capturing groups.",
-              "phrase(re_match(\"(?P<id>abc)\", Match), \"abc\")",
-              phrase(re_match("(?P<id>abc)", Match24), "abc"),
-              ["Match"], [Match24]),
+    run_query(Stream, "24. Named Group Capture", "Syntax support for named capturing groups using re_match//2 for full pattern matching, and re_match_named//3 with re_group/3 to extract named captured subgroups.",
+              "phrase(re_match_named(\"(?P<first>[a-z]+) ([a-z]+) (?P<last>[a-z]+)\", Match, Named), \"john middle doe\"), re_group(Named, first, First)",
+              (phrase(re_match_named("(?P<first>[a-z]+) ([a-z]+) (?P<last>[a-z]+)", Match24, Named24), "john middle doe"), re_group(Named24, first, First24)),
+              ["Match", "Named", "First"], [Match24, Named24, First24]),
 
     run_query(Stream, "25. Inline Case-Insensitive Flag", "Enable case-insensitivity using inline flags.",
               "phrase(re_match(\"(?i)abc\", Match), \"ABC\")",
