@@ -467,11 +467,19 @@ re_postfix_tokens(AST) -->
 
 %% is_ast(+AST)
 %
-% Validates that AST is a valid Abstract Syntax Tree using a recursive DCG grammar.
+% Validates that `AST` is a structurally sound Abstract Syntax Tree (AST) term.
+%
+% Implementation Rationale:
+% Rather than parsing concrete tokens via `re_ast//1` (which is cut-heavy and allocates
+% token streams), `is_ast/1` uses `ast_node//1`—a pure, recursive DCG grammar that validates
+% the AST term schema directly over empty lists `[]` in O(N) time with zero token allocations.
 is_ast(AST) :-
     nonvar(AST),
     phrase(ast_node(AST), []).
 
+%% ast_node(+AST)//
+%
+% Pure recursive DCG grammar defining valid AST term schemas and sub-tree structures.
 ast_node(lit(_))              --> [].
 ast_node(dot)                 --> [].
 ast_node(anchor(_))           --> [].
