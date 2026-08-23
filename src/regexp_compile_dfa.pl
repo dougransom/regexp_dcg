@@ -21,7 +21,8 @@
     re_match_named//3,
     re_group/3,
     re_compile/2,
-    re_clear_cache/0
+    re_clear_cache/0,
+    re_cache_info/2
 ]).
 
 :- use_module(library(lists)).
@@ -103,6 +104,14 @@ re_compile(Pattern, NFA) :-
 % Clear all compiled patterns currently stored in the dynamic `dfa_pattern_cache/2` database.
 re_clear_cache :-
     retractall(dfa_pattern_cache(_, _)).
+
+%% re_cache_info(-Count, -Keys)
+%
+% Unifies `Count` with the total number of compiled patterns currently in the cache,
+% and `Keys` with the list of cached pattern key strings.
+re_cache_info(Count, Keys) :-
+    findall(Key, dfa_pattern_cache(Key, _), Keys),
+    length(Keys, Count).
 
 % Helper: convert pattern to AST
 pattern_ast(AST, AST) :-

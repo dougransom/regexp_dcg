@@ -71,7 +71,8 @@
     re_match_named//3,       % DCG non-terminal prefix matcher (unifies Match & NamedGroups)
     re_group/3,              % Lookup captured group by name
     re_compile/2,            % Compile pattern to a reusable compiled structure
-    re_clear_cache/0         % Clear compiled pattern cache database
+    re_clear_cache/0,        % Clear compiled pattern cache database
+    re_cache_info/2          % Inspect compiled pattern cache (Count, Keys)
 ]).
 
 :- use_module('src/regexp_ast').
@@ -118,6 +119,14 @@ pattern_compiled(Pattern, Goal, GroupCount) :-
 % Clear all compiled patterns currently stored in the dynamic `pattern_cache/3` database.
 re_clear_cache :-
     retractall(pattern_cache(_, _, _)).
+
+%% re_cache_info(-Count, -Keys)
+%
+% Unifies `Count` with the total number of compiled patterns currently in the cache,
+% and `Keys` with the list of cached pattern key strings.
+re_cache_info(Count, Keys) :-
+    findall(Key, pattern_cache(Key, _, _), Keys),
+    length(Keys, Count).
 
 %% re_match(+Pattern)//
 %

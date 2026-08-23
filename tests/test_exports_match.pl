@@ -18,7 +18,8 @@ test("Public user interfaces are identical in both modules",
             re_match_named//3,
             re_group/3,
             re_compile/2,
-            re_clear_cache/0
+            re_clear_cache/0,
+            re_cache_info/2
         ],
         % Read exports from both files (assuming execution from root directory)
         module_exports('regexp_dcg.pl', DcgExports),

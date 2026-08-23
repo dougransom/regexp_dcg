@@ -56,18 +56,28 @@ main :-
 
     run_query(Stream, "1. Direct Pattern Match with phrase/2", "Match a string directly against a regular expression pattern using phrase/2.",
               "phrase(re_match(\"a.*b\", Match), \"acb\")",
-              phrase(re_match("a.*b", Match1), "acb"),
-              ["Match"], [Match1]),
+              phrase(re_match("a.*b", U_Match1), "acb"),
+              ["Match"], [U_Match1]),
 
     run_query(Stream, "2. Pattern Compilation", "Compile a regular expression pattern string into a reusable compiled structure.",
               "re_compile(\"a.*b\", Compiled)",
-              re_compile("a.*b", Compiled2),
-              ["Compiled"], [Compiled2]),
+              re_compile("a.*b", U_Compiled2),
+              ["Compiled"], [U_Compiled2]),
 
     run_query(Stream, "3. Match using Compiled Pattern", "Execute a pre-compiled pattern inside phrase/2 for maximum performance.",
               "re_compile(\"a.*b\", Compiled), phrase(re_match(Compiled, Match), \"acb\")",
-              (re_compile("a.*b", Compiled3), phrase(re_match(Compiled3, Match3), "acb")),
-              ["Compiled", "Match"], [Compiled3, Match3]),
+              (re_compile("a.*b", U_Compiled3), phrase(re_match(U_Compiled3, U_Match3), "acb")),
+              ["Compiled", "Match"], [U_Compiled3, U_Match3]),
+
+    run_query(Stream, "4. Inspect Compiled Pattern Cache", "Inspect the dynamic compilation cache using re_cache_info/2 to check the number of cached patterns and their pattern keys.",
+              "re_clear_cache, phrase(re_match(\"a.*b\"), \"acb\"), phrase(re_match(\"[0-9]+\"), \"123\"), re_cache_info(Count, Keys)",
+              (re_clear_cache, phrase(re_match("a.*b"), _), phrase(re_match("[0-9]+"), _), re_cache_info(U_Count4, U_Keys4)),
+              ["Count", "Keys"], [U_Count4, U_Keys4]),
+
+    run_query(Stream, "5. Clear Compiled Pattern Cache", "Clear all compiled pattern goals from the dynamic compilation database using re_clear_cache/0.",
+              "re_clear_cache, re_cache_info(Count, Keys)",
+              (re_clear_cache, re_cache_info(U_Count5, U_Keys5)),
+              ["Count", "Keys"], [U_Count5, U_Keys5]),
 
     format(Stream, "## Pattern Examples~n~n", []),
 
