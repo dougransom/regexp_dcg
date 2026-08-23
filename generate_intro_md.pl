@@ -48,17 +48,30 @@ run_query(Stream, Title, Desc, QueryStr, Goal, VarNames, VarValues) :-
 main :-
     open('docs/regexp_intro.md', write, Stream),
     format(Stream, "# Using Regular Expression Patterns in Prolog~n~n", []),
-    format(Stream, "This document provides examples and expected Prolog toplevel outputs for all supported regular expression features in this library.~n~n", []),
+    format(Stream, "This document provides usage examples and pattern matching examples with expected Prolog toplevel outputs for the regular expression library.~n~n", []),
     format(Stream, "To load the backtracking regular expression engine, run:~n", []),
     format(Stream, "```prolog~n?- use_module(regexp_dcg).~n   true.~n```~n~n", []),
+
+    format(Stream, "## Usage Examples~n~n", []),
+
+    run_query(Stream, "1. Direct Pattern Match with phrase/2", "Match a string directly against a regular expression pattern using phrase/2.",
+              "phrase(re_match(\"a.*b\", Match), \"acb\")",
+              phrase(re_match("a.*b", Match1), "acb"),
+              ["Match"], [Match1]),
+
+    run_query(Stream, "2. Pattern Compilation", "Compile a regular expression pattern string into a reusable compiled structure.",
+              "re_compile(\"a.*b\", Compiled)",
+              re_compile("a.*b", Compiled2),
+              ["Compiled"], [Compiled2]),
+
+    run_query(Stream, "3. Match using Compiled Pattern", "Execute a pre-compiled pattern inside phrase/2 for maximum performance.",
+              "re_compile(\"a.*b\", Compiled), phrase(re_match(Compiled, Match), \"acb\")",
+              (re_compile("a.*b", Compiled3), phrase(re_match(Compiled3, Match3), "acb")),
+              ["Compiled", "Match"], [Compiled3, Match3]),
+
     format(Stream, "## Pattern Examples~n~n", []),
 
-    run_query(Stream, "1. DCG for Literal", "Compile pattern into a DCG and match a string.",
-              "regexp_dcg:pattern_ast(\"abc\", AST), regexp_dcg:ast_dcg(AST, _S0, _S1, DCG), phrase(DCG, \"abc\")",
-              (regexp_dcg:pattern_ast("abc", AST), regexp_dcg:ast_dcg(AST, _S0, _S1, DCG), phrase(DCG, "abc")),
-              ["AST", "DCG"], [AST, DCG]),
-
-    run_query(Stream, "2. Simple Match", "Basic matching of a literal pattern.",
+    run_query(Stream, "1. Simple Literal Match", "Basic matching of a literal character sequence.",
               "phrase(re_match(\"abc\", Match), \"abc\")",
               phrase(re_match("abc", Match2), "abc"),
               ["Match"], [Match2]),

@@ -50,6 +50,12 @@ Bakage is **optional**. Because `regexp_dcg` is written in pure ISO Prolog, you 
    ?- phrase(re_match("[a-z]+", Match), "hello").
    ```
 
+   > [!NOTE]
+   > If your Prolog system provides this package out-of-the-box (or on its library path), you can import it directly:
+   > ```prolog
+   > :- use_module(library(regexp_dcg)).  % or :- use_module(regexp_dcg).
+   > ```
+
 ---
 
 ## Primary Interface (`regexp_dcg`)

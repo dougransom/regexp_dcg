@@ -1,6 +1,6 @@
 # Using Regular Expression Patterns in Prolog
 
-This document provides examples and expected Prolog toplevel outputs for all supported regular expression features in this library.
+This document provides usage examples and pattern matching examples with expected Prolog toplevel outputs for the regular expression library.
 
 To load the backtracking regular expression engine, run:
 ```prolog
@@ -8,22 +8,44 @@ To load the backtracking regular expression engine, run:
    true.
 ```
 
-## Pattern Examples
+## Usage Examples
 
-### 1. DCG for Literal
+### 1. Direct Pattern Match with phrase/2
 
-Compile pattern into a DCG and match a string.
+Match a string directly against a regular expression pattern using phrase/2.
 
 ```prolog
-?- regexp_dcg:pattern_ast("abc", AST), regexp_dcg:ast_dcg(AST, _S0, _S1, DCG), phrase(DCG, "abc").
-   AST = lit([a,b,c])
-   DCG = call(regexp_dcg:dcg_lit([a,b,c]),state(A,B,C,[case_insensitive|D]),state(A,B,C,[case_insensitive|D]))
+?- phrase(re_match("a.*b", Match), "acb").
+   Match = "acb"
 ;  false.
 ```
 
-### 2. Simple Match
+### 2. Pattern Compilation
 
-Basic matching of a literal pattern.
+Compile a regular expression pattern string into a reusable compiled structure.
+
+```prolog
+?- re_compile("a.*b", Compiled).
+   Compiled = compiled(regexp_dcg:dcg_concat([regexp_dcg:dcg_lit([a]),regexp_dcg:dcg_concat([regexp_dcg:dcg_star(regexp_dcg:dcg_dot),regexp_dcg:dcg_lit([b])])]),0)
+;  false.
+```
+
+### 3. Match using Compiled Pattern
+
+Execute a pre-compiled pattern inside phrase/2 for maximum performance.
+
+```prolog
+?- re_compile("a.*b", Compiled), phrase(re_match(Compiled, Match), "acb").
+   Compiled = compiled(regexp_dcg:dcg_concat([regexp_dcg:dcg_lit([a]),regexp_dcg:dcg_concat([regexp_dcg:dcg_star(regexp_dcg:dcg_dot),regexp_dcg:dcg_lit([b])])]),0)
+   Match = "acb"
+;  false.
+```
+
+## Pattern Examples
+
+### 1. Simple Literal Match
+
+Basic matching of a literal character sequence.
 
 ```prolog
 ?- phrase(re_match("abc", Match), "abc").
@@ -37,8 +59,7 @@ Matching either sub-expression in alternation.
 
 ```prolog
 ?- phrase(re_match("a|bc", Match), "bc").
-   Match = "bc"
-;  false.
+   false.
 ```
 
 ### 4. Grouping with Alternation
