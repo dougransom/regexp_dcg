@@ -1,0 +1,20 @@
+# Bakage package manager dependencies & build directory
+scryer_libs/
+
+# Prolog compiled objects & logs
+*.po
+*.ql
+*.so
+*.o
+*.dll
+*.dylib
+*.log
+*.tmp
+*.html
+
+# Editor & System Files
+*~
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
