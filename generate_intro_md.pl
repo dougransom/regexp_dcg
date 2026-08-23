@@ -71,7 +71,7 @@ main :-
 
     run_query(Stream, "4. Inspect Compiled Pattern Cache", "Inspect the dynamic compilation cache using re_cache_info/2 to check the number of cached patterns and their pattern keys.",
               "re_clear_cache, phrase(re_match(\"a.*b\"), \"acb\"), phrase(re_match(\"[0-9]+\"), \"123\"), re_cache_info(Count, Keys)",
-              (re_clear_cache, phrase(re_match("a.*b"), _), phrase(re_match("[0-9]+"), _), re_cache_info(U_Count4, U_Keys4)),
+              (re_clear_cache, phrase(re_match("a.*b"), "acb"), phrase(re_match("[0-9]+"), "123"), re_cache_info(U_Count4, U_Keys4)),
               ["Count", "Keys"], [U_Count4, U_Keys4]),
 
     run_query(Stream, "5. Clear Compiled Pattern Cache", "Clear all compiled pattern goals from the dynamic compilation database using re_clear_cache/0.",
