@@ -75,7 +75,6 @@
 ]).
 
 :- use_module(regexp_ast).
-:- use_module(logs).
 :- use_module(library(si)).
 :- use_module(library(lists)).
 :- use_module(library(dcgs)).

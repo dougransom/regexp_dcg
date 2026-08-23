@@ -39,6 +39,7 @@
 :- use_module(library(dcgs)).
 :- use_module(library(lists)).
 :- use_module(library(dif)).
+:- use_module(library(si)).
 
 % Reusable expansion to turn a string into O(1) facts for a predicate.
 user:term_expansion(generate_char_predicate(Name, String), [PluralFact|Clauses]) :-
@@ -49,8 +50,20 @@ user:term_expansion(generate_char_predicate(Name, String), [PluralFact|Clauses])
         Head =.. [Name, Char]
     ), Clauses).
 
+% Macro for defining deterministic tokenizer rules: tk(Term, String) -> re_token(Term) --> String, !.
 user:term_expansion(tk(Term, String), (re_token(Term) --> String, !)).
+
+% Macro for defining deterministic character class items: ci(Term, String) -> class_item(Term) --> String, !.
 user:term_expansion(ci(Term, String), (class_item(Term) --> String, !)).
+
+% Compile-time macros for AST node classification used by is_ast/1.
+% Translates declarative node definitions into indexed ast_children/2 facts:
+% - ast_unary(Pattern, Child): 1-child (unary) node term containing child `Child`.
+% - ast_binary(Pattern, ChildA, ChildB): 2-child (binary) node term containing children `ChildA` and `ChildB`.
+% - ast_leaf(Pattern): 0-child (leaf) node term containing no sub-ASTs.
+user:term_expansion(ast_unary(Pattern, A),     ast_children(Pattern, [A])).
+user:term_expansion(ast_binary(Pattern, A, B),  ast_children(Pattern, [A, B])).
+user:term_expansion(ast_leaf(Pattern),         ast_children(Pattern, [])).
 
 
 %:- dynamic metachars/1.
@@ -508,24 +521,35 @@ is_ast(AST) :-
     nonvar(AST),
     valid_ast_node(AST).
 
-valid_ast_node(lit(_)).
-valid_ast_node(dot).
-valid_ast_node(anchor(_)).
-valid_ast_node(boundary(_)).
-valid_ast_node(escaped(_)).
-valid_ast_node(class(_)).
-valid_ast_node(group(A))            :- is_ast(A).
-valid_ast_node(capture(A))          :- is_ast(A).
-valid_ast_node(named_capture(_, A)) :- is_ast(A).
-valid_ast_node(lookahead(A))        :- is_ast(A).
-valid_ast_node(neg_lookahead(A))    :- is_ast(A).
-valid_ast_node(postfix(A, _))       :- is_ast(A).
-valid_ast_node(quant(A, _))         :- is_ast(A).
-valid_ast_node(star(A))             :- is_ast(A).
-valid_ast_node(plus(A))             :- is_ast(A).
-valid_ast_node(maybe(A))            :- is_ast(A).
-valid_ast_node(or(A, B))            :- is_ast(A), is_ast(B).
-valid_ast_node(concat(A, B))        :- is_ast(A), is_ast(B).
-valid_ast_node(concat(List))        :- maplist(is_ast, List).
-valid_ast_node(flags(_)).
-valid_ast_node(flags(_, A))         :- is_ast(A).
+valid_ast_node(Node) :-
+    ast_children(Node, Children),
+    maplist(is_ast, Children).
+
+% 1-child (unary) wrapper nodes
+ast_unary(group(A), A).
+ast_unary(capture(A), A).
+ast_unary(named_capture(_, A), A).
+ast_unary(lookahead(A), A).
+ast_unary(neg_lookahead(A), A).
+ast_unary(postfix(A, _), A).
+ast_unary(quant(A, _), A).
+ast_unary(star(A), A).
+ast_unary(plus(A), A).
+ast_unary(maybe(A), A).
+ast_unary(flags(_, A), A).
+
+% 2-child (binary) nodes
+ast_binary(or(A, B), A, B).
+ast_binary(concat(A, B), A, B).
+
+% List-child node
+ast_children(concat(List), List) :- list_si(List).
+
+% 0-child (leaf) nodes
+ast_leaf(lit(_)).
+ast_leaf(dot).
+ast_leaf(anchor(_)).
+ast_leaf(boundary(_)).
+ast_leaf(escaped(_)).
+ast_leaf(class(_)).
+ast_leaf(flags(_)).
