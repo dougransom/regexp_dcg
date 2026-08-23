@@ -243,9 +243,23 @@ ast_dcg(AST, S0, SF, DCG) :-
     ast_dcg_goal(AST, 0, _, Goal),
     DCG = call(Goal, S0, SF).
 
-% ast_dcg_goal(+AST, +C0, -CF, -Goal)
-% Compiles the AST into a runtime DCG goal that threads SIn -> SOut at match-time,
-% while counting capture group indices C0 -> CF.
+%% ast_dcg_goal(+AST, +C0, -CF, -Goal)
+%
+% Compiles an AST term into an executable runtime DCG goal term `Goal`.
+% Threads state accumulator `SIn -> SOut` at match-time and counts capture group indices `C0 -> CF` at compile-time.
+%
+% ### Accumulator Behavior:
+% Any AST node that does not create a capturing group (e.g. `lit/1`, `dot`, `anchor/1`, `class/1`) passes
+% the capture group index through unchanged (`C0 = CF = C`). Nodes creating capturing groups (`capture/1`,
+% `named_capture/2`) increment the counter (`C1 is C0 + 1`).
+%
+% ### Deterministic Compilation & Cut (`!`) Rationale:
+% Compilation is 100% deterministic (zero choicepoint overhead). Cuts (`!`) are placed on specific clauses for:
+% 1. _Arity Disambiguation_: Cuts on `concat(A, B)` (`concat/2`) vs `concat(List)` (`concat/1`) and `flags(Flags, Sub)` (`flags/2`)
+%    vs `flags(Flags)` (`flags/1`) commit immediately to multi-argument clauses.
+% 2. _Sub-Functor Disambiguation_: Cuts on lazy quantifiers `postfix(Expr, lazy(Op))` commit when `Op = lazy(...)` matches,
+%    cutting choicepoints against greedy `postfix/2` clauses.
+% 3. _Error Containment_: Commits to the matching clause so sub-AST compilation errors fail immediately without spurious backtracking.
 ast_dcg_goal(lit(Chars), C, C, regexp_dcg:dcg_lit(Chars)).
 ast_dcg_goal(concat(A, B), C0, CF, regexp_dcg:dcg_concat([GA, GB])) :-
     !,
