@@ -467,40 +467,29 @@ re_postfix_tokens(AST) -->
 
 %% is_ast(+AST)
 %
-% Validates that `AST` is a structurally sound Abstract Syntax Tree (AST) term.
-%
-% Implementation Rationale:
-% Rather than parsing concrete tokens via `re_ast//1` (which is cut-heavy and allocates
-% token streams), `is_ast/1` uses `ast_node//1`—a pure, recursive DCG grammar that validates
-% the AST term schema directly over empty lists `[]` in O(N) time with zero token allocations.
+% Recursively validates that AST is a structurally sound Abstract Syntax Tree term.
 is_ast(AST) :-
     nonvar(AST),
-    phrase(ast_node(AST), []).
+    valid_ast_node(AST).
 
-%% ast_node(+AST)//
-%
-% Pure recursive DCG grammar defining valid AST term schemas and sub-tree structures.
-ast_node(lit(_))              --> [].
-ast_node(dot)                 --> [].
-ast_node(anchor(_))           --> [].
-ast_node(boundary(_))         --> [].
-ast_node(escaped(_))          --> [].
-ast_node(class(_))            --> [].
-ast_node(group(A))            --> ast_node(A).
-ast_node(capture(A))          --> ast_node(A).
-ast_node(named_capture(_, A)) --> ast_node(A).
-ast_node(lookahead(A))        --> ast_node(A).
-ast_node(neg_lookahead(A))    --> ast_node(A).
-ast_node(postfix(A, _))       --> ast_node(A).
-ast_node(quant(A, _))         --> ast_node(A).
-ast_node(star(A))             --> ast_node(A).
-ast_node(plus(A))             --> ast_node(A).
-ast_node(maybe(A))            --> ast_node(A).
-ast_node(or(A, B))            --> ast_node(A), ast_node(B).
-ast_node(concat(List))        --> ast_node_list(List).
-ast_node(concat(A, B))        --> ast_node(A), ast_node(B).
-ast_node(flags(_))            --> [].
-ast_node(flags(_, A))         --> ast_node(A).
-
-ast_node_list([])     --> [].
-ast_node_list([H|T]) --> ast_node(H), ast_node_list(T).
+valid_ast_node(lit(_)).
+valid_ast_node(dot).
+valid_ast_node(anchor(_)).
+valid_ast_node(boundary(_)).
+valid_ast_node(escaped(_)).
+valid_ast_node(class(_)).
+valid_ast_node(group(A))            :- is_ast(A).
+valid_ast_node(capture(A))          :- is_ast(A).
+valid_ast_node(named_capture(_, A)) :- is_ast(A).
+valid_ast_node(lookahead(A))        :- is_ast(A).
+valid_ast_node(neg_lookahead(A))    :- is_ast(A).
+valid_ast_node(postfix(A, _))       :- is_ast(A).
+valid_ast_node(quant(A, _))         :- is_ast(A).
+valid_ast_node(star(A))             :- is_ast(A).
+valid_ast_node(plus(A))             :- is_ast(A).
+valid_ast_node(maybe(A))            :- is_ast(A).
+valid_ast_node(or(A, B))            :- is_ast(A), is_ast(B).
+valid_ast_node(concat(A, B))        :- is_ast(A), is_ast(B).
+valid_ast_node(concat(List))        :- maplist(is_ast, List).
+valid_ast_node(flags(_)).
+valid_ast_node(flags(_, A))         :- is_ast(A).
