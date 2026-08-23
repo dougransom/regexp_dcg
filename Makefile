@@ -1,6 +1,6 @@
 SCRYER ?= scryer-prolog
 
-.PHONY: test test_curr_pred test_exports_match test_format test_logs test_regexp_ast test_regexp_dcg test_regexp_compile_dfa test_si test_time test_re_token test_international test_toml docs
+.PHONY: test test_curr_pred test_exports_match test_format test_logs test_regexp_ast test_regexp_dcg test_regexp_compile_dfa test_si test_time test_re_token test_international test_toml docs html
 
 test: test_curr_pred test_exports_match test_format test_logs test_regexp_ast test_regexp_dcg test_regexp_compile_dfa test_si test_time test_re_token test_international test_toml
 
@@ -10,9 +10,16 @@ test_toml:
 	@echo ""
 
 docs:
-	@echo "=== Generating docs/regexp_intro.md ==="
+	@echo "=== Generating docs/usage.md ==="
 	$(SCRYER) -g main -g halt generate_intro_md.pl
 	@echo "Docs successfully updated."
+	@echo ""
+
+html: docs
+	@echo "=== Generating HTML documentation ==="
+	pandoc -s --metadata title="Regexp DCG Usage Guide" -c "https://cdn.jsdelivr.net/npm/water.css@2/out/water.css" docs/usage.md -o docs/usage.html
+	pandoc -s --metadata title="Regexp DCG Library" -c "https://cdn.jsdelivr.net/npm/water.css@2/out/water.css" readme.md -o readme.html
+	@echo "HTML files successfully generated (docs/usage.html, readme.html)."
 	@echo ""
 
 test_curr_pred:

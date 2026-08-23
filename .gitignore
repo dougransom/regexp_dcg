@@ -10,6 +10,7 @@ scryer_libs/
 *.dylib
 *.log
 *.tmp
+*.html
 
 # Editor & System Files
 *~

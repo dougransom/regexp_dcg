@@ -46,7 +46,7 @@ run_query(Stream, Title, Desc, QueryStr, Goal, VarNames, VarValues) :-
     format(Stream, "```~n~n", []).
 
 main :-
-    open('docs/regexp_intro.md', write, Stream),
+    open('docs/usage.md', write, Stream),
     format(Stream, "# Using Regular Expression Patterns in Prolog~n~n", []),
     format(Stream, "This document provides usage examples and pattern matching examples with expected Prolog toplevel outputs for the regular expression library.~n~n", []),
     format(Stream, "To load the backtracking regular expression engine, run:~n", []),

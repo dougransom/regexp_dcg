@@ -60,7 +60,7 @@ Bakage is **optional**. Because `regexp_dcg` is written in pure ISO Prolog, you 
 
 ## Primary Interface (`regexp_dcg`)
 
-The main entry point for matching patterns is the [`regexp_dcg`](file:///home/doug/code/regexp/regexp_dcg.pl) module.
+The main entry point for matching patterns is the [`regexp_dcg`](file:///home/doug/code/regexp/regexp_dcg.pl) module. For a comprehensive walkthrough of supported pattern constructs and REPL output examples, see the [`docs/usage.md`](file:///home/doug/code/regexp/docs/usage.md) guide.
 
 ### Quick Usage Examples
 
@@ -176,7 +176,7 @@ The repository includes a complete **TOML Light Parser Example** under [`example
 
 ## Documentation & Test Suite
 
-- **Detailed Documentation**: See [`docs/regexp_intro.md`](file:///home/doug/code/regexp/docs/regexp_intro.md) for full feature documentation and expected Scryer Prolog REPL outputs for all supported regular expression constructs.
+- **Detailed Documentation**: See [`docs/usage.md`](file:///home/doug/code/regexp/docs/usage.md) for full feature documentation and expected Scryer Prolog REPL outputs for all supported regular expression constructs.
 - **Unit Tests**:
   - [`tests/test_regexp_dcg.pl`](file:///home/doug/code/regexp/tests/test_regexp_dcg.pl) — Core DCG engine matching tests.
   - [`tests/test_international.pl`](file:///home/doug/code/regexp/tests/test_international.pl) — Multilingual character tests (French, Greek, Chinese, Emoji, Klingon).
