@@ -60,7 +60,7 @@ Bakage is **optional**. Because `regexp_dcg` is written in pure ISO Prolog, you 
 
 ## Primary Interface (`regexp_dcg`)
 
-The main entry point for matching patterns is the [`regexp_dcg`](file:///home/doug/code/regexp/regexp_dcg.pl) module. For a comprehensive walkthrough of supported pattern constructs and REPL output examples, see the [`docs/usage.md`](file:///home/doug/code/regexp/docs/usage.md) guide.
+The main entry point for matching patterns is the [`regexp_dcg`](regexp_dcg.pl) module. For a comprehensive walkthrough of supported pattern constructs and REPL output examples, see the [`docs/usage.md`](docs/usage.md) guide.
 
 ### Quick Usage Examples
 
@@ -115,13 +115,13 @@ For maximum efficiency when evaluating the same pattern against many inputs, pre
 
 The library is structured into modular layers:
 
-- **[`regexp_dcg.pl`](file:///home/doug/code/regexp/regexp_dcg.pl)** (Primary User Interface):
+- **[`regexp_dcg.pl`](regexp_dcg.pl)** (Primary User Interface):
   Exposes user-facing DCG matching non-terminals (`re_match//1-2`, `re_match_groups//3`, `re_match_named//3`), group resolution (`re_group/3`), compilation (`re_compile/2`), and dynamic compilation caching.
 
-- **[`src/regexp_ast.pl`](file:///home/doug/code/regexp/src/regexp_ast.pl)** (Parser & Tokenizer):
+- **[`src/regexp_ast.pl`](src/regexp_ast.pl)** (Parser & Tokenizer):
   Parses raw regular expression character lists into an Abstract Syntax Tree (AST) representation (`lit/1`, `class/1`, `group/1`, `star/1`, etc.). Implements tokenizers (`re_token//1`) and POSIX class parsing.
 
-- **[`src/regexp_compile_dfa.pl`](file:///home/doug/code/regexp/src/regexp_compile_dfa.pl)** (Experimental DFA Engine):
+- **[`src/regexp_compile_dfa.pl`](src/regexp_compile_dfa.pl)** (Experimental DFA Engine):
   An experimental NFA/DFA engine for benchmarking and comparing performance against the primary DCG engine.
 
 ---
@@ -137,13 +137,13 @@ In ISO Prolog systems treating `double_quotes` as character lists (`chars`), str
 > [!NOTE]
 > **Case-Insensitivity Limitation (`(?i)`)**: Inline flag `(?i)` case folding is currently scoped to ASCII characters (`'A'-'Z'` $\leftrightarrow$ `'a'-'z'`). Non-ASCII international uppercase/lowercase foldings (e.g. `'É'` $\leftrightarrow$ `'é'`) are not automatically folded by `(?i)`.
 
-- **Multilingual Example Script**: See [`examples/international/multilingual_matching.pl`](file:///home/doug/code/regexp/examples/international/multilingual_matching.pl).
+- **Multilingual Example Script**: See [`examples/international/multilingual_matching.pl`](examples/international/multilingual_matching.pl).
 
 ---
 
 ## TOML Light Parser Example (`examples/toml/`)
 
-The repository includes a complete **TOML Light Parser Example** under [`examples/toml/`](file:///home/doug/code/regexp/examples/toml/), demonstrating how `regexp_dcg` functions as a clean tokenizer combined with Prolog DCG grammars to parse configuration files into structured AST terms.
+The repository includes a complete **TOML Light Parser Example** under [`examples/toml/`](examples/toml/), demonstrating how `regexp_dcg` functions as a clean tokenizer combined with Prolog DCG grammars to parse configuration files into structured AST terms.
 
 ### Features Supported
 
@@ -156,7 +156,7 @@ The repository includes a complete **TOML Light Parser Example** under [`example
 
 ### Demonstration Highlights
 
-1. **Regex Tokenizer ([`examples/toml/toml_tokenizer.pl`](file:///home/doug/code/regexp/examples/toml/toml_tokenizer.pl))**:
+1. **Regex Tokenizer ([`examples/toml/toml_tokenizer.pl`](examples/toml/toml_tokenizer.pl))**:
    Demonstrates `regexp_dcg` features:
    - **Bare Keys**: `[A-Za-z0-9_-]+`
    - **Quoted Strings**: `"([^"\\]|\\.)*"`
@@ -164,9 +164,9 @@ The repository includes a complete **TOML Light Parser Example** under [`example
    - **Booleans**: `true|false`
    - **Comments**: `#.*$`
    - **Quantifiers & Alternation**: Greedy/non-greedy quantifiers, character classes, whitespace skipping.
-2. **DCG Grammar & AST Builder ([`examples/toml/toml_parser.pl`](file:///home/doug/code/regexp/examples/toml/toml_parser.pl))**:
+2. **DCG Grammar & AST Builder ([`examples/toml/toml_parser.pl`](examples/toml/toml_parser.pl))**:
    Recursive DCG rules building AST terms (`toml([kv(...), table(...), comment(...)])`) handling multi-line files and nested table scopes.
-3. **Sample File & Runner ([`examples/toml/sample.toml`](file:///home/doug/code/regexp/examples/toml/sample.toml) & [`examples/toml/parse_sample.pl`](file:///home/doug/code/regexp/examples/toml/parse_sample.pl))**:
+3. **Sample File & Runner ([`examples/toml/sample.toml`](examples/toml/sample.toml) & [`examples/toml/parse_sample.pl`](examples/toml/parse_sample.pl))**:
    Execute the TOML parser pipeline inside the `examples/toml` directory:
    ```bash
    cd examples/toml
@@ -176,13 +176,13 @@ The repository includes a complete **TOML Light Parser Example** under [`example
 
 ## Documentation & Test Suite
 
-- **Detailed Documentation**: See [`docs/usage.md`](file:///home/doug/code/regexp/docs/usage.md) for full feature documentation and expected Scryer Prolog REPL outputs for all supported regular expression constructs.
+- **Detailed Documentation**: See [`docs/usage.md`](docs/usage.md) for full feature documentation and expected Scryer Prolog REPL outputs for all supported regular expression constructs.
 - **Unit Tests**:
-  - [`tests/test_regexp_dcg.pl`](file:///home/doug/code/regexp/tests/test_regexp_dcg.pl) — Core DCG engine matching tests.
-  - [`tests/test_international.pl`](file:///home/doug/code/regexp/tests/test_international.pl) — Multilingual character tests (French, Greek, Chinese, Emoji, Klingon).
-  - [`tests/test_regexp_ast.pl`](file:///home/doug/code/regexp/tests/test_regexp_ast.pl) — Regex parser and AST construction tests.
-  - [`tests/test_re_token.pl`](file:///home/doug/code/regexp/tests/test_re_token.pl) — Regex tokenization (`re_token//1`), metacharacter, and character class tests.
-  - [`tests/test_exports_match.pl`](file:///home/doug/code/regexp/tests/test_exports_match.pl) — Module export interface consistency tests.
+  - [`tests/test_regexp_dcg.pl`](tests/test_regexp_dcg.pl) — Core DCG engine matching tests.
+  - [`tests/test_international.pl`](tests/test_international.pl) — Multilingual character tests (French, Greek, Chinese, Emoji, Klingon).
+  - [`tests/test_regexp_ast.pl`](tests/test_regexp_ast.pl) — Regex parser and AST construction tests.
+  - [`tests/test_re_token.pl`](tests/test_re_token.pl) — Regex tokenization (`re_token//1`), metacharacter, and character class tests.
+  - [`tests/test_exports_match.pl`](tests/test_exports_match.pl) — Module export interface consistency tests.
 
 Run the test suite with:
 ```bash
