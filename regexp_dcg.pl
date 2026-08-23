@@ -192,26 +192,56 @@ pattern_ast(Pattern, AST) :-
     to_chars(Pattern, Chars),
     phrase(re_ast_chars(AST), Chars).
 
-state(_Full, _Groups, _Named, _Tree).
+%% state(?Full, ?Groups, ?Named, ?Flags)
+%
+% Matcher state term `state(Full, Groups, Named, Flags)` threaded through DCG goals:
+%   1. Full:   Initial full input character list before matching (L0).
+%   2. Groups: List of captured positional subgroup values [Group0, Group1, ...] ordered by group index.
+%   3. Named:  List of captured named group Key-Value pairs [Name1-Val1, Name2-Val2, ...].
+%   4. Flags:  Execution flags and options (e.g. `[case_insensitive]`).
+state(_Full, _Groups, _Named, _Flags).
 
+%% state_full(+State, -Full)
+%
+% Extract the initial full input character list `Full` from matcher `State`.
 state_full(state(Full, _, _, _), Full).
-state_groups(state(_, Groups, _, _), Groups).
-state_named(state(_, _, Named, _), Named).
-state_tree(state(_, _, _, Tree), Tree).
 
+%% state_groups(+State, -Groups)
+%
+% Extract the positional captured group substrings list `Groups` from matcher `State`.
+state_groups(state(_, Groups, _, _), Groups).
+
+%% state_named(+State, -Named)
+%
+% Extract the named captured group Key-Value pairs `Named` from matcher `State`.
+state_named(state(_, _, Named, _), Named).
+
+%% state_tree(+State, -Flags)
+%
+% Extract the execution flags list `Flags` from matcher `State`.
+state_tree(state(_, _, _, Flags), Flags).
+
+%% initial_state(?State)
+%
+% Unifies `State` with an initial empty state structure.
 initial_state(state(_, [], [], _)).
 
+%% state_match(+State, -Match)
+%
+% Alias for `state_full/2`, retrieving the matched character sequence.
 state_match(State, Match) :-
     state_full(State, Match).
 
-% ast_dcg(+AST, +State0, -StateF, -DCG)
+%% ast_dcg(+AST, +State0, -StateF, -DCG)
+%
+% Compiles the regex Abstract Syntax Tree `AST` into an executable DCG non-terminal `DCG`.
+%
+% Binds `DCG` to `call(Goal, State0, StateF)`. When `DCG` is passed to `phrase/2` or `phrase/3`,
+% it executes the dynamic goal `Goal`, threading `State0 -> StateF` and input character
+% difference lists `L0 -> L` at match time.
 ast_dcg(AST, S0, SF, DCG) :-
     ast_dcg_goal(AST, 0, _, Goal),
     DCG = call(Goal, S0, SF).
-
-% ast_dcg_/4 - kept for backward-compatibility / trace purposes
-ast_dcg_(AST, S0, SF, call(Goal, S0, SF)) :-
-    ast_dcg_goal(AST, 0, _, Goal).
 
 % ast_dcg_goal(+AST, +C0, -CF, -Goal)
 % Compiles the AST into a runtime DCG goal that threads SIn -> SOut at match-time,
