@@ -1,4 +1,25 @@
-% This module provides a DCG-based parser for regular expressions, matching those of Python 3.14 Regexp.
+/**
+  Provides the tokenizer, AST parser, and schema validator for regular expressions.
+
+  This module parses regular expression character streams into an Abstract Syntax Tree (AST)
+  representation following standard Python 3.14 / PCRE regular expression syntax and operator precedence.
+
+  ### Two-Phase Parsing Architecture
+
+  1. **Tokenization (`re_tokens//1`)**:
+     Converts input character sequences into deterministic token streams (`re_token//1`),
+     handling escaped metacharacters, character classes (`[...]`), POSIX classes (`[:digit:]`),
+     quantifiers, anchors, and word boundaries.
+
+  2. **AST Parsing (`re_ast//1` / `re_ast_chars//1`)**:
+     Parses token streams into structured AST terms, respecting operator precedence:
+     `Alternation (|) < Concatenation < Postfix Quantifiers (*, +, ?, {n,m}) < Atoms & Groups`.
+
+  ### AST Term Validation (`is_ast/1`)
+
+  Exports `is_ast/1` to perform deep recursive schema validation of AST terms in $O(N)$ time
+  without token allocation or difference-list overhead.
+*/
 :- module(regexp_ast, [
  
     re_token//1,

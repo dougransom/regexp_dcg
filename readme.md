@@ -121,9 +121,6 @@ The library is structured into modular layers:
 - **[`regexp_ast.pl`](file:///home/doug/code/regexp/regexp_ast.pl)** (Parser & Tokenizer):
   Parses raw regular expression character lists into an Abstract Syntax Tree (AST) representation (`lit/1`, `class/1`, `group/1`, `star/1`, etc.). Implements tokenizers (`re_token//1`) and POSIX class parsing.
 
-- **[`ast_dcg.pl`](file:///home/doug/code/regexp/ast_dcg.pl)** (DCG Code Generator):
-  Transforms parsed AST terms into pure ISO Prolog DCG matching goals constructed from pure combinators (`dcg_lit`, `dcg_concat`, `dcg_or`, `dcg_star`, etc.).
-
 - **[`regexp_compile_dfa.pl`](file:///home/doug/code/regexp/regexp_compile_dfa.pl)** (Experimental DFA Engine):
   An experimental NFA/DFA engine for benchmarking and comparing performance against the primary DCG engine.
 
@@ -184,7 +181,6 @@ The repository includes a complete **TOML Light Parser Example** under [`example
   - [`tests/test_regexp_dcg.pl`](file:///home/doug/code/regexp/tests/test_regexp_dcg.pl) — Core DCG engine matching tests.
   - [`tests/test_international.pl`](file:///home/doug/code/regexp/tests/test_international.pl) — Multilingual character tests (French, Greek, Chinese, Emoji, Klingon).
   - [`tests/test_regexp_ast.pl`](file:///home/doug/code/regexp/tests/test_regexp_ast.pl) — Regex parser and AST construction tests.
-  - [`tests/test_ast_dcg.pl`](file:///home/doug/code/regexp/tests/test_ast_dcg.pl) — AST-to-DCG code generator tests.
   - [`tests/test_re_token.pl`](file:///home/doug/code/regexp/tests/test_re_token.pl) — Regex tokenization (`re_token//1`), metacharacter, and character class tests.
   - [`tests/test_exports_match.pl`](file:///home/doug/code/regexp/tests/test_exports_match.pl) — Module export interface consistency tests.
 

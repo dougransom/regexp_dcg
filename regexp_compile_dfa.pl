@@ -8,6 +8,9 @@
   This module is experimental, for comparing performance vs the DCG-based engine. This 
   module may be deprecated in the future.
 
+  This module has been completely written by Google Antigravity and no human review of the 
+   code has been performed. 
+
   For the list of supported regular expression patterns, see the module documentation
   for `regexp_dcg` (in [regexp_dcg.pl](file:///home/doug/code/regexp/regexp_dcg.pl)).
 */
