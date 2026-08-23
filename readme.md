@@ -130,7 +130,7 @@ The library is structured into modular layers:
 
 In ISO Prolog systems treating `double_quotes` as character lists (`chars`), strings represent sequences of native character code points. This library supports international character matching out of the box:
 
-- **Exact Literals**: Accented Latin (`"café"`), Greek (`"αβγ"`), Chinese Hanzi (`"你好"`), Emojis (`"🚀😀"`), and Klingon script (`""` PUA / `"Qapla'"`).
+- **Exact Literals**: Accented Latin (`"café"`), Greek (`"αβγ"`), Chinese Hanzi (`"你好"`), Emojis (`"🚀😀"`), and Klingon script (`"Qapla'"` / PUA code points `"\uF8D5\uF8D4\uF8E1\uF8D5\uF8DF"`).
 - **Wildcard `.`**: Correctly matches 1 Unicode character (code point).
 - **Character Classes & Ranges**: `[caféñ]` or `[α-ω]` match by Unicode code points.
 
