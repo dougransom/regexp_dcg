@@ -1,7 +1,7 @@
 :- use_module('../bakage').
 :- use_module(pkg(testing)).
 :- use_module('../regexp_dcg').
-:- use_module('../regexp_compile_dfa').
+:- use_module('../src/regexp_compile_dfa').
 :- use_module(library(lists)).
 :- use_module(library(dcgs)).
 

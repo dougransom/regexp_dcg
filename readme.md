@@ -118,10 +118,10 @@ The library is structured into modular layers:
 - **[`regexp_dcg.pl`](file:///home/doug/code/regexp/regexp_dcg.pl)** (Primary User Interface):
   Exposes user-facing DCG matching non-terminals (`re_match//1-2`, `re_match_groups//3`, `re_match_named//3`), group resolution (`re_group/3`), compilation (`re_compile/2`), and dynamic compilation caching.
 
-- **[`regexp_ast.pl`](file:///home/doug/code/regexp/regexp_ast.pl)** (Parser & Tokenizer):
+- **[`src/regexp_ast.pl`](file:///home/doug/code/regexp/src/regexp_ast.pl)** (Parser & Tokenizer):
   Parses raw regular expression character lists into an Abstract Syntax Tree (AST) representation (`lit/1`, `class/1`, `group/1`, `star/1`, etc.). Implements tokenizers (`re_token//1`) and POSIX class parsing.
 
-- **[`regexp_compile_dfa.pl`](file:///home/doug/code/regexp/regexp_compile_dfa.pl)** (Experimental DFA Engine):
+- **[`src/regexp_compile_dfa.pl`](file:///home/doug/code/regexp/src/regexp_compile_dfa.pl)** (Experimental DFA Engine):
   An experimental NFA/DFA engine for benchmarking and comparing performance against the primary DCG engine.
 
 ---

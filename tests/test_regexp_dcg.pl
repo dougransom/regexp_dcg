@@ -2,7 +2,7 @@
 
 :- use_module('../bakage').
 :- use_module(pkg(testing)).
-:- use_module('../regexp_ast').
+:- use_module('../src/regexp_ast').
 :- use_module('../regexp_dcg').
 :- use_module(library(debug)).
 :- use_module(library(pio)).
@@ -10,7 +10,7 @@
 :- dynamic(debug_mode/1).
 debug_mode(on).
 
-:- use_module('../regexp_ast').   % your existing front-end
+:- use_module('../src/regexp_ast').   % your existing front-end
 
 :- discontiguous(test/2).
 

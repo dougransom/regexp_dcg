@@ -1,5 +1,5 @@
 :- module(example_logging, [run_examples/0, main/0,heavy_computation/1, setup_handlers/0, some_examples/0, example_lazy_a/0]).
-:- use_module('../logs').
+:- use_module('../src/logs').
 :- use_module(library(format)).
 :- use_module(library(lists)).
 :- use_module(library(debug)).

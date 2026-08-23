@@ -2,7 +2,7 @@
 
 :- use_module('../bakage').
 :- use_module(pkg(testing)).
-:- use_module('../regexp_compile_dfa').
+:- use_module('../src/regexp_compile_dfa').
 :- use_module(library(debug)).
 
 :- discontiguous(test/2).

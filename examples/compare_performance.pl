@@ -3,7 +3,7 @@
 :- use_module(library(lists)).
 
 :- use_module('../regexp_dcg').
-:- use_module('../regexp_compile_dfa').
+:- use_module('../src/regexp_compile_dfa').
 
 % 20 C tokens and their corresponding regex patterns
 c_tokens([

@@ -74,7 +74,7 @@
     re_clear_cache/0         % Clear compiled pattern cache database
 ]).
 
-:- use_module(regexp_ast).
+:- use_module('src/regexp_ast').
 :- use_module(library(si)).
 :- use_module(library(lists)).
 :- use_module(library(dcgs)).
