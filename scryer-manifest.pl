@@ -1,4 +1,5 @@
 name("regexp").
+version("0.1.0").
 % Main module entry point imported when using pkg(regexp)
 main_file("regexp_dcg.pl").
 % Package license
