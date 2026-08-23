@@ -467,7 +467,22 @@ re_postfix_tokens(AST) -->
 
 %% is_ast(+AST)
 %
-% Recursively validates that AST is a structurally sound Abstract Syntax Tree term.
+% Recursively validates that `AST` is a structurally sound Abstract Syntax Tree (AST) term.
+%
+% Implementation & Design Rationale:
+% 1. Why not `re_ast//1` (the token DCG grammar)?
+%    `re_ast//1` is a cut-heavy parser designed to translate concrete token sequences into ASTs.
+%    Using it for validation in reverse requires generating and allocating token streams in memory,
+%    and its deterministic cuts interfere with bidirectional AST generation.
+%
+% 2. Why recursive predicates instead of a term DCG (`ast_node//1`)?
+%    DCGs thread implicit difference lists (`L0, L`). When inspecting an AST term tree in memory,
+%    no sequence elements are consumed, so a DCG would unnecessarily pass dummy difference lists `[]`
+%    through every recursive call.
+%
+% 3. Standard Recursive Predicate (`valid_ast_node/1` + `maplist/2`):
+%    Directly traverses the term tree structure in O(N) time with zero token allocations
+%    and zero difference list overhead.
 is_ast(AST) :-
     nonvar(AST),
     valid_ast_node(AST).
