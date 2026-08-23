@@ -65,7 +65,8 @@ The main entry point for matching patterns is the [`regexp_dcg`](regexp_dcg.pl) 
 ### Quick Usage Examples
 
 #### 1. Direct & Embedded DCG Matching (`re_match//1-2`)
-Use `re_match` non-terminals directly inside `phrase/2`, `phrase/3`, or embedded within custom DCG rules:
+Use `re_match` non-terminals directly inside `phrase/2`, `phrase/3`, or embedded within custom DCG rules.
+*Note: Patterns passed directly to `re_match` are automatically compiled into DCG goals and cached using the pattern string as the key. This avoids parsing overhead on repeated calls, but each unique pattern retains a compiled goal in memory. This could be an issue for programs using many different patterns (perhaps thousands). Use `re_clear_cache/0` to clear cached patterns or pre-compile patterns with `re_compile/2`.*
 
 ```prolog
 ?- use_module(regexp_dcg).
@@ -98,7 +99,7 @@ Extract numbered or named capturing groups:
 ```
 
 #### 3. Pre-Compiling Reusable Patterns (`re_compile/2`)
-For maximum efficiency when evaluating the same pattern against many inputs, pre-compile the pattern into a reusable goal:
+For maximum efficiency when evaluating the same pattern against many inputs, pre-compile the pattern into a reusable goal. This avoids both pattern parsing overhead and cache lookup overhead on subsequent matches:
 
 ```prolog
 ?- re_compile("[0-9]+", Compiled),
@@ -183,6 +184,10 @@ The repository includes a complete **TOML Light Parser Example** under [`example
   - [`tests/test_regexp_ast.pl`](tests/test_regexp_ast.pl) — Regex parser and AST construction tests.
   - [`tests/test_re_token.pl`](tests/test_re_token.pl) — Regex tokenization (`re_token//1`), metacharacter, and character class tests.
   - [`tests/test_exports_match.pl`](tests/test_exports_match.pl) — Module export interface consistency tests.
+
+- **Testing Requirements**:
+  - **Bug Fixes**: Always add a test case reproducing the issue (which failed before the fix) when fixing any bug.
+  - **New Interfaces**: Any new public interface, predicate, or feature addition must include dedicated unit tests.
 
 Run the test suite with:
 ```bash

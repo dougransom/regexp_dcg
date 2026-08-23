@@ -54,7 +54,7 @@ main :-
 
     format(Stream, "## Usage Examples~n~n", []),
 
-    run_query(Stream, "1. Direct Pattern Match with phrase/2", "Match a string directly against a regular expression pattern using phrase/2.",
+    run_query(Stream, "1. Direct Pattern Match with phrase/2", "Match a string directly against a regular expression pattern using phrase/2. Patterns passed directly to re_match//1-2 are automatically compiled into DCG goals and cached using the pattern string as the key. This avoids pattern parsing overhead when matching the same pattern repeatedly, but creates a compiled DCG goal in the cache database for each unique pattern that remains in memory. This could be an issue for programs using many different patterns (perhaps thousands).",
               "phrase(re_match(\"a.*b\", Match), \"acb\")",
               phrase(re_match("a.*b", U_Match1), "acb"),
               ["Match"], [U_Match1]),
@@ -64,7 +64,7 @@ main :-
               re_compile("a.*b", U_Compiled2),
               ["Compiled"], [U_Compiled2]),
 
-    run_query(Stream, "3. Match using Compiled Pattern", "Execute a pre-compiled pattern inside phrase/2 for maximum performance.",
+    run_query(Stream, "3. Match using Compiled Pattern", "Execute a pre-compiled pattern inside phrase/2 for maximum performance. Passing a pre-compiled pattern to re_match//1-2 avoids both pattern parsing overhead and cache lookup overhead on subsequent matches.",
               "re_compile(\"a.*b\", Compiled), phrase(re_match(Compiled, Match), \"acb\")",
               (re_compile("a.*b", U_Compiled3), phrase(re_match(U_Compiled3, U_Match3), "acb")),
               ["Compiled", "Match"], [U_Compiled3, U_Match3]),

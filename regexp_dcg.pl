@@ -12,7 +12,7 @@
      ?- phrase(re_match("a*b", Match), "aaabc", Rest).
      % Match = "aaab", Rest = "c"
      ```
-     Patterns passed directly to match predicates are automatically compiled into DCG goals and cached for subsequent calls.
+     Patterns passed directly to match predicates are automatically compiled into DCG goals and cached using the pattern string as the key. This avoids pattern parsing overhead when matching the same pattern repeatedly, but creates a compiled DCG entry in the cache database for each unique pattern that remains in memory. This could be an issue for programs using many different patterns (perhaps thousands). Use `re_clear_cache/0` to clear cached patterns or pre-compile patterns with `re_compile/2`.
 
   2. **Pre-Compiling Patterns (`re_compile/2`)**:
      Compile a regular expression pattern string into a reusable compiled DCG structure:
@@ -20,7 +20,7 @@
      ?- re_compile("a*b", Compiled),
         phrase(re_match(Compiled, Match), "aaab").
      ```
-     This avoids parsing overhead when matching the same pattern repeatedly across multiple inputs.
+     This avoids both pattern parsing overhead and cache lookup overhead on subsequent matches.
 
   ### Supported Regular Expression Syntax
 
