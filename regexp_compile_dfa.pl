@@ -25,7 +25,7 @@
 :- use_module(library(dcgs)).
 :- use_module(library(si)).
 :- use_module(library(error)).
-:- use_module(regexp_ast, [re_ast_chars/3]).
+:- use_module(regexp_ast, [re_ast_chars/3, is_ast/1]).
 
 :- dynamic(dfa_pattern_cache/2).
 
@@ -109,28 +109,6 @@ pattern_ast(AST, AST) :-
 pattern_ast(Pattern, AST) :-
     to_chars(Pattern, Chars),
     phrase(re_ast_chars(AST), Chars).
-
-is_ast(lit(_)).
-is_ast(class(_)).
-is_ast(anchor(_)).
-is_ast(boundary(_)).
-is_ast(group(_)).
-is_ast(capture(_)).
-is_ast(lookahead(_)).
-is_ast(neg_lookahead(_)).
-is_ast(quant(_, _)).
-is_ast(postfix(_, _)).
-is_ast(star(_)).
-is_ast(plus(_)).
-is_ast(maybe(_)).
-is_ast(concat(_)).
-is_ast(concat(_, _)).
-is_ast(or(_, _)).
-is_ast(escaped(_)).
-is_ast(dot).
-is_ast(named_capture(_, _)).
-is_ast(flags(_)).
-is_ast(flags(_, _)).
 
 % Compile AST to NFA: starts fresh states at 2 (0=Start, 1=Accept)
 compile_ast_nfa(AST, nfa(Start, Accept, Trans, Eps)) :-

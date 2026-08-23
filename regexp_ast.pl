@@ -11,7 +11,8 @@
     metachars/1,
     re_expr_tokens//1,
     posix_name//1,
-    class_item//1
+    class_item//1,
+    is_ast/1
 ]).
 
 :- use_module(library(dcgs)).
@@ -463,3 +464,35 @@ re_postfix_tokens(AST) -->
         )
     ;   { AST = A }
     ).
+
+%% is_ast(+AST)
+%
+% Validates that AST is a valid Abstract Syntax Tree using a recursive DCG grammar.
+is_ast(AST) :-
+    nonvar(AST),
+    phrase(ast_node(AST), []).
+
+ast_node(lit(_))              --> [].
+ast_node(dot)                 --> [].
+ast_node(anchor(_))           --> [].
+ast_node(boundary(_))         --> [].
+ast_node(escaped(_))          --> [].
+ast_node(class(_))            --> [].
+ast_node(group(A))            --> ast_node(A).
+ast_node(capture(A))          --> ast_node(A).
+ast_node(named_capture(_, A)) --> ast_node(A).
+ast_node(lookahead(A))        --> ast_node(A).
+ast_node(neg_lookahead(A))    --> ast_node(A).
+ast_node(postfix(A, _))       --> ast_node(A).
+ast_node(quant(A, _))         --> ast_node(A).
+ast_node(star(A))             --> ast_node(A).
+ast_node(plus(A))             --> ast_node(A).
+ast_node(maybe(A))            --> ast_node(A).
+ast_node(or(A, B))            --> ast_node(A), ast_node(B).
+ast_node(concat(List))        --> ast_node_list(List).
+ast_node(concat(A, B))        --> ast_node(A), ast_node(B).
+ast_node(flags(_))            --> [].
+ast_node(flags(_, A))         --> ast_node(A).
+
+ast_node_list([])     --> [].
+ast_node_list([H|T]) --> ast_node(H), ast_node_list(T).

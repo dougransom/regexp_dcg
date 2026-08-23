@@ -163,13 +163,21 @@ re_match_named(Pattern, Match, NamedGroups) -->
 re_group(NamedGroups, Name, Value) :-
     member(Name-Value, NamedGroups).
 
+%% re_match_dcg_state(+Pattern, -Match, ?S0, -SF)//
+%
+% Helper for DCG matching. Initializes S0 if unbound, or extracts input from existing S0.
+%   S0: Initial state | SF: Final state
+%   L0: Initial input char list | L: Remaining unparsed input char list (L0 = Match + L)
 re_match_dcg_state(Pattern, Match, S0, SF, L0, L) :-
     pattern_compiled(Pattern, Goal, GroupCount),
     (   var(S0) ->
+        % Initialize fresh state for top-level call
         length(Groups, GroupCount),
         S0 = state(L0, Groups, [], [])
-    ;   S0 = state(L0, _, _, _)
+    ;   % Use existing initial state
+        S0 = state(L0, _, _, _)
     ),
+    % SF is the final state after Goal matches. L0 is input, L is remainder.
     call(Goal, S0, SF, L0, L),
     append(Match, L, L0).
 
@@ -183,28 +191,6 @@ pattern_ast(AST, AST) :-
 pattern_ast(Pattern, AST) :-
     to_chars(Pattern, Chars),
     phrase(re_ast_chars(AST), Chars).
-
-is_ast(lit(_)).
-is_ast(class(_)).
-is_ast(anchor(_)).
-is_ast(boundary(_)).
-is_ast(group(_)).
-is_ast(capture(_)).
-is_ast(lookahead(_)).
-is_ast(neg_lookahead(_)).
-is_ast(quant(_, _)).
-is_ast(postfix(_, _)).
-is_ast(star(_)).
-is_ast(plus(_)).
-is_ast(maybe(_)).
-is_ast(concat(_)).
-is_ast(concat(_, _)).
-is_ast(or(_, _)).
-is_ast(escaped(_)).
-is_ast(dot).
-is_ast(named_capture(_, _)).
-is_ast(flags(_)).
-is_ast(flags(_, _)).
 
 state(_Full, _Groups, _Named, _Tree).
 
