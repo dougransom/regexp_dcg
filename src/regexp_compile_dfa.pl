@@ -19,6 +19,12 @@
     re_match//2,
     re_match_groups//3,
     re_match_named//3,
+    re_match/2,
+    re_match/3,
+    re_match_groups/4,
+    re_match_groups/5,
+    re_match_named/4,
+    re_match_named/5,
     re_group/3,
     re_compile/2,
     re_clear_cache/0,
@@ -33,16 +39,23 @@
 
 :- dynamic(dfa_pattern_cache/2).
 
-%% re_match(+Pattern)//
+%% re_group(+NamedGroups, +Name, -Value)
 %
-% DCG non-terminal prefix matcher. Matches a prefix of the input sequence conforming to `Pattern`.
-re_match(Pattern) -->
-    re_match(Pattern, _Match).
+% Retrieve the value of a named capturing group by its `Name`.
+re_group(NamedGroups, Name, Value) :-
+    member(Name-Value, NamedGroups).
+
+%% re_match(+Pattern, ?Chars)
+re_match(Pattern, Chars) :-
+    re_match(Pattern, Chars, []).
+
+%% re_match(+Pattern, ?Chars, -Rest)
+% Direct 3-arg matcher and DCG //1 matcher
+re_match(Pattern, Chars, Rest) :-
+    phrase(re_match(Pattern, _Match), Chars, Rest).
 
 %% re_match(+Pattern, -Match)//
-%
-% DCG non-terminal prefix matcher. Matches a prefix of the input sequence conforming to `Pattern`,
-% unifying `Match` with the matched character sequence.
+% DCG //2 matcher (expanded to 4 args)
 re_match(Pattern, Match, L0, L) :-
     nonvar(Pattern),
     Pattern = nfa(Start, Accept, States, Transitions),
@@ -66,31 +79,45 @@ dfa_match_chars(NFA, Match) :-
     to_chars(Match, Chars),
     dfa_match(NFA, Chars).
 
-%% re_match_groups(+Pattern, -Match, -Groups)//
-%
-% Note: Capturing groups are not supported by the DFA engine and will raise a domain error.
-re_match_groups(Pattern, _Match, _Groups) -->
+%% re_match_groups(+Pattern, ?Chars, -Match, -Groups)
+re_match_groups(Pattern, Chars, Match, Groups) :-
+    re_match_groups(Pattern, Chars, Match, Groups, []).
+
+%% re_match_groups(+Pattern, ?Arg2, ?Arg3, ?Arg4, ?Arg5)
+% Direct 5-arg matcher and DCG //3 expanded matcher.
+re_match_groups(Pattern, Arg2, Arg3, Arg4, Arg5) :-
+    (   (nonvar(Arg2), (list_si(Arg2) ; atom_si(Arg2))) ->
+        to_chars(Arg2, Input),
+        phrase(re_match_groups_dcg(Pattern, Arg3, Arg4), Input, Arg5)
+    ;   phrase(re_match_groups_dcg(Pattern, Arg2, Arg3), Arg4, Arg5)
+    ).
+
+re_match_groups_dcg(Pattern, _Match, _Groups), _S --> _S,
     { nonvar(Pattern), Pattern = nfa(Start, Accept, States, Transitions) },
     !,
     { domain_error(dfa_group_extraction, nfa(Start, Accept, States, Transitions)) }.
-re_match_groups(Pattern, _Match, _Groups) -->
+re_match_groups_dcg(Pattern, _Match, _Groups), _S --> _S,
     { domain_error(dfa_group_extraction, Pattern) }.
 
-%% re_match_named(+Pattern, -Match, -NamedGroups)//
-%
-% Note: Capturing groups are not supported by the DFA engine and will raise a domain error.
-re_match_named(Pattern, _Match, _NamedGroups) -->
+%% re_match_named(+Pattern, ?Chars, -Match, -NamedGroups)
+re_match_named(Pattern, Chars, Match, NamedGroups) :-
+    re_match_named(Pattern, Chars, Match, NamedGroups, []).
+
+%% re_match_named(+Pattern, ?Arg2, ?Arg3, ?Arg4, ?Arg5)
+% Direct 5-arg matcher and DCG //3 expanded matcher.
+re_match_named(Pattern, Arg2, Arg3, Arg4, Arg5) :-
+    (   (nonvar(Arg2), (list_si(Arg2) ; atom_si(Arg2))) ->
+        to_chars(Arg2, Input),
+        phrase(re_match_named_dcg(Pattern, Arg3, Arg4), Input, Arg5)
+    ;   phrase(re_match_named_dcg(Pattern, Arg2, Arg3), Arg4, Arg5)
+    ).
+
+re_match_named_dcg(Pattern, _Match, _NamedGroups), _S --> _S,
     { nonvar(Pattern), Pattern = nfa(Start, Accept, States, Transitions) },
     !,
     { domain_error(dfa_group_extraction, nfa(Start, Accept, States, Transitions)) }.
-re_match_named(Pattern, _Match, _NamedGroups) -->
+re_match_named_dcg(Pattern, _Match, _NamedGroups), _S --> _S,
     { domain_error(dfa_group_extraction, Pattern) }.
-
-%% re_group(+NamedGroups, +Name, -Value)
-%
-% Retrieve the value of a named capturing group by its `Name`.
-re_group(NamedGroups, Name, Value) :-
-    member(Name-Value, NamedGroups).
 
 %% re_compile(+Pattern, -Compiled)
 %

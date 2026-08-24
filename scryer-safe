@@ -1,18 +1,14 @@
-#!/bin/bash
-# Local safety wrapper script for Scryer Prolog invocations.
-# Enforces CPU and memory resource limits to prevent OS freezes.
+#!/bin/sh
+# Wrapper to run Scryer Prolog safely under resource limits (cgroups / systemd-run / ulimit / nice)
 
-THIS_SCRIPT=$(readlink -f "$0" 2>/dev/null || echo "$0")
-SYSTEM_SCRYER_SAFE=$(type -P scryer-safe 2>/dev/null)
-
-# 1. If a system-wide scryer-safe exists outside this repo, delegate to it
-if [ -n "$SYSTEM_SCRYER_SAFE" ] && [ "$(readlink -f "$SYSTEM_SCRYER_SAFE" 2>/dev/null)" != "$THIS_SCRIPT" ]; then
-    exec "$SYSTEM_SCRYER_SAFE" "$@"
+# 1. Respect SCRYER_PROLOG environment variable if explicitly set
+if [ -n "$SCRYER_PROLOG" ]; then
+    exec "$SCRYER_PROLOG" "$@"
 fi
 
 # 2. Fallback: Use systemd-run if available for cgroup memory & CPU limits
 if command -v systemd-run >/dev/null 2>&1; then
-    exec systemd-run --user --pty \
+    exec systemd-run --user --quiet --pipe \
       --property=MemoryMax=50M \
       --property=CPUQuota=65% \
       --working-directory="$PWD" \
@@ -21,8 +17,8 @@ fi
 
 # 3. Fallback: Use timeout and nice if systemd-run is not active
 if command -v timeout >/dev/null 2>&1; then
-    exec timeout 30s nice -n 19 scryer-prolog "$@"
+    exec timeout 30s nice -n 10 scryer-prolog "$@"
 fi
 
-# 4. Final fallback: Execute scryer-prolog directly
+# 4. Final fallback: Run directly
 exec scryer-prolog "$@"

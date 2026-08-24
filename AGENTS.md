@@ -17,3 +17,11 @@ When writing, refactoring, or reviewing Prolog code for this repository, all AI 
 - **Verification & Testing**: Always run `make test` to verify changes.
   - **Bug Fixes**: Always add a test case demonstrating the bug (failing prior to the fix) alongside any bug fix.
   - **New Interfaces**: Always add unit tests for new public predicates, interfaces, or features.
+
+## Engine Interface Consistency Rule
+All regular expression engines (`regexp_dcg.pl`, `src/regexp_compile_dfa.pl`, `regexp_tree.pl`) MUST maintain identical public user interfaces:
+- **DCG Non-Terminal Predicates**: `re_match//1`, `re_match//2`, `re_match_groups//3`, `re_match_named//3`
+- **Direct List Matchers**: `re_match/2`, `re_match/3`, `re_match_groups/4`, `re_match_groups/5`, `re_match_named/4`, `re_match_named/5`
+- **Management & Utilities**: `re_group/3`, `re_compile/2`, `re_clear_cache/0`, `re_cache_info/2`
+
+Whenever adding or modifying a public user interface predicate in one engine, you MUST update all other engines to maintain 1:1 API parity. This consistency is automatically enforced by `tests/test_exports_match.pl` during `make test`.

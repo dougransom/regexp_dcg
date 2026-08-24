@@ -9,21 +9,28 @@ module_exports(File, Exports) :-
     close(Stream),
     Term = (:- module(_, Exports)).
 
-test("Public user interfaces are identical in both modules",
+test("Public user interfaces are identical across all modules",
     (   % Expected public API predicates
         PublicInterface = [
             re_match//1,
             re_match//2,
             re_match_groups//3,
             re_match_named//3,
+            re_match/2,
+            re_match/3,
+            re_match_groups/4,
+            re_match_groups/5,
+            re_match_named/4,
+            re_match_named/5,
             re_group/3,
             re_compile/2,
             re_clear_cache/0,
             re_cache_info/2
         ],
-        % Read exports from both files (assuming execution from root directory)
+        % Read exports from all engine files (assuming execution from root directory)
         module_exports('regexp_dcg.pl', DcgExports),
         module_exports('src/regexp_compile_dfa.pl', DfaExports),
+        module_exports('regexp_tree.pl', TreeExports),
         
         % 1. All public interface predicates must be exported by the DCG engine
         maplist(member_of(DcgExports), PublicInterface),
@@ -31,10 +38,17 @@ test("Public user interfaces are identical in both modules",
         % 2. All public interface predicates must be exported by the DFA engine
         maplist(member_of(DfaExports), PublicInterface),
         
-        % 3. The DFA engine must ONLY export the public user interface
+        % 3. All public interface predicates must be exported by the Tree engine
+        maplist(member_of(TreeExports), PublicInterface),
+
+        % 4. The DFA engine must ONLY export the public user interface
         length(DfaExports, L_Dfa),
         length(PublicInterface, L_Pub),
-        L_Dfa == L_Pub
+        L_Dfa == L_Pub,
+
+        % 5. The DCG engine must ONLY export the public user interface
+        length(DcgExports, L_Dcg),
+        L_Dcg == L_Pub
     )).
 
 member_of(List, Element) :-

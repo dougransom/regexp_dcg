@@ -69,6 +69,12 @@
     re_match//2,             % DCG non-terminal prefix matcher (unifies Match substring)
     re_match_groups//3,      % DCG non-terminal prefix matcher (unifies Match & Groups)
     re_match_named//3,       % DCG non-terminal prefix matcher (unifies Match & NamedGroups)
+    re_match/2,              % Direct list matcher (anchored match)
+    re_match/3,              % Direct list matcher (unanchored, returns Rest)
+    re_match_groups/4,       % Direct list matcher (anchored, returns Match & Groups)
+    re_match_groups/5,       % Direct list matcher (unanchored, returns Match, Groups & Rest)
+    re_match_named/4,        % Direct list matcher (anchored, returns Match & NamedGroups)
+    re_match_named/5,        % Direct list matcher (unanchored, returns Match, NamedGroups & Rest)
     re_group/3,              % Lookup captured group by name
     re_compile/2,            % Compile pattern to a reusable compiled structure
     re_clear_cache/0,        % Clear compiled pattern cache database
@@ -128,48 +134,59 @@ re_cache_info(Count, Keys) :-
     findall(Key, pattern_cache(Key, _, _), Keys),
     length(Keys, Count).
 
-%% re_match(+Pattern)//
-%
-% DCG non-terminal prefix matcher. Matches a prefix of the input sequence
-% that conforms to the regular expression `Pattern`.
-re_match(Pattern) -->
-    re_match_groups(Pattern, _Match, _Groups).
-
-%% re_match(+Pattern, -Match)//
-%
-% DCG non-terminal prefix matcher. Matches a prefix of the input sequence
-% that conforms to the regular expression `Pattern`, unifying `Match` with the matched characters.
-re_match(Pattern, Match) -->
-    re_match_groups(Pattern, Match, _Groups).
-
-%% re_match_groups(+Pattern, -Match, -Groups)//
-%
-% DCG non-terminal prefix matcher. Matches a prefix of the input sequence conforming to `Pattern`,
-% unifying `Match` with the matched characters and `Groups` with the list of captured group substrings,
-% ordered in group-number order (left-to-right based on their opening parentheses).
-% Definition: https://docs.oracle.com/javase/tutorial/essential/regex/groups.html
-re_match_groups(Pattern, Match, Groups) -->
-    re_match_dcg_state(Pattern, Match, _S0, SF),
-    {
-        state_groups(SF, Groups)
-    }.
-
-%% re_match_named(+Pattern, -Match, -NamedGroups)//
-%
-% DCG non-terminal prefix matcher. Matches a prefix of the input sequence conforming to `Pattern`,
-% unifying `Match` with the matched characters and `NamedGroups` with a list of Name-Value pairs
-% representing the matched named capturing groups.
-re_match_named(Pattern, Match, NamedGroups) -->
-    re_match_dcg_state(Pattern, Match, _S0, SF),
-    {
-        state_named(SF, NamedGroups)
-    }.
-
 %% re_group(+NamedGroups, +Name, -Value)
 %
 % Retrieve the value of a named capturing group by its `Name`.
 re_group(NamedGroups, Name, Value) :-
     member(Name-Value, NamedGroups).
+
+%% re_match(+Pattern, ?Chars)
+re_match(Pattern, Chars) :-
+    re_match(Pattern, Chars, []).
+
+%% re_match(+Pattern, ?Chars, -Rest)
+% Direct 3-arg matcher and DCG //1 matcher
+re_match(Pattern, Chars, Rest) :-
+    phrase(re_match_groups(Pattern, _Match, _Groups), Chars, Rest).
+
+%% re_match(+Pattern, -Match)//
+% DCG //2 matcher (expanded to 4 args)
+re_match(Pattern, Match, S0, S) :-
+    phrase(re_match_groups(Pattern, Match, _Groups), S0, S).
+
+%% re_match_groups(+Pattern, ?Chars, -Match, -Groups)
+re_match_groups(Pattern, Chars, Match, Groups) :-
+    re_match_groups(Pattern, Chars, Match, Groups, []).
+
+%% re_match_groups(+Pattern, ?Arg2, ?Arg3, ?Arg4, ?Arg5)
+% Direct 5-arg matcher and DCG //3 expanded matcher.
+re_match_groups(Pattern, Arg2, Arg3, Arg4, Arg5) :-
+    (   (nonvar(Arg2), (list_si(Arg2) ; atom_si(Arg2))) ->
+        to_chars(Arg2, Input),
+        phrase(re_match_groups_dcg(Pattern, Arg3, Arg4), Input, Arg5)
+    ;   phrase(re_match_groups_dcg(Pattern, Arg2, Arg3), Arg4, Arg5)
+    ).
+
+re_match_groups_dcg(Pattern, Match, Groups, S0, S) :-
+    re_match_dcg_state(Pattern, Match, _State0, SF, S0, S),
+    state_groups(SF, Groups).
+
+%% re_match_named(+Pattern, ?Chars, -Match, -NamedGroups)
+re_match_named(Pattern, Chars, Match, NamedGroups) :-
+    re_match_named(Pattern, Chars, Match, NamedGroups, []).
+
+%% re_match_named(+Pattern, ?Arg2, ?Arg3, ?Arg4, ?Arg5)
+% Direct 5-arg matcher and DCG //3 expanded matcher.
+re_match_named(Pattern, Arg2, Arg3, Arg4, Arg5) :-
+    (   (nonvar(Arg2), (list_si(Arg2) ; atom_si(Arg2))) ->
+        to_chars(Arg2, Input),
+        phrase(re_match_named_dcg(Pattern, Arg3, Arg4), Input, Arg5)
+    ;   phrase(re_match_named_dcg(Pattern, Arg2, Arg3), Arg4, Arg5)
+    ).
+
+re_match_named_dcg(Pattern, Match, NamedGroups, S0, S) :-
+    re_match_dcg_state(Pattern, Match, _State0, SF, S0, S),
+    state_named(SF, NamedGroups).
 
 %% re_match_dcg_state(+Pattern, -Match, ?S0, -SF)//
 %
