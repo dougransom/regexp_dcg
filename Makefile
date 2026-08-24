@@ -1,4 +1,4 @@
-SCRYER ?= scryer-safe
+SCRYER ?= ./scryer-safe
 
 .PHONY: test test_curr_pred test_exports_match test_format test_logs test_regexp_ast test_regexp_dcg test_regexp_compile_dfa test_si test_time test_re_token test_international test_toml docs html
 
