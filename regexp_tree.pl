@@ -136,7 +136,7 @@ re_tree_match_groups_impl(Pattern, Input, Match, Groups, Rest) :-
     to_chars(Input, Chars),
     get_tree_automaton(Pattern, Automaton, GroupCount),
     length(PosGroups, GroupCount),
-    S0 = state(Chars, PosGroups, []),
+    S0 = state(Chars, PosGroups, [], []),
     regex_tree_run(Chars, Automaton, S0, SF, Rest),
     state_groups(SF, Groups),
     extract_match(Chars, Rest, Match).
@@ -145,7 +145,7 @@ re_tree_match_named_impl(Pattern, Input, Match, NamedGroups, Rest) :-
     to_chars(Input, Chars),
     get_tree_automaton(Pattern, Automaton, GroupCount),
     length(PosGroups, GroupCount),
-    S0 = state(Chars, PosGroups, []),
+    S0 = state(Chars, PosGroups, [], []),
     regex_tree_run(Chars, Automaton, S0, SF, Rest),
     state_named(SF, NamedGroups),
     extract_match(Chars, Rest, Match).
@@ -186,8 +186,8 @@ to_chars(Input, Chars) :-
 to_chars(Input, _) :-
     domain_error(chars, Input).
 
-state_groups(state(_, Groups, _), Groups).
-state_named(state(_, _, Named), Named).
+state_groups(state(_, Groups, _, _), Groups).
+state_named(state(_, _, Named, _), Named).
 
 extract_match(Full, Rest, Match) :-
     length(Full, LFull),

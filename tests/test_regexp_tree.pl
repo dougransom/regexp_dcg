@@ -2,6 +2,7 @@
 :- use_module(library(format)).
 :- use_module(library(si)).
 :- use_module('../regexp_tree').
+:- use_module(test_regexp_compile_shared).
 
 run_test(Name, Goal) :-
     (   catch(Goal, Error, (format("FAIL (~s): ~w~n", [Name, Error]), fail)) ->
@@ -58,28 +59,47 @@ test_tree_patterns :-
     run_test("Builtin Digit", re_tree_match("\\d", "5")),
     run_test("Builtin Word", re_tree_match("\\w", "x")),
 
-    % 15. Anchors
+    % 15. Anchors & Boundaries
     run_test("Start of Line Anchor", re_tree_match("^a", "a")),
+    run_test("Word Boundary", re_tree_match("\\bcat\\b", "cat")),
+    run_test("Non-Word Boundary", re_tree_match("s\\Bcat\\Bs", "scats")),
 
-    % 16. Named Group Capture
-    run_test("Named Group Capture", (re_tree_match_named("(?P<first>[a-z]+) ([a-z]+) (?P<last>[a-z]+)", "john middle doe", Match16, Named16), nonvar(Match16), nonvar(Named16))),
+    % 16. Lazy (Non-Greedy) Quantifiers
+    run_test("Non-Greedy Star", (re_tree_match("a*?b", "aaab", Rest16), Rest16 == [])),
+    run_test("Non-Greedy Match Prefix", (re_tree_match("a*?", "aaa", Rest16b), Rest16b == "aaa")),
 
-    % 17. Pre-compilation
+    % 17. Backreferences
+    run_test("Backreference Match", re_tree_match("([a-z]+)-\\1", "abc-abc")),
+
+    % 18. Inline Flags
+    run_test("Inline Case-Insensitive Flag", re_tree_match("(?i)hello", "HeLLo")),
+
+    % 19. Named Group Capture
+    run_test("Named Group Capture", (re_tree_match_named("(?P<first>[a-z]+) ([a-z]+) (?P<last>[a-z]+)", "john middle doe", Match19, Named19), nonvar(Match19), nonvar(Named19))),
+
+    % 20. Pre-compilation
     run_test("Pre-compiled Tree", (
         re_tree_compile("a*b", Tree),
         re_tree_match(Tree, "aaabc", "c")
     )),
 
-    % 18. DCG Wrapper
-    run_test("DCG Wrapper", (phrase(re_tree_match("a*b", Match18), "aaabc", "c"), nonvar(Match18))),
+    % 21. DCG Wrapper
+    run_test("DCG Wrapper", (phrase(re_tree_match("a*b", Match21), "aaabc", "c"), nonvar(Match21))),
 
-    % 19. International
+    % 22. International
     run_test("International French", re_tree_match("café", "café")),
     run_test("International Greek", re_tree_match("α+β+", "αααβββ")),
     run_test("International Chinese", re_tree_match("你好", "你好")).
 
+run_shared_tests :-
+    shared_test(regexp_tree, Name, Goal),
+    run_test(Name, Goal),
+    fail.
+run_shared_tests.
+
 main :-
     test_tree_patterns,
+    run_shared_tests,
     format("All regexp_tree tests completed.~n", []).
 
 :- initialization(main).
