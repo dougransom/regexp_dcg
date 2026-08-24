@@ -243,8 +243,9 @@ Drawing inspiration from finite state machine compilers like **[Ragel](https://w
 3. **Brzozowski & Antimirov Derivatives**:
    - Utilizing regular expression derivatives ($\partial_a R$) to enable direct DFA generation, pattern canonicalization ($a(b|b) \rightarrow ab$), and algebraic expression simplification.
 
-4. **Ragel-Style Embedded Actions**:
-   - Embedding arbitrary Prolog goals and accumulator state transitions directly into automaton state transitions, transforming the engine into a compiled state-machine parser generator.
+4. **The Ragel Connection (State Machine Compilation & Embedded Actions)**:
+   - Inspired by **[Ragel State Machine Compiler](https://www.colm.net/open-source/ragel/)**, regular expressions can be treated as formal state machine compilation targets rather than purely interpreted string matchers.
+   - Embedding arbitrary Prolog goals, semantic guards, and accumulator updates directly onto state transition edges ($S_i \to S_j$ with action goals), transforming the regular expression engine into a high-performance, compiled lexer/parser generator.
 
 ---
 
