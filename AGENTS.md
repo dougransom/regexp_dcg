@@ -13,6 +13,7 @@ When writing, refactoring, or reviewing Prolog code for this repository, all AI 
 - **Libraries**: Explicitly import `:- use_module(library(dcgs)).` and `:- use_module(library(charsio)).`.
 - **DCGs**: Use pure DCG syntax for all parsing and matching logic.
 - **Purity**: Prefer `dif/2` (`library(dif)`) and `if_/3` (`library(reif)`). Avoid `->` when `if_/3` can be used.
+- **Safety & Command Invocations**: ALWAYS invoke Scryer Prolog using the `scryer-safe` wrapper script or `$(SCRYER)` variable from the Makefile (which uses `systemd-run` resource limits: `MemoryMax=50M`, `CPUQuota=65%`). Never invoke `scryer-prolog` directly.
 - **Verification & Testing**: Always run `make test` to verify changes.
   - **Bug Fixes**: Always add a test case demonstrating the bug (failing prior to the fix) alongside any bug fix.
   - **New Interfaces**: Always add unit tests for new public predicates, interfaces, or features.
