@@ -229,6 +229,25 @@ make test
 
 ---
 
+## Future Directions & Vision
+
+Drawing inspiration from finite state machine compilers like **[Ragel](https://www.colm.net/open-source/ragel/)** and Kleene algebra theory, Prolog is uniquely suited to evolve this regular expression engine beyond string matching into an algebraic reasoning and state machine synthesis tool:
+
+1. **Algebraic Reasoning & Set Operations**:
+   - **Intersection ($R_1 \cap R_2$) & Difference ($R_1 \setminus R_2$)**: Constructing product automata and minimal DFA complements to compute formal regular language intersections and set differences.
+   - **Subsumption & Equivalence**: Proving whether $R_1 \subseteq R_2$ or $R_1 \equiv R_2$ via language emptiness checks ($L(R_1 \setminus R_2) = \emptyset$).
+
+2. **Induction & Shortest Regular Expression Synthesis**:
+   - Leveraging Prolog's natural bidirectionality to find the provably shortest regular expression matching a set of positive string examples while rejecting negative string examples.
+
+3. **Brzozowski & Antimirov Derivatives**:
+   - Utilizing regular expression derivatives ($\partial_a R$) to enable direct DFA generation, pattern canonicalization ($a(b|b) \rightarrow ab$), and algebraic expression simplification.
+
+4. **Ragel-Style Embedded Actions**:
+   - Embedding arbitrary Prolog goals and accumulator state transitions directly into automaton state transitions, transforming the engine into a compiled state-machine parser generator.
+
+---
+
 ## Python Specification & Inspiration
 
 The regular expression syntax and semantics supported by this library are inspired by **Python 3.14 regular expressions (`re`)**:
