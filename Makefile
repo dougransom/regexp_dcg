@@ -1,6 +1,6 @@
 SCRYER ?= ./scryer-safe
 
-.PHONY: test test_curr_pred test_exports_match test_format test_logs test_regexp_ast test_regexp_dcg test_regexp_compile_dfa test_regexp_tree test_si test_time test_re_token test_international test_toml docs html
+.PHONY: test test_curr_pred test_exports_match test_format test_logs test_regexp_ast test_regexp_dcg test_regexp_compile_dfa test_regexp_tree test_si test_time test_re_token test_international test_toml docs html llms
 
 test: test_curr_pred test_exports_match test_format test_logs test_regexp_ast test_regexp_dcg test_regexp_compile_dfa test_regexp_tree test_si test_time test_re_token test_international test_toml
 
@@ -9,16 +9,26 @@ test_toml:
 	$(SCRYER) -g run_tests -g halt tests/test_toml.pl
 	@echo ""
 
-docs:
+docs: llms
 	@echo "=== Generating docs/usage.md ==="
 	$(SCRYER) -g main -g halt generate_intro_md.pl
 	@echo "Docs successfully updated."
 	@echo ""
 
+llms:
+	@echo "=== Generating llms-full.txt ==="
+	@cat llms.txt > llms-full.txt
+	@echo "\n\n---\n\n# Full User Guide & Pattern Reference\n" >> llms-full.txt
+	@cat docs/usage.md >> llms-full.txt
+	@echo "\n\n---\n\n# Project README\n" >> llms-full.txt
+	@cat readme.md >> llms-full.txt
+	@echo "llms-full.txt successfully generated."
+	@echo ""
+
 html: docs
 	@echo "=== Generating HTML documentation ==="
-	pandoc -s --metadata title="Regexp DCG Usage Guide" -c "https://cdn.jsdelivr.net/npm/water.css@2/out/water.css" docs/usage.md -o docs/usage.html
-	pandoc -s --metadata title="Regexp DCG Library" -c "https://cdn.jsdelivr.net/npm/water.css@2/out/water.css" readme.md -o readme.html
+	pandoc -s --metadata title="Regexp DCG Usage Guide" --metadata description="Pure ISO Scryer Prolog regular expression engine user guide and pattern reference" --metadata keywords="prolog,scryer-prolog,regex,dcg,dfa,iso-prolog" -c "https://cdn.jsdelivr.net/npm/water.css@2/out/water.css" docs/usage.md -o docs/usage.html
+	pandoc -s --metadata title="Regexp DCG Library" --metadata description="Pure ISO Scryer Prolog regular expression engine providing DCG non-terminal and direct list matching" --metadata keywords="prolog,scryer-prolog,regex,dcg,dfa,iso-prolog,bakage" -c "https://cdn.jsdelivr.net/npm/water.css@2/out/water.css" readme.md -o readme.html
 	@echo "HTML files successfully generated (docs/usage.html, readme.html)."
 	@echo ""
 

@@ -2,6 +2,13 @@
 
 A pure, ISO-compliant regular expression engine providing both **Definite Clause Grammar (DCG) non-terminal** and **direct character list (`chars`) matching interfaces** for [Scryer Prolog](https://github.com/mthom/scryer-prolog) and other ISO-compliant Prolog implementations.
 
+### Categories & Classifiers
+
+- **Topic**: `Software Development :: Libraries :: Prolog Modules`, `Text Processing :: Pattern Matching :: Regular Expressions`, `Compilers/Interpreters :: Definite Clause Grammars (DCG)`
+- **Programming Language**: `Prolog :: ISO-Compliant`
+- **Target Systems**: `Scryer Prolog`, `Trealla Prolog`, `Tau Prolog`, `GNU Prolog`
+- **License**: `Unlicense (Public Domain)`
+
 ### Project Goals
 
 The primary goals of this project are:
