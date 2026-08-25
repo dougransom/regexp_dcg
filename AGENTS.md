@@ -33,3 +33,9 @@ When a release is requested by the user, AI assistants MUST follow these steps:
 2. **Sync Manifest & Git Tag**: Update `version("X.Y.Z")` in `scryer-manifest.pl` so it matches the Git tag (e.g. tag `v0.1.0` matches `version("0.1.0")`).
 3. **Tag & Push**: Commit `scryer-manifest.pl`, create the annotated Git tag (e.g. `git tag -a v0.1.0 -m "Release v0.1.0"`), and push both commits and tags (`git push && git push origin v0.1.0`).
 4. **Post-Release Dev Version Prompt**: Immediately after the release, ask the user if they want to set a new development version in `scryer-manifest.pl` with `.devX` (where `X` is an integer, e.g. `version("0.1.1.dev1")`).
+
+## Schema.org Metadata Maintenance Rule
+AI assistants MUST keep Schema.org metadata synchronized across the repository:
+- **Primary Source**: [`schema.jsonld`](schema.jsonld) in repository root.
+- **Embedded Copy**: `<script type="application/ld+json">` tag in [`readme.md`](readme.md).
+- **Synchronization**: Whenever package version, license, description, repository URLs, or runtime platforms are updated in `scryer-manifest.pl` or `readme.md`, immediately update both `schema.jsonld` and the JSON-LD block in `readme.md`. Prompt the user if clarification is needed.

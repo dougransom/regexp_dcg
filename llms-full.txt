@@ -51,6 +51,7 @@ All engines maintain identical 1:1 API signatures:
 
 - [Full Consolidated Documentation](llms-full.txt): Complete user guide, pattern reference, and full documentation for LLMs.
 - [User Guide & Pattern Reference](docs/usage.md): Detailed regex syntax reference (character classes, quantifiers, lookarounds, flags).
+- [Machine-Readable Metadata (JSON-LD)](schema.jsonld): Schema.org structured metadata for `regexp_dcg`.
 - [README](readme.md): Project overview and Bakage installation guide.
 - [Scryer Prolog Standards](.agents/skills/scryer-prolog-standards/SKILL.md): Repository coding rules and ISO Prolog standards.
 
@@ -841,3 +842,34 @@ The regular expression syntax and semantics supported by this library are inspir
 - [Python 3.14 Documentation for `re`](https://docs.python.org/3/library/re.html)
 - [Python Source for `re`](https://github.com/python/cpython/tree/3.14/Lib/re)
 - [Python Unit Tests for `re`](https://github.com/python/cpython/blob/3.14/Lib/test/test_re.py)
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareSourceCode",
+  "name": "regexp_dcg",
+  "version": "0.1.0",
+  "description": "A pure, ISO-compliant Definite Clause Grammar (DCG) regular expression engine designed for Scryer Prolog and other ISO-compliant Prolog implementations.",
+  "programmingLanguage": {
+    "@type": "ComputerLanguage",
+    "name": "Prolog",
+    "alternateName": "ISO Prolog"
+  },
+  "runtimePlatform": "Scryer Prolog",
+  "codeRepository": "https://github.com/dougransom/regexp_dcg",
+  "license": "https://unlicense.org",
+  "author": {
+    "@type": "Person",
+    "name": "Doug Ransom"
+  },
+  "keywords": [
+    "prolog",
+    "scryer-prolog",
+    "iso-prolog",
+    "dcg",
+    "regular-expressions",
+    "regex",
+    "parser"
+  ]
+}
+</script>

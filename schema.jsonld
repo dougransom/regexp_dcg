@@ -1,0 +1,35 @@
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareSourceCode",
+  "name": "regexp_dcg",
+  "version": "0.1.0",
+  "description": "A pure, ISO-compliant Definite Clause Grammar (DCG) regular expression engine designed for Scryer Prolog and other ISO-compliant Prolog implementations.",
+  "programmingLanguage": {
+    "@type": "ComputerLanguage",
+    "name": "Prolog",
+    "alternateName": "ISO Prolog"
+  },
+  "runtimePlatform": "Scryer Prolog",
+  "codeRepository": "https://github.com/dougransom/regexp_dcg",
+  "license": "https://unlicense.org",
+  "author": {
+    "@type": "Person",
+    "name": "Doug Ransom"
+  },
+  "keywords": [
+    "prolog",
+    "scryer-prolog",
+    "iso-prolog",
+    "dcg",
+    "regular-expressions",
+    "regex",
+    "parser",
+    "dfa"
+  ],
+  "targetProduct": {
+    "@type": "SoftwareApplication",
+    "name": "regexp_dcg",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Linux, macOS, Windows"
+  }
+}
