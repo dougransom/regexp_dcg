@@ -848,7 +848,7 @@ The regular expression syntax and semantics supported by this library are inspir
   "@context": "https://schema.org",
   "@type": "SoftwareSourceCode",
   "name": "regexp_dcg",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A pure, ISO-compliant Definite Clause Grammar (DCG) regular expression engine designed for Scryer Prolog and other ISO-compliant Prolog implementations.",
   "programmingLanguage": {
     "@type": "ComputerLanguage",
