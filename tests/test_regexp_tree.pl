@@ -5,9 +5,9 @@
 :- use_module(test_regexp_compile_shared).
 
 run_test(Name, Goal) :-
-    (   catch(Goal, Error, (format("FAIL (~s): ~w~n", [Name, Error]), fail)) ->
-        format("OK: ~s~n", [Name])
-    ;   format("FAIL: ~s~n", [Name]),
+    (   catch(Goal, Error, (format("FAIL (~s): ~w~n", [Name, Error]), flush_output, fail)) ->
+        format("OK: ~s~n", [Name]), flush_output
+    ;   format("FAIL: ~s~n", [Name]), flush_output,
         false
     ).
 
@@ -102,4 +102,3 @@ main :-
     run_shared_tests,
     format("All regexp_tree tests completed.~n", []).
 
-:- initialization(main).

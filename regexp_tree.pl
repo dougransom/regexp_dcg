@@ -152,9 +152,13 @@ re_tree_match_named_impl(Pattern, Input, Match, NamedGroups, Rest) :-
 
 /* Internal Helpers */
 
+get_tree_automaton(Pattern, _, _) :-
+    var(Pattern),
+    !,
+    instantiation_error(get_tree_automaton/3).
 get_tree_automaton(compiled_tree(Automaton, GroupCount), Automaton, GroupCount) :- !.
 get_tree_automaton(Pattern, Automaton, GroupCount) :-
-    (   (nonvar(Pattern), tree_pattern_cache(Pattern, AST, GroupCount)) ->
+    (   tree_pattern_cache(Pattern, AST, GroupCount) ->
         compile_ast_tree(AST, Automaton, GroupCount)
     ;   pattern_ast(Pattern, AST),
         compile_ast_tree(AST, Automaton, GroupCount),
@@ -164,8 +168,11 @@ get_tree_automaton(Pattern, Automaton, GroupCount) :-
         )
     ).
 
+pattern_ast(AST, _) :-
+    var(AST),
+    !,
+    instantiation_error(pattern_ast/2).
 pattern_ast(AST, AST) :-
-    nonvar(AST),
     is_ast(AST),
     !.
 pattern_ast(Pattern, AST) :-
