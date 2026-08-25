@@ -294,3 +294,10 @@ The regular expression syntax and semantics supported by this library are inspir
   ]
 }
 </script>
+
+<!-- Open Graph Metadata -->
+<meta property="og:title" content="regexp_dcg: ISO Scryer Prolog Regular Expression Engine">
+<meta property="og:description" content="A pure, ISO-compliant Definite Clause Grammar (DCG) regular expression engine for Scryer Prolog supporting backtracking, DFA execution, and cyclic tree automata.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://github.com/dougransom/regexp_dcg">
+<meta property="og:site_name" content="regexp_dcg">
