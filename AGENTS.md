@@ -26,3 +26,10 @@ All regular expression engines (`regexp_dcg.pl`, `src/regexp_compile_dfa.pl`, `r
 - **Management & Utilities**: `re_group/3`, `re_compile/2`, `re_clear_cache/0`, `re_cache_info/2`
 
 Whenever adding or modifying a public user interface predicate in one engine, you MUST update all other engines to maintain 1:1 API parity. This consistency is automatically enforced by `tests/test_exports_match.pl` during `make test`.
+
+## Release & Versioning Workflow
+When a release is requested by the user, AI assistants MUST follow these steps:
+1. **Show Current Version & Prompt**: Read `scryer-manifest.pl`, display the current `version("...")` value to the user, and ask what version number and Git tag to use for the release.
+2. **Sync Manifest & Git Tag**: Update `version("X.Y.Z")` in `scryer-manifest.pl` so it matches the Git tag (e.g. tag `v0.1.0` matches `version("0.1.0")`).
+3. **Tag & Push**: Commit `scryer-manifest.pl`, create the annotated Git tag (e.g. `git tag -a v0.1.0 -m "Release v0.1.0"`), and push both commits and tags (`git push && git push origin v0.1.0`).
+4. **Post-Release Dev Version Prompt**: Immediately after the release, ask the user if they want to set a new development version in `scryer-manifest.pl` with `.devX` (where `X` is an integer, e.g. `version("0.1.1.dev1")`).
