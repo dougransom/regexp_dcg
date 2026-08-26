@@ -82,6 +82,7 @@
 ]).
 
 :- use_module('src/regexp_ast').
+:- use_module('src/regexp_common').
 :- use_module(library(si)).
 :- use_module(library(lists)).
 :- use_module(library(dcgs)).
@@ -134,11 +135,6 @@ re_cache_info(Count, Keys) :-
     findall(Key, pattern_cache(Key, _, _), Keys),
     length(Keys, Count).
 
-%% re_group(+NamedGroups, +Name, -Value)
-%
-% Retrieve the value of a named capturing group by its `Name`.
-re_group(NamedGroups, Name, Value) :-
-    member(Name-Value, NamedGroups).
 
 %% re_match(+Pattern, ?Chars)
 re_match(Pattern, Chars) :-
@@ -206,40 +202,6 @@ re_match_dcg_state(Pattern, Match, S0, SF, L0, L) :-
     call(Goal, S0, SF, L0, L),
     append(Match, L, L0).
 
-% Pattern already an AST
-pattern_ast(AST, AST) :-
-    nonvar(AST),
-    is_ast(AST),
-    !.
-
-% Pattern is a string/atom: tokenize + parse
-pattern_ast(Pattern, AST) :-
-    to_chars(Pattern, Chars),
-    phrase(re_ast_chars(AST), Chars).
-
-%% state(?Full, ?Groups, ?Named, ?Flags)
-%
-% Matcher state term `state(Full, Groups, Named, Flags)` threaded through DCG goals:
-%   1. Full:   Initial full input character list before matching (L0).
-%   2. Groups: List of captured positional subgroup values [Group0, Group1, ...] ordered by group index.
-%   3. Named:  List of captured named group Key-Value pairs [Name1-Val1, Name2-Val2, ...].
-%   4. Flags:  Execution flags and options (e.g. `[case_insensitive]`).
-state(_Full, _Groups, _Named, _Flags).
-
-%% state_full(+State, -Full)
-%
-% Extract the initial full input character list `Full` from matcher `State`.
-state_full(state(Full, _, _, _), Full).
-
-%% state_groups(+State, -Groups)
-%
-% Extract the positional captured group substrings list `Groups` from matcher `State`.
-state_groups(state(_, Groups, _, _), Groups).
-
-%% state_named(+State, -Named)
-%
-% Extract the named captured group Key-Value pairs `Named` from matcher `State`.
-state_named(state(_, _, Named, _), Named).
 
 %% state_tree(+State, -Flags)
 %
@@ -348,20 +310,7 @@ seq_ast_dcg([H|T], C0, CF, [G|Gs]) :-
 literal_match([]) --> [].
 literal_match([C|Cs]) --> [C], literal_match(Cs).
 
-% Convert input to character list safely without SWI-specifics (var check first!)
-to_chars(Input, _) :-
-    var(Input),
-    !,
-    instantiation_error(to_chars/2).
-to_chars(Input, Input) :-
-    list_si(Input),
-    !.
-to_chars(Input, Chars) :-
-    atom_si(Input),
-    !,
-    atom_chars(Input, Chars).
-to_chars(Input, _) :-
-    domain_error(chars, Input).
+
 
 /* ---------- Runtime DCG combinators ---------- */
 

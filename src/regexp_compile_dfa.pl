@@ -36,14 +36,11 @@
 :- use_module(library(si)).
 :- use_module(library(error)).
 :- use_module(regexp_ast, [re_ast_chars/3, is_ast/1]).
+:- use_module(regexp_common).
 
 :- dynamic(dfa_pattern_cache/2).
 
-%% re_group(+NamedGroups, +Name, -Value)
-%
-% Retrieve the value of a named capturing group by its `Name`.
-re_group(NamedGroups, Name, Value) :-
-    member(Name-Value, NamedGroups).
+
 
 %% re_match(+Pattern, ?Chars)
 re_match(Pattern, Chars) :-
@@ -140,14 +137,7 @@ re_cache_info(Count, Keys) :-
     findall(Key, dfa_pattern_cache(Key, _), Keys),
     length(Keys, Count).
 
-% Helper: convert pattern to AST
-pattern_ast(AST, AST) :-
-    nonvar(AST),
-    is_ast(AST),
-    !.
-pattern_ast(Pattern, AST) :-
-    to_chars(Pattern, Chars),
-    phrase(re_ast_chars(AST), Chars).
+
 
 % Compile AST to NFA: starts fresh states at 2 (0=Start, 1=Accept)
 compile_ast_nfa(AST, nfa(Start, Accept, Trans, Eps)) :-
@@ -517,16 +507,3 @@ char_equal_ci(C1, C2) :-
     char_lower(C1, L),
     char_lower(C2, L).
 
-to_chars(Input, _) :-
-    var(Input),
-    !,
-    instantiation_error(to_chars/2).
-to_chars(Input, Input) :-
-    list_si(Input),
-    !.
-to_chars(Input, Chars) :-
-    atom_si(Input),
-    !,
-    atom_chars(Input, Chars).
-to_chars(Input, _) :-
-    domain_error(chars, Input).

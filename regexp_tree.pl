@@ -61,6 +61,7 @@
 :- use_module(library(error)).
 
 :- use_module(src/regexp_ast, [re_ast_chars//1, is_ast/1]).
+:- use_module(src/regexp_common).
 :- use_module(src/regexp_compile_tree, [compile_ast_tree/3, regex_tree_run/5]).
 
 :- dynamic(tree_pattern_cache/3).
@@ -73,7 +74,6 @@ re_match_groups(Pattern, Chars, Match, Groups) :- re_tree_match_groups(Pattern, 
 re_match_groups(Pattern, Arg2, Arg3, Arg4, Arg5) :- re_tree_match_groups(Pattern, Arg2, Arg3, Arg4, Arg5).
 re_match_named(Pattern, Chars, Match, Named) :- re_tree_match_named(Pattern, Chars, Match, Named).
 re_match_named(Pattern, Arg2, Arg3, Arg4, Arg5) :- re_tree_match_named(Pattern, Arg2, Arg3, Arg4, Arg5).
-re_group(NamedGroups, Name, Value) :- re_tree_group(NamedGroups, Name, Value).
 re_compile(Pattern, Compiled) :- re_tree_compile(Pattern, Compiled).
 re_clear_cache :- re_tree_clear_cache.
 re_cache_info(Count, Keys) :- re_tree_cache_info(Count, Keys).
@@ -89,7 +89,7 @@ re_tree_cache_info(Count, Keys) :-
 
 %% re_tree_group(+NamedGroups, +Name, -Value)
 re_tree_group(NamedGroups, Name, Value) :-
-    member(Name-Value, NamedGroups).
+    re_group(NamedGroups, Name, Value).
 
 %% re_tree_compile(+Pattern, -CompiledTerm)
 re_tree_compile(Pattern, compiled_tree(Automaton, GroupCount)) :-
@@ -168,42 +168,4 @@ get_tree_automaton(Pattern, Automaton, GroupCount) :-
         )
     ).
 
-pattern_ast(AST, _) :-
-    var(AST),
-    !,
-    instantiation_error(pattern_ast/2).
-pattern_ast(AST, AST) :-
-    is_ast(AST),
-    !.
-pattern_ast(Pattern, AST) :-
-    to_chars(Pattern, Chars),
-    phrase(re_ast_chars(AST), Chars).
 
-to_chars(Input, _) :-
-    var(Input),
-    !,
-    instantiation_error(to_chars/2).
-to_chars(Input, Input) :-
-    list_si(Input),
-    !.
-to_chars(Input, Chars) :-
-    atom_si(Input),
-    !,
-    atom_chars(Input, Chars).
-to_chars(Input, _) :-
-    domain_error(chars, Input).
-
-state_groups(state(_, Groups, _, _), Groups).
-state_named(state(_, _, Named, _), Named).
-
-extract_match(Full, Rest, Match) :-
-    length(Full, LFull),
-    length(Rest, LRest),
-    LMatch is LFull - LRest,
-    take_n(LMatch, Full, Match).
-
-take_n(0, _, []) :- !.
-take_n(N, [H|T], [H|R]) :-
-    N > 0,
-    N1 is N - 1,
-    take_n(N1, T, R).
