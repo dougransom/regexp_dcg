@@ -19,6 +19,7 @@
 :- use_module(library(reif)).
 :- use_module(library(si)).
 :- use_module(library(dif)).
+:- use_module(library(clpz)).
 
 %% compile_ast_tree(+AST, -Automaton, -GroupCount)
 %
@@ -55,12 +56,12 @@ compile_node(group(Inner), C0, CF, Cont, Node) :-
 
 compile_node(capture(Inner), C0, CF, Cont, cap_open(C0, NodeInner)) :-
     !,
-    C1 is C0 + 1,
+    C1 #= C0 + 1,
     compile_node(Inner, C1, CF, cap_close(C0, Cont), NodeInner).
 
 compile_node(named_capture(Name, Inner), C0, CF, Cont, named_open(Name, C0, NodeInner)) :-
     !,
-    C1 is C0 + 1,
+    C1 #= C0 + 1,
     compile_node(Inner, C1, CF, named_close(Name, C0, Cont), NodeInner).
 
 compile_node(postfix(Expr, star), C0, CF, Cont, star(SubNode, Cont)) :-
@@ -101,8 +102,8 @@ compile_node(quant(Expr, mn(M, inf)), C0, CF, Cont, Node) :-
     compile_exact_n(M, Expr, C1, CF, NodeStar, Node).
 compile_node(quant(Expr, mn(M, N)), C0, CF, Cont, Node) :-
     !,
-    M =< N,
-    RestCount is N - M,
+    M #=< N,
+    RestCount #= N - M,
     compile_optionals(RestCount, Expr, C0, C1, Cont, NodeOpt),
     compile_exact_n(M, Expr, C1, CF, NodeOpt, Node).
 
@@ -118,8 +119,8 @@ compile_node(quant(Expr, lazy(mn(M, inf))), C0, CF, Cont, Node) :-
     compile_exact_n(M, Expr, C1, CF, NodeStar, Node).
 compile_node(quant(Expr, lazy(mn(M, N))), C0, CF, Cont, Node) :-
     !,
-    M =< N,
-    RestCount is N - M,
+    M #=< N,
+    RestCount #= N - M,
     compile_lazy_optionals(RestCount, Expr, C0, C1, Cont, NodeOpt),
     compile_exact_n(M, Expr, C1, CF, NodeOpt, Node).
 
@@ -128,7 +129,7 @@ compile_node(escaped(Char), C, C, Cont, Node) :-
     !,
     (   char_range_t('1', '9', Char, true) ->
         char_code(Char, Code),
-        Idx is Code - 49,
+        Idx #= Code - 49,
         Node = backref(Idx, Cont)
     ;   Node = sym(char(Char), Cont, stp)
     ).
@@ -161,22 +162,22 @@ compile_seq([H|T], C0, CF, Cont, Node) :-
 
 compile_exact_n(0, _, C, C, Cont, Cont) :- !.
 compile_exact_n(N, Expr, C0, CF, Cont, Node) :-
-    N > 0,
-    N1 is N - 1,
+    N #> 0,
+    N1 #= N - 1,
     compile_exact_n(N1, Expr, C0, C1, Cont, RestNode),
     compile_node(Expr, C1, CF, RestNode, Node).
 
 compile_optionals(0, _, C, C, Cont, Cont) :- !.
 compile_optionals(N, Expr, C0, CF, Cont, Node) :-
-    N > 0,
-    N1 is N - 1,
+    N #> 0,
+    N1 #= N - 1,
     compile_optionals(N1, Expr, C0, C1, Cont, RestNode),
     compile_node(postfix(Expr, question), C1, CF, RestNode, Node).
 
 compile_lazy_optionals(0, _, C, C, Cont, Cont) :- !.
 compile_lazy_optionals(N, Expr, C0, CF, Cont, Node) :-
-    N > 0,
-    N1 is N - 1,
+    N #> 0,
+    N1 #= N - 1,
     compile_lazy_optionals(N1, Expr, C0, C1, Cont, RestNode),
     compile_node(postfix(Expr, lazy(question)), C1, CF, RestNode, Node).
 
@@ -382,7 +383,7 @@ char_equal_ci(C1, C2) :-
 char_lower(C, L) :-
     (   C @>= 'A', C @=< 'Z' ->
         char_code(C, Code),
-        LowerCode is Code + 32,
+        LowerCode #= Code + 32,
         char_code(L, LowerCode)
     ;   L = C
     ).
@@ -534,32 +535,32 @@ delete_key([H|T], K, [H|T1]) :- delete_key(T, K, T1).
 replace_nth([], _, _, []).
 replace_nth([_|T], 0, Val, [Val|T]) :- !.
 replace_nth([H|T], N, Val, [H|R]) :-
-    N > 0,
-    N1 is N - 1,
+    N #> 0,
+    N1 #= N - 1,
     replace_nth(T, N1, Val, R).
 
 extract_substring(Full, StartChars, EndChars, Substr) :-
     length(Full, LFull),
     length(StartChars, LStart),
     length(EndChars, LEnd),
-    Skip is LFull - LStart,
-    Take is LStart - LEnd,
+    Skip #= LFull - LStart,
+    Take #= LStart - LEnd,
     drop_n(Skip, Full, Rest),
     take_n(Take, Rest, Substr).
 
 drop_n(0, L, L) :- !.
-drop_n(N, [_|T], R) :- N > 0, N1 is N - 1, drop_n(N1, T, R).
+drop_n(N, [_|T], R) :- N #> 0, N1 #= N - 1, drop_n(N1, T, R).
 
 take_n(0, _, []) :- !.
-take_n(N, [H|T], [H|R]) :- N > 0, N1 is N - 1, take_n(N1, T, R).
+take_n(N, [H|T], [H|R]) :- N #> 0, N1 #= N - 1, take_n(N1, T, R).
 
 is_bol(state(Full, _, _, _), Chars) :-
     (   Full == Chars ->
         true
     ;   length(Full, LFull),
         length(Chars, LChars),
-        Skip is LFull - LChars - 1,
-        Skip >= 0,
+        Skip #= LFull - LChars - 1,
+        Skip #>= 0,
         nth0(Skip, Full, '\n')
     ).
 
@@ -572,14 +573,14 @@ is_boundary(state(Full, _, _, _), Chars) :-
         is_word_char(H)
     ;   Chars == [] ->
         length(Full, LFull),
-        Skip is LFull - 1,
-        Skip >= 0,
+        Skip #= LFull - 1,
+        Skip #>= 0,
         nth0(Skip, Full, Prev),
         is_word_char(Prev)
     ;   length(Full, LFull),
         length(Chars, LChars),
-        Skip is LFull - LChars - 1,
-        Skip >= 0,
+        Skip #= LFull - LChars - 1,
+        Skip #>= 0,
         nth0(Skip, Full, Prev),
         Chars = [Curr|_],
         (   is_word_char(Prev), \+ is_word_char(Curr)

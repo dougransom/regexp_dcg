@@ -17,6 +17,7 @@
 :- use_module(library(dcgs)).
 :- use_module(library(si)).
 :- use_module(library(error)).
+:- use_module(library(clpz)).
 
 :- use_module(regexp_ast, [re_ast_chars//1, is_ast/1]).
 
@@ -64,7 +65,7 @@ re_group(NamedGroups, Name, Value) :-
 extract_match(Full, Rest, Match) :-
     length(Full, LFull),
     length(Rest, LRest),
-    LMatch is LFull - LRest,
+    LMatch #= LFull - LRest,
     take_n(LMatch, Full, Match).
 
 %% take_n(+N, +List, -Prefix)
@@ -72,8 +73,8 @@ extract_match(Full, Rest, Match) :-
 % Take first `N` elements from `List`.
 take_n(0, _, []) :- !.
 take_n(N, [H|T], [H|R]) :-
-    N > 0,
-    N1 is N - 1,
+    N #> 0,
+    N1 #= N - 1,
     take_n(N1, T, R).
 
 %% state_full(+State, -Full)

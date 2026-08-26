@@ -35,6 +35,7 @@
 :- use_module(library(dcgs)).
 :- use_module(library(si)).
 :- use_module(library(error)).
+:- use_module(library(clpz)).
 :- use_module(regexp_ast, [re_ast_chars/3, is_ast/1]).
 :- use_module(regexp_common).
 
@@ -188,11 +189,11 @@ ast_nfa(flags(FlagsStr, Sub), Flags, Start, Accept, Trans, Eps, SIn, SOut) :-
     ast_nfa(Sub, CombinedFlags, Start, Accept, Trans, Eps, SIn, SOut).
 ast_nfa(or(A, B), Flags, Start, Accept, Trans, Eps, SIn, SOut) :-
     !,
-    AStart is SIn,
-    AAccept is SIn + 1,
-    BStart is SIn + 2,
-    BAccept is SIn + 3,
-    SIn1 is SIn + 4,
+    AStart #= SIn,
+    AAccept #= SIn + 1,
+    BStart #= SIn + 2,
+    BAccept #= SIn + 3,
+    SIn1 #= SIn + 4,
     ast_nfa(A, Flags, AStart, AAccept, TransA, EpsA, SIn1, SOut1),
     ast_nfa(B, Flags, BStart, BAccept, TransB, EpsB, SOut1, SOut),
     append(TransA, TransB, Trans),
@@ -212,9 +213,9 @@ ast_nfa(concat(List), Flags, Start, Accept, Trans, Eps, SIn, SOut) :-
     factors_nfa(Flat, Flags, Start, Accept, Trans, Eps, SIn, SOut).
 ast_nfa(postfix(Expr, star), Flags, Start, Accept, Trans, Eps, SIn, SOut) :-
     !,
-    AStart is SIn,
-    AAccept is SIn + 1,
-    SIn1 is SIn + 2,
+    AStart #= SIn,
+    AAccept #= SIn + 1,
+    SIn1 #= SIn + 2,
     ast_nfa(Expr, Flags, AStart, AAccept, TransA, EpsA, SIn1, SOut),
     append(TransA, [], Trans),
     append(EpsA, [
@@ -225,9 +226,9 @@ ast_nfa(postfix(Expr, star), Flags, Start, Accept, Trans, Eps, SIn, SOut) :-
     ], Eps).
 ast_nfa(postfix(Expr, plus), Flags, Start, Accept, Trans, Eps, SIn, SOut) :-
     !,
-    AStart is SIn,
-    AAccept is SIn + 1,
-    SIn1 is SIn + 2,
+    AStart #= SIn,
+    AAccept #= SIn + 1,
+    SIn1 #= SIn + 2,
     ast_nfa(Expr, Flags, AStart, AAccept, TransA, EpsA, SIn1, SOut),
     append(TransA, [], Trans),
     append(EpsA, [

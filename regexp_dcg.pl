@@ -87,6 +87,7 @@
 :- use_module(library(lists)).
 :- use_module(library(dcgs)).
 :- use_module(library(error)).
+:- use_module(library(clpz)).
 
 :- dynamic(pattern_cache/3).
 
@@ -260,7 +261,7 @@ ast_dcg_goal(or(A, B), C0, CF, regexp_dcg:dcg_or(GA, GB)) :-
 ast_dcg_goal(group(Inner), C0, CF, Goal) :-
     ast_dcg_goal(Inner, C0, CF, Goal).
 ast_dcg_goal(capture(Inner), C0, CF, regexp_dcg:dcg_capture(C0, GInner)) :-
-    C1 is C0 + 1,
+    C1 #= C0 + 1,
     ast_dcg_goal(Inner, C1, CF, GInner).
 ast_dcg_goal(postfix(Expr, star), C0, CF, regexp_dcg:dcg_star(GExpr)) :-
     ast_dcg_goal(Expr, C0, CF, GExpr).
@@ -294,7 +295,7 @@ ast_dcg_goal(quant(Expr, lazy(mn(M, N))), C0, CF, regexp_dcg:dcg_quant_lazy(GExp
     ast_dcg_goal(Expr, C0, CF, GExpr).
 ast_dcg_goal(named_capture(Name, Inner), C0, CF, regexp_dcg:dcg_named_capture(Name, C0, GInner)) :-
     !,
-    C1 is C0 + 1,
+    C1 #= C0 + 1,
     ast_dcg_goal(Inner, C1, CF, GInner).
 ast_dcg_goal(flags(Flags), C, C, regexp_dcg:dcg_flags(Flags)).
 ast_dcg_goal(flags(Flags, Sub), C0, CF, regexp_dcg:dcg_flags_group(Flags, GSub)) :-
@@ -363,13 +364,13 @@ dcg_quant(GExpr, M, N, S0, SF) -->
     dcg_quant_loop(GExpr, 0, M, Max, S0, SF).
 
 dcg_quant_loop(GExpr, Count, Min, Max, S0, SF) -->
-    { (Max == inf ; Count < Max) },
+    { (Max == inf ; Count #< Max) },
     call(GExpr, S0, S1),
-    { Count1 is Count + 1 },
+    { Count1 #= Count + 1 },
     dcg_quant_loop(GExpr, Count1, Min, Max, S1, SF).
 
 dcg_quant_loop(_GExpr, Count, Min, _Max, S, S) -->
-    { Count >= Min }.
+    { Count #>= Min }.
 
 dcg_dot(S, S) -->
     [_].
