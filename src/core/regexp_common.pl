@@ -116,38 +116,36 @@ builtin_class_spec(upper, [range('A', 'Z')]).
 builtin_class_spec(xdigit,[range('0', '9'), range('a', 'f'), range('A', 'F')]).
 
 %% match_builtin(+Class, +Char)
-% Semi-deterministic match for built-in or POSIX character class.
-match_builtin(not_digit, C) :- !, \+ match_builtin(digit, C).
-match_builtin('D', C)       :- !, \+ match_builtin(digit, C).
-match_builtin(not_word, C)  :- !, \+ match_builtin(word, C).
-match_builtin('W', C)       :- !, \+ match_builtin(word, C).
-match_builtin(not_space, C) :- !, \+ match_builtin(space, C).
-match_builtin('S', C)       :- !, \+ match_builtin(space, C).
+% Pure logical match for built-in or POSIX character class.
 match_builtin(Class, C) :-
-    builtin_class_spec(Class, Specs),
-    match_specs(Specs, C).
-
-match_specs([Spec|_], C) :-
-    match_spec_item(Spec, C),
-    !.
-match_specs([_|Specs], C) :-
-    match_specs(Specs, C).
-
-match_spec_item(range(Min, Max), C) :- C @>= Min, C @=< Max.
-match_spec_item(char(Ch), C)         :- C == Ch.
-match_spec_item(set(List), C)       :- member(C, List).
+    match_builtin_t(Class, C, true).
 
 %% match_builtin_t(+Class, +Char, -Truth)
-% Reified pure match for built-in or POSIX character class using if_/3 logic.
-match_builtin_t(not_digit, C, Truth) :- !, match_builtin_t(digit, C, T0), reif_not(T0, Truth).
-match_builtin_t('D', C, Truth)       :- !, match_builtin_t(digit, C, T0), reif_not(T0, Truth).
-match_builtin_t(not_word, C, Truth)  :- !, match_builtin_t(word, C, T0), reif_not(T0, Truth).
-match_builtin_t('W', C, Truth)       :- !, match_builtin_t(word, C, T0), reif_not(T0, Truth).
-match_builtin_t(not_space, C, Truth) :- !, match_builtin_t(space, C, T0), reif_not(T0, Truth).
-match_builtin_t('S', C, Truth)       :- !, match_builtin_t(space, C, T0), reif_not(T0, Truth).
-match_builtin_t(Class, C, Truth) :-
-    builtin_class_spec(Class, Specs),
-    match_specs_t(Specs, C, Truth).
+% Reified pure match for built-in or POSIX character class using first-argument indexing and if_/3.
+match_builtin_t(not_digit, C, Truth) :- match_builtin_t(digit, C, T0), reif_not(T0, Truth).
+match_builtin_t('D', C, Truth)       :- match_builtin_t(digit, C, T0), reif_not(T0, Truth).
+match_builtin_t(not_word, C, Truth)  :- match_builtin_t(word, C, T0), reif_not(T0, Truth).
+match_builtin_t('W', C, Truth)       :- match_builtin_t(word, C, T0), reif_not(T0, Truth).
+match_builtin_t(not_space, C, Truth) :- match_builtin_t(space, C, T0), reif_not(T0, Truth).
+match_builtin_t('S', C, Truth)       :- match_builtin_t(space, C, T0), reif_not(T0, Truth).
+
+match_builtin_t(digit, C, Truth)     :- match_specs_t([range('0', '9')], C, Truth).
+match_builtin_t('d', C, Truth)       :- match_specs_t([range('0', '9')], C, Truth).
+match_builtin_t(word, C, Truth)      :- match_specs_t([range('a', 'z'), range('A', 'Z'), range('0', '9'), char('_')], C, Truth).
+match_builtin_t('w', C, Truth)       :- match_specs_t([range('a', 'z'), range('A', 'Z'), range('0', '9'), char('_')], C, Truth).
+match_builtin_t(space, C, Truth)     :- match_specs_t([set([' ', '\t', '\r', '\n', '\f', '\v'])], C, Truth).
+match_builtin_t('s', C, Truth)       :- match_specs_t([set([' ', '\t', '\r', '\n', '\f', '\v'])], C, Truth).
+
+match_builtin_t(alnum, C, Truth)     :- match_specs_t([range('a', 'z'), range('A', 'Z'), range('0', '9')], C, Truth).
+match_builtin_t(alpha, C, Truth)     :- match_specs_t([range('a', 'z'), range('A', 'Z')], C, Truth).
+match_builtin_t(blank, C, Truth)     :- match_specs_t([set([' ', '\t'])], C, Truth).
+match_builtin_t(cntrl, C, Truth)     :- match_specs_t([range('\x00\', '\x1F\'), char('\x7F\')], C, Truth).
+match_builtin_t(graph, C, Truth)     :- match_specs_t([range('!', '~')], C, Truth).
+match_builtin_t(lower, C, Truth)     :- match_specs_t([range('a', 'z')], C, Truth).
+match_builtin_t(print, C, Truth)     :- match_specs_t([range(' ', '~')], C, Truth).
+match_builtin_t(punct, C, Truth)     :- match_specs_t([set(['!', '"', '#', '$', '%', '&', '\'', '(', ')', '*', '+', ',', '-', '.', '/', ':', ';', '<', '=', '>', '?', '@', '[', '\\', ']', '^', '_', '`', '{', '|', '}', '~'])], C, Truth).
+match_builtin_t(upper, C, Truth)     :- match_specs_t([range('A', 'Z')], C, Truth).
+match_builtin_t(xdigit, C, Truth)    :- match_specs_t([range('0', '9'), range('a', 'f'), range('A', 'F')], C, Truth).
 
 match_specs_t([], _C, false).
 match_specs_t([Spec|Specs], C, Truth) :-
@@ -161,7 +159,13 @@ match_spec_item_t(range(Min, Max), C, Truth) :-
 match_spec_item_t(char(Ch), C, Truth) :-
     =(Ch, C, Truth).
 match_spec_item_t(set(List), C, Truth) :-
-    member_t(C, List, Truth).
+    member_char_t(C, List, Truth).
+
+member_char_t(_C, [], false).
+member_char_t(C, [H|T], Truth) :-
+    if_(C = H,
+        Truth = true,
+        member_char_t(C, T, Truth)).
 
 char_ge_t(A, B, true) :- A @>= B, !.
 char_ge_t(_, _, false).
