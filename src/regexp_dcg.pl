@@ -81,8 +81,8 @@
     re_cache_info/2          % Inspect compiled pattern cache (Count, Keys)
 ]).
 
-:- use_module(regexp_ast).
-:- use_module(regexp_common).
+:- use_module('core/regexp_ast').
+:- use_module('core/regexp_common').
 :- use_module(library(si)).
 :- use_module(library(lists)).
 :- use_module(library(dcgs)).

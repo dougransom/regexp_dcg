@@ -1,5 +1,5 @@
-:- use_module(testing).
-:- use_module('../src/regexp_ast').
+:- use_module('../testing').
+:- use_module('../../src/core/regexp_ast').
 :- use_module(library(debug)).
 :- use_module(library(pio)).
 :- use_module(library(dcgs)).

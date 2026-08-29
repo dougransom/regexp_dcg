@@ -1,6 +1,6 @@
-:- use_module(testing).
-:- use_module('../src/regexp_dcg').
-:- use_module('../src/regexp_compile_dfa').
+:- use_module('../testing').
+:- use_module('../../src/regexp_dcg').
+:- use_module('../../src/core/regexp_compile_dfa').
 :- use_module(library(lists)).
 :- use_module(library(dcgs)).
 

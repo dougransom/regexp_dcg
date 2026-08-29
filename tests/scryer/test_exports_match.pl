@@ -1,4 +1,4 @@
-:- use_module(testing).
+:- use_module('../testing').
 :- use_module(library(lists)).
 
 % Helper to read the exports list from the module declaration of a file
@@ -26,10 +26,10 @@ test("Public user interfaces are identical across all modules",
             re_clear_cache/0,
             re_cache_info/2
         ],
-        % Read exports from all engine files (assuming execution from root directory or tests/)
+        % Read exports from all engine files
         module_exports('src/regexp_dcg.pl', DcgExports),
-        module_exports('src/regexp_compile_dfa.pl', DfaExports),
-        module_exports('src/regexp_tree.pl', TreeExports),
+        module_exports('src/core/regexp_compile_dfa.pl', DfaExports),
+        module_exports('src/adapters/regexp_tree.pl', TreeExports),
         
         % 1. All public interface predicates must be exported by the DCG engine
         maplist(member_of(DcgExports), PublicInterface),

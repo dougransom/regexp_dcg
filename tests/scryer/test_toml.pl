@@ -1,8 +1,8 @@
-:- use_module(testing).
+:- use_module('../testing').
 :- use_module(library(pio)).
 :- use_module(library(dcgs)).
-:- use_module('../examples/toml/toml_tokenizer').
-:- use_module('../examples/toml/toml_parser').
+:- use_module('../../examples/toml/toml_tokenizer').
+:- use_module('../../examples/toml/toml_parser').
 
 read_file_chars([]) --> [].
 read_file_chars([C|Cs]) --> [C], read_file_chars(Cs).
