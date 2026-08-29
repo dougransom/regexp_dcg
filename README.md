@@ -81,7 +81,16 @@ Bakage is **optional**. Because `regexp` is written in pure ISO Prolog, you can 
 
 ## Primary Interface (`regexp`)
 
-The main entry point for matching patterns is the [`regexp`](src/regexp.pl) module. By default, it re-exports the Rational Tree Automaton implementation (`regexp_tree`), with the DCG-based engine (`src/core/regexp_compile_dcg.pl`) and DFA engine (`src/core/regexp_compile_dfa.pl`) available as 1:1 API-compatible direct substitutes.
+The main entry point for matching patterns is the [`regexp`](src/regexp.pl) module. By default, it uses the Rational Tree Automaton implementation (`regexp_tree`). You can switch the active engine globally by asserting `user:regexp_mode(dcg)` or `user:regexp_mode(dfa)` prior to or after importing, or per-call via mode options (`[mode(dcg)]`, `[mode(dfa)]`).
+
+```prolog
+% Global mode selection before or after importing regexp:
+?- assertz(user:regexp_mode(dcg)).
+   true.
+
+?- use_module('src/regexp').
+   true.
+```
 
 ### Quick Usage Examples
 
