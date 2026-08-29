@@ -3,6 +3,7 @@ VERSION = 0.1.2.dev1
 
 export PROLOG_ENGINE ?= scryer
 SCRYER ?= scryer-safe
+PROLOG_AGENT ?= prolog-agent
 
 .PHONY: all test test_curr_pred test_exports_match test_format test_logs test_regexp_ast test_regexp_dcg test_regexp_compile_dfa test_regexp_tree test_si test_time test_re_token test_international test_toml docs html llms packages package_bakage package_swi clean
 
@@ -113,14 +114,12 @@ html: docs
 packages: test docs package_bakage package_swi
 
 package_bakage:
-	@echo "=== Building Scryer bakage archive ==="
-	mkdir -p dist
-	tar -czvf dist/$(NAME)-$(VERSION)-bakage.tar.gz bakage.toml pack.pl README.md UNLICENSE src/ tests/
+	@echo "=== Building Scryer bakage package ==="
+	$(PROLOG_AGENT) pack --engine scryer
 
 package_swi:
-	@echo "=== Building SWI pack_install archive ==="
-	mkdir -p dist
-	tar -czvf dist/$(NAME)-$(VERSION)-swi.tar.gz pack.pl README.md UNLICENSE src/ tests/
+	@echo "=== Building SWI pack_install package ==="
+	$(PROLOG_AGENT) pack --engine swi
 
 # ==============================================================================
 # Cleanup Target

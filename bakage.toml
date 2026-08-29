@@ -1,10 +1,6 @@
-[package]
 name = "regexp_dcg"
 version = "0.1.2.dev1"
 description = "Pure ISO Scryer Prolog regular expression engine providing DCG non-terminal and direct list matching"
 authors = ["Doug Ransom"]
-
-[modules]
-main = "src/regexp_dcg.pl"
-
-[dependencies]
+modules = ["src/regexp_dcg.pl"]
+requires = []
