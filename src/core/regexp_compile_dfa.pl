@@ -148,47 +148,39 @@ compile_ast_nfa(AST, nfa(Start, Accept, Trans, Eps)) :-
 
 /* ---------- NFA Construction ---------- */
 
-ast_nfa(lit([]), _, Start, Accept, [], [eps(Start, Accept, always)], SIn, SIn) :- !.
+ast_nfa(lit([]), _, Start, Accept, [], [eps(Start, Accept, always)], SIn, SIn).
 ast_nfa(lit([C|Cs]), Flags, Start, Accept, Trans, [], SIn, SOut) :-
-    !,
     (   member(case_insensitive, Flags) ->
         chars_nfa_ci([C|Cs], Start, Accept, Trans, SIn, SOut)
     ;   chars_nfa([C|Cs], Start, Accept, Trans, SIn, SOut)
     ).
 ast_nfa(escaped(C), Flags, Start, Accept, [trans(Start, Cond, Accept)], [], SIn, SIn) :-
-    !,
     (   member(case_insensitive, Flags) ->
         Cond = char_ci(C)
     ;   Cond = char(C)
     ).
-ast_nfa(dot, _, Start, Accept, [trans(Start, any, Accept)], [], SIn, SIn) :- !.
+ast_nfa(dot, _, Start, Accept, [trans(Start, any, Accept)], [], SIn, SIn).
 ast_nfa(class(Items), Flags, Start, Accept, [trans(Start, Cond, Accept)], [], SIn, SIn) :-
-    !,
     (   member(case_insensitive, Flags) ->
         Cond = class_ci(Items)
     ;   Cond = class(Items)
     ).
-ast_nfa(builtin(Class), _, Start, Accept, [trans(Start, builtin(Class), Accept)], [], SIn, SIn) :- !.
-ast_nfa(anchor(bol), _, Start, Accept, [], [eps(Start, Accept, bol)], SIn, SIn) :- !.
-ast_nfa(anchor(eol), _, Start, Accept, [], [eps(Start, Accept, eol)], SIn, SIn) :- !.
-ast_nfa(boundary(B), _, Start, Accept, [], [eps(Start, Accept, boundary(B))], SIn, SIn) :- !.
+ast_nfa(builtin(Class), _, Start, Accept, [trans(Start, builtin(Class), Accept)], [], SIn, SIn).
+ast_nfa(anchor(bol), _, Start, Accept, [], [eps(Start, Accept, bol)], SIn, SIn).
+ast_nfa(anchor(eol), _, Start, Accept, [], [eps(Start, Accept, eol)], SIn, SIn).
+ast_nfa(boundary(B), _, Start, Accept, [], [eps(Start, Accept, boundary(B))], SIn, SIn).
 ast_nfa(group(Inner), Flags, Start, Accept, Trans, Eps, SIn, SOut) :-
-    !,
     ast_nfa(Inner, Flags, Start, Accept, Trans, Eps, SIn, SOut).
 ast_nfa(capture(Inner), Flags, Start, Accept, Trans, Eps, SIn, SOut) :-
-    !,
     ast_nfa(Inner, Flags, Start, Accept, Trans, Eps, SIn, SOut).
 ast_nfa(named_capture(_, Inner), Flags, Start, Accept, Trans, Eps, SIn, SOut) :-
-    !,
     ast_nfa(Inner, Flags, Start, Accept, Trans, Eps, SIn, SOut).
-ast_nfa(flags(_), _, Start, Accept, [], [eps(Start, Accept, always)], SIn, SIn) :- !.
+ast_nfa(flags(_), _, Start, Accept, [], [eps(Start, Accept, always)], SIn, SIn).
 ast_nfa(flags(FlagsStr, Sub), Flags, Start, Accept, Trans, Eps, SIn, SOut) :-
-    !,
     parse_flags(FlagsStr, NewFlags),
     append(NewFlags, Flags, CombinedFlags),
     ast_nfa(Sub, CombinedFlags, Start, Accept, Trans, Eps, SIn, SOut).
 ast_nfa(or(A, B), Flags, Start, Accept, Trans, Eps, SIn, SOut) :-
-    !,
     AStart #= SIn,
     AAccept #= SIn + 1,
     BStart #= SIn + 2,
@@ -203,16 +195,13 @@ ast_nfa(or(A, B), Flags, Start, Accept, Trans, Eps, SIn, SOut) :-
            eps(AAccept, Accept, always),
            eps(BAccept, Accept, always) | EpsSub].
 ast_nfa(concat(A, B), Flags, Start, Accept, Trans, Eps, SIn, SOut) :-
-    !,
     flatten_concat(concat(A, B), Flat),
     factors_nfa(Flat, Flags, Start, Accept, Trans, Eps, SIn, SOut).
 ast_nfa(concat(List), Flags, Start, Accept, Trans, Eps, SIn, SOut) :-
     list_si(List),
-    !,
     flatten_list(List, Flat),
     factors_nfa(Flat, Flags, Start, Accept, Trans, Eps, SIn, SOut).
 ast_nfa(postfix(Expr, star), Flags, Start, Accept, Trans, Eps, SIn, SOut) :-
-    !,
     AStart #= SIn,
     AAccept #= SIn + 1,
     SIn1 #= SIn + 2,
@@ -225,7 +214,6 @@ ast_nfa(postfix(Expr, star), Flags, Start, Accept, Trans, Eps, SIn, SOut) :-
         eps(AAccept, Accept, always)
     ], Eps).
 ast_nfa(postfix(Expr, plus), Flags, Start, Accept, Trans, Eps, SIn, SOut) :-
-    !,
     AStart #= SIn,
     AAccept #= SIn + 1,
     SIn1 #= SIn + 2,
@@ -237,7 +225,6 @@ ast_nfa(postfix(Expr, plus), Flags, Start, Accept, Trans, Eps, SIn, SOut) :-
         eps(AAccept, Accept, always)
     ], Eps).
 ast_nfa(postfix(Expr, question), Flags, Start, Accept, Trans, Eps, SIn, SOut) :-
-    !,
     AStart is SIn,
     AAccept is SIn + 1,
     SIn1 is SIn + 2,
@@ -249,10 +236,8 @@ ast_nfa(postfix(Expr, question), Flags, Start, Accept, Trans, Eps, SIn, SOut) :-
         eps(AAccept, Accept, always)
     ], Eps).
 ast_nfa(postfix(Expr, lazy(Op)), Flags, Start, Accept, Trans, Eps, SIn, SOut) :-
-    !,
     ast_nfa(postfix(Expr, Op), Flags, Start, Accept, Trans, Eps, SIn, SOut).
 ast_nfa(quant(Expr, Q), Flags, Start, Accept, Trans, Eps, SIn, SOut) :-
-    !,
     (   Q = lazy(Q0) -> Q1 = Q0 ; Q1 = Q ),
     expand_quant(Expr, Q1, ExpandedAST),
     ast_nfa(ExpandedAST, Flags, Start, Accept, Trans, Eps, SIn, SOut).
@@ -265,13 +250,13 @@ expand_quant(Expr, mn(M, N), Expanded) :-
         expand_min_max(Expr, M, N, Expanded)
     ).
 
-expand_min_inf(Expr, 0, postfix(Expr, star)) :- !.
+expand_min_inf(Expr, 0, postfix(Expr, star)).
 expand_min_inf(Expr, M, concat(Expr, Sub)) :-
     M > 0,
     M1 is M - 1,
     expand_min_inf(Expr, M1, Sub).
 
-expand_min_max(_Expr, 0, 0, lit([])) :- !.
+expand_min_max(_Expr, 0, 0, lit([])).
 expand_min_max(Expr, 0, N, concat(postfix(Expr, question), Sub)) :-
     N > 0,
     N1 is N - 1,
@@ -284,15 +269,15 @@ expand_min_max(Expr, M, N, concat(Expr, Sub)) :-
 
 % Flatting con-cat helper
 flatten_concat(concat(A, B), Flat) :-
-    !,
     flatten_concat(A, FlatA),
     flatten_concat(B, FlatB),
     append(FlatA, FlatB, Flat).
 flatten_concat(concat(List), Flat) :-
     list_si(List),
-    !,
     flatten_list(List, Flat).
-flatten_concat(Expr, [Expr]).
+flatten_concat(Expr, [Expr]) :-
+    dif(Expr, concat(_)),
+    dif(Expr, concat(_, _)).
 
 flatten_list([], []).
 flatten_list([H|T], Flat) :-
@@ -303,11 +288,9 @@ flatten_list([H|T], Flat) :-
 % Threading factors with flags
 factors_nfa([], _, Start, Accept, [], [eps(Start, Accept, always)], S, S).
 factors_nfa([F], Flags, Start, Accept, Trans, Eps, SIn, SOut) :-
-    !,
     ast_nfa(F, Flags, Start, Accept, Trans, Eps, SIn, SOut).
 factors_nfa([F|Fs], Flags, Start, Accept, Trans, Eps, SIn, SOut) :-
     Fs = [_|_],
-    !,
     (   F = flags(NewFlagsStr) ->
         parse_flags(NewFlagsStr, NewFlags),
         append(NewFlags, Flags, CombinedFlags),

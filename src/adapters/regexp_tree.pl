@@ -156,8 +156,10 @@ get_tree_automaton(Pattern, _, _) :-
     var(Pattern),
     !,
     instantiation_error(get_tree_automaton/3).
-get_tree_automaton(compiled_tree(Automaton, GroupCount), Automaton, GroupCount) :- !.
+get_tree_automaton(compiled_tree(Automaton, GroupCount), Automaton, GroupCount).
 get_tree_automaton(Pattern, Automaton, GroupCount) :-
+    nonvar(Pattern),
+    Pattern \= compiled_tree(_, _),
     (   tree_pattern_cache(Pattern, AST, GroupCount) ->
         compile_ast_tree(AST, Automaton, GroupCount)
     ;   pattern_ast(Pattern, AST),

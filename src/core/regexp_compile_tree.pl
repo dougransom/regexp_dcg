@@ -39,129 +39,106 @@ compile_ast_tree(AST, Automaton, GroupCount) :-
 %% compile_node(+AST, +C0, -CF, +Cont, -Node)
 %
 % Compiles an AST node into an automaton node with continuation `Cont`.
-compile_node(lit([]), C, C, Cont, Cont) :- !.
-compile_node(lit([Char]), C, C, Cont, sym(char(Char), Cont, stp)) :- !.
+compile_node(lit([]), C, C, Cont, Cont).
+compile_node(lit([Char]), C, C, Cont, sym(char(Char), Cont, stp)).
 compile_node(lit([C1, C2 | Cs]), C, C, Cont, Node) :-
-    !,
     compile_node(lit([C2 | Cs]), C, C, Cont, RestNode),
     Node = sym(char(C1), RestNode, stp).
 
 compile_node(concat(A, B), C0, CF, Cont, Node) :-
-    !,
     compile_node(A, C0, C1, NodeB, Node),
     compile_node(B, C1, CF, Cont, NodeB).
 compile_node(concat(List), C0, CF, Cont, Node) :-
-    !,
     compile_seq(List, C0, CF, Cont, Node).
 
 compile_node(or(A, B), C0, CF, Cont, alt(NodeA, NodeB)) :-
-    !,
     compile_node(A, C0, C1, Cont, NodeA),
     compile_node(B, C1, CF, Cont, NodeB).
 
 compile_node(group(Inner), C0, CF, Cont, Node) :-
-    !,
     compile_node(Inner, C0, CF, Cont, Node).
 
 compile_node(capture(Inner), C0, CF, Cont, cap_open(C0, NodeInner)) :-
-    !,
     C1 #= C0 + 1,
     compile_node(Inner, C1, CF, cap_close(C0, Cont), NodeInner).
 
 compile_node(named_capture(Name, Inner), C0, CF, Cont, named_open(Name, C0, NodeInner)) :-
-    !,
     C1 #= C0 + 1,
     compile_node(Inner, C1, CF, named_close(Name, C0, Cont), NodeInner).
 
 compile_node(postfix(Expr, star), C0, CF, Cont, star(SubNode, Cont)) :-
-    !,
     compile_node(Expr, C0, CF, end, SubNode).
 
 compile_node(postfix(Expr, lazy(star)), C0, CF, Cont, lazy_star(SubNode, Cont)) :-
-    !,
     compile_node(Expr, C0, CF, end, SubNode).
 
 compile_node(postfix(Expr, plus), C0, CF, Cont, Node) :-
-    !,
     compile_node(Expr, C0, C1, star(SubNode, Cont), Node),
     compile_node(Expr, C1, CF, end, SubNode).
 
 compile_node(postfix(Expr, lazy(plus)), C0, CF, Cont, Node) :-
-    !,
     compile_node(Expr, C0, C1, lazy_star(SubNode, Cont), Node),
     compile_node(Expr, C1, CF, end, SubNode).
 
 compile_node(postfix(Expr, question), C0, CF, Cont, opt(SubNode, Cont)) :-
-    !,
     compile_node(Expr, C0, CF, Cont, SubNode).
 
 compile_node(postfix(Expr, lazy(question)), C0, CF, Cont, lazy_opt(SubNode, Cont)) :-
-    !,
     compile_node(Expr, C0, CF, Cont, SubNode).
 
 compile_node(quant(Expr, mn(M, M)), C0, CF, Cont, Node) :-
-    !,
     compile_exact_n(M, Expr, C0, CF, Cont, Node).
 compile_node(quant(Expr, mn(0, inf)), C0, CF, Cont, Node) :-
-    !,
     compile_node(postfix(Expr, star), C0, CF, Cont, Node).
 compile_node(quant(Expr, mn(M, inf)), C0, CF, Cont, Node) :-
-    !,
+    M #> 0,
     compile_node(postfix(Expr, star), C0, C1, Cont, NodeStar),
     compile_exact_n(M, Expr, C1, CF, NodeStar, Node).
 compile_node(quant(Expr, mn(M, N)), C0, CF, Cont, Node) :-
-    !,
     M #=< N,
+    dif(N, inf),
     RestCount #= N - M,
     compile_optionals(RestCount, Expr, C0, C1, Cont, NodeOpt),
     compile_exact_n(M, Expr, C1, CF, NodeOpt, Node).
 
 compile_node(quant(Expr, lazy(mn(M, M))), C0, CF, Cont, Node) :-
-    !,
     compile_exact_n(M, Expr, C0, CF, Cont, Node).
 compile_node(quant(Expr, lazy(mn(0, inf))), C0, CF, Cont, Node) :-
-    !,
     compile_node(postfix(Expr, lazy(star)), C0, CF, Cont, Node).
 compile_node(quant(Expr, lazy(mn(M, inf))), C0, CF, Cont, Node) :-
-    !,
+    M #> 0,
     compile_node(postfix(Expr, lazy(star)), C0, C1, Cont, NodeStar),
     compile_exact_n(M, Expr, C1, CF, NodeStar, Node).
 compile_node(quant(Expr, lazy(mn(M, N))), C0, CF, Cont, Node) :-
-    !,
     M #=< N,
+    dif(N, inf),
     RestCount #= N - M,
     compile_lazy_optionals(RestCount, Expr, C0, C1, Cont, NodeOpt),
     compile_exact_n(M, Expr, C1, CF, NodeOpt, Node).
 
-compile_node(dot, C, C, Cont, sym(dot, Cont, stp)) :- !.
+compile_node(dot, C, C, Cont, sym(dot, Cont, stp)).
 compile_node(escaped(Char), C, C, Cont, Node) :-
-    !,
-    (   char_range_t('1', '9', Char, true) ->
-        char_code(Char, Code),
-        Idx #= Code - 49,
-        Node = backref(Idx, Cont)
-    ;   Node = sym(char(Char), Cont, stp)
-    ).
-compile_node(anchor(bol), C, C, Cont, sym(bol, Cont, stp)) :- !.
-compile_node(anchor(eol), C, C, Cont, sym(eol, Cont, stp)) :- !.
-compile_node(boundary, C, C, Cont, sym(boundary, Cont, stp)) :- !.
-compile_node(boundary(word), C, C, Cont, sym(boundary, Cont, stp)) :- !.
-compile_node(not_boundary, C, C, Cont, sym(not_boundary, Cont, stp)) :- !.
-compile_node(boundary(not_word), C, C, Cont, sym(not_boundary, Cont, stp)) :- !.
-compile_node(backref(Idx), C, C, Cont, backref(Idx, Cont)) :- !.
-compile_node(builtin(Class), C, C, Cont, sym(builtin(Class), Cont, stp)) :- !.
-compile_node(class(neg(Items)), C, C, Cont, sym(neg_class(Items), Cont, stp)) :- !.
-compile_node(class(Items), C, C, Cont, sym(class(Items), Cont, stp)) :- !.
-compile_node(neg_class(Items), C, C, Cont, sym(neg_class(Items), Cont, stp)) :- !.
+    if_(char_range_t('1', '9', Char),
+        ( char_code(Char, Code), Idx #= Code - 49, Node = backref(Idx, Cont) ),
+        Node = sym(char(Char), Cont, stp)).
+
+compile_node(anchor(bol), C, C, Cont, sym(bol, Cont, stp)).
+compile_node(anchor(eol), C, C, Cont, sym(eol, Cont, stp)).
+compile_node(boundary, C, C, Cont, sym(boundary, Cont, stp)).
+compile_node(boundary(word), C, C, Cont, sym(boundary, Cont, stp)).
+compile_node(not_boundary, C, C, Cont, sym(not_boundary, Cont, stp)).
+compile_node(boundary(not_word), C, C, Cont, sym(not_boundary, Cont, stp)).
+compile_node(backref(Idx), C, C, Cont, backref(Idx, Cont)).
+compile_node(builtin(Class), C, C, Cont, sym(builtin(Class), Cont, stp)).
+compile_node(class(neg(Items)), C, C, Cont, sym(neg_class(Items), Cont, stp)).
+compile_node(class(Items), C, C, Cont, sym(class(Items), Cont, stp)).
+compile_node(neg_class(Items), C, C, Cont, sym(neg_class(Items), Cont, stp)).
 compile_node(lookahead(Sub), C0, CF, Cont, lookahead(SubNode, Cont, stp)) :-
-    !,
     compile_node(Sub, C0, CF, end, SubNode).
 compile_node(neg_lookahead(Sub), C0, CF, Cont, neg_lookahead(SubNode, Cont, stp)) :-
-    !,
     compile_node(Sub, C0, CF, end, SubNode).
-compile_node(flags(Flags), C, C, Cont, set_flags(Flags, Cont)) :- !.
+compile_node(flags(Flags), C, C, Cont, set_flags(Flags, Cont)).
 compile_node(flags(Flags, Sub), C0, CF, Cont, scoped_flags(Flags, SubNode, Cont)) :-
-    !,
     compile_node(Sub, C0, CF, Cont, SubNode).
 
 compile_seq([], C, C, Cont, Cont).
@@ -169,21 +146,21 @@ compile_seq([H|T], C0, CF, Cont, Node) :-
     compile_node(H, C0, C1, RestNode, Node),
     compile_seq(T, C1, CF, Cont, RestNode).
 
-compile_exact_n(0, _, C, C, Cont, Cont) :- !.
+compile_exact_n(0, _, C, C, Cont, Cont).
 compile_exact_n(N, Expr, C0, CF, Cont, Node) :-
     N #> 0,
     N1 #= N - 1,
     compile_exact_n(N1, Expr, C0, C1, Cont, RestNode),
     compile_node(Expr, C1, CF, RestNode, Node).
 
-compile_optionals(0, _, C, C, Cont, Cont) :- !.
+compile_optionals(0, _, C, C, Cont, Cont).
 compile_optionals(N, Expr, C0, CF, Cont, Node) :-
     N #> 0,
     N1 #= N - 1,
     compile_optionals(N1, Expr, C0, C1, Cont, RestNode),
     compile_node(postfix(Expr, question), C1, CF, RestNode, Node).
 
-compile_lazy_optionals(0, _, C, C, Cont, Cont) :- !.
+compile_lazy_optionals(0, _, C, C, Cont, Cont).
 compile_lazy_optionals(N, Expr, C0, CF, Cont, Node) :-
     N #> 0,
     N1 #= N - 1,
@@ -281,28 +258,24 @@ regex_tree_run(Chars, backref(Idx, Next), S0, SF, Rest) :-
     ).
 
 regex_tree_run(Chars, sym(bol, Succ, Fail), S0, SF, Rest) :-
-    !,
     (   is_bol(S0, Chars) ->
         regex_tree_run(Chars, Succ, S0, SF, Rest)
     ;   regex_tree_run(Chars, Fail, S0, SF, Rest)
     ).
 
 regex_tree_run(Chars, sym(eol, Succ, Fail), S0, SF, Rest) :-
-    !,
     (   is_eol(Chars) ->
         regex_tree_run(Chars, Succ, S0, SF, Rest)
     ;   regex_tree_run(Chars, Fail, S0, SF, Rest)
     ).
 
 regex_tree_run(Chars, sym(boundary, Succ, Fail), S0, SF, Rest) :-
-    !,
     (   is_boundary(S0, Chars) ->
         regex_tree_run(Chars, Succ, S0, SF, Rest)
     ;   regex_tree_run(Chars, Fail, S0, SF, Rest)
     ).
 
 regex_tree_run(Chars, sym(not_boundary, Succ, Fail), S0, SF, Rest) :-
-    !,
     (   \+ is_boundary(S0, Chars) ->
         regex_tree_run(Chars, Succ, S0, SF, Rest)
     ;   regex_tree_run(Chars, Fail, S0, SF, Rest)
@@ -322,8 +295,8 @@ regex_tree_run([H|T], sym(Cond, Succ, Fail), S0, SF, Rest) :-
         regex_tree_run([H|T], Fail, S0, SF, Rest)).
 
 %% match_cond_empty(+Cond, -Truth)
-match_cond_empty(eol, true) :- !.
-match_cond_empty(_, false).
+match_cond_empty(Cond, Truth) :-
+    if_(Cond = eol, Truth = true, Truth = false).
 
 %% match_cond_flags(+Cond, +Char, +Flags, -Truth)
 match_cond_flags(Cond, H, Flags, Truth) :-
@@ -450,11 +423,13 @@ set_named_end(Full, Named, Name, _, RemainingChars, [Name-Substr|Named1]) :-
     ).
 
 delete_key([], _, []).
-delete_key([K-_|T], K, T1) :- !, delete_key(T, K, T1).
-delete_key([H|T], K, [H|T1]) :- delete_key(T, K, T1).
+delete_key([K0-V|T], K, R) :-
+    if_(K0 = K,
+        delete_key(T, K, R),
+        ( R = [K0-V|R1], delete_key(T, K, R1) )).
 
 replace_nth([], _, _, []).
-replace_nth([_|T], 0, Val, [Val|T]) :- !.
+replace_nth([_|T], 0, Val, [Val|T]).
 replace_nth([H|T], N, Val, [H|R]) :-
     N #> 0,
     N1 #= N - 1,
@@ -469,10 +444,10 @@ extract_substring(Full, StartChars, EndChars, Substr) :-
     drop_n(Skip, Full, Rest),
     take_n(Take, Rest, Substr).
 
-drop_n(0, L, L) :- !.
+drop_n(0, L, L).
 drop_n(N, [_|T], R) :- N #> 0, N1 #= N - 1, drop_n(N1, T, R).
 
-take_n(0, _, []) :- !.
+take_n(0, _, []).
 take_n(N, [H|T], [H|R]) :- N #> 0, N1 #= N - 1, take_n(N1, T, R).
 
 is_bol(state(Full, _, _, _), Chars) :-
@@ -485,7 +460,7 @@ is_bol(state(Full, _, _, _), Chars) :-
         nth0(Skip, Full, '\n')
     ).
 
-is_eol([]) :- !.
+is_eol([]).
 is_eol(['\n'|_]).
 
 is_boundary(state(Full, _, _, _), Chars) :-

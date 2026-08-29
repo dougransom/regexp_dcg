@@ -138,8 +138,9 @@ re_concat_more(Acc, AST) -->
 re_concat_more(Acc, Acc) -->
     [].
 
-normalize_concat(concat([X]), X) :- !.
-normalize_concat(X, X).
+normalize_concat(concat([X]), X).
+normalize_concat(X, X) :-
+    dif(X, concat([_])).
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

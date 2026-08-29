@@ -235,22 +235,8 @@ ast_dcg(AST, S0, SF, DCG) :-
 %
 % Compiles an AST term into an executable runtime DCG goal term `Goal`.
 % Threads state accumulator `SIn -> SOut` at match-time and counts capture group indices `C0 -> CF` at compile-time.
-%
-% ### Accumulator Behavior:
-% Any AST node that does not create a capturing group (e.g. `lit/1`, `dot`, `anchor/1`, `class/1`) passes
-% the capture group index through unchanged (`C0 = CF = C`). Nodes creating capturing groups (`capture/1`,
-% `named_capture/2`) increment the counter (`C1 is C0 + 1`).
-%
-% ### Deterministic Compilation & Cut (`!`) Rationale:
-% Compilation is 100% deterministic (zero choicepoint overhead). Cuts (`!`) are placed on specific clauses for:
-% 1. _Arity Disambiguation_: Cuts on `concat(A, B)` (`concat/2`) vs `concat(List)` (`concat/1`) and `flags(Flags, Sub)` (`flags/2`)
-%    vs `flags(Flags)` (`flags/1`) commit immediately to multi-argument clauses.
-% 2. _Sub-Functor Disambiguation_: Cuts on lazy quantifiers `postfix(Expr, lazy(Op))` commit when `Op = lazy(...)` matches,
-%    cutting choicepoints against greedy `postfix/2` clauses.
-% 3. _Error Containment_: Commits to the matching clause so sub-AST compilation errors fail immediately without spurious backtracking.
 ast_dcg_goal(lit(Chars), C, C, regexp_dcg:dcg_lit(Chars)).
 ast_dcg_goal(concat(A, B), C0, CF, regexp_dcg:dcg_concat([GA, GB])) :-
-    !,
     ast_dcg_goal(A, C0, C1, GA),
     ast_dcg_goal(B, C1, CF, GB).
 ast_dcg_goal(concat(List), C0, CF, regexp_dcg:dcg_concat(SubGoals)) :-
@@ -282,24 +268,18 @@ ast_dcg_goal(lookahead(Sub), C0, CF, regexp_dcg:dcg_lookahead(GSub)) :-
 ast_dcg_goal(neg_lookahead(Sub), C0, CF, regexp_dcg:dcg_neg_lookahead(GSub)) :-
     ast_dcg_goal(Sub, C0, CF, GSub).
 ast_dcg_goal(postfix(Expr, lazy(star)), C0, CF, regexp_dcg:dcg_star_lazy(GExpr)) :-
-    !,
     ast_dcg_goal(Expr, C0, CF, GExpr).
 ast_dcg_goal(postfix(Expr, lazy(plus)), C0, CF, regexp_dcg:dcg_plus_lazy(GExpr)) :-
-    !,
     ast_dcg_goal(Expr, C0, CF, GExpr).
 ast_dcg_goal(postfix(Expr, lazy(question)), C0, CF, regexp_dcg:dcg_question_lazy(GExpr)) :-
-    !,
     ast_dcg_goal(Expr, C0, CF, GExpr).
 ast_dcg_goal(quant(Expr, lazy(mn(M, N))), C0, CF, regexp_dcg:dcg_quant_lazy(GExpr, M, N)) :-
-    !,
     ast_dcg_goal(Expr, C0, CF, GExpr).
 ast_dcg_goal(named_capture(Name, Inner), C0, CF, regexp_dcg:dcg_named_capture(Name, C0, GInner)) :-
-    !,
     C1 #= C0 + 1,
     ast_dcg_goal(Inner, C1, CF, GInner).
 ast_dcg_goal(flags(Flags), C, C, regexp_dcg:dcg_flags(Flags)).
 ast_dcg_goal(flags(Flags, Sub), C0, CF, regexp_dcg:dcg_flags_group(Flags, GSub)) :-
-    !,
     ast_dcg_goal(Sub, C0, CF, GSub).
 
 seq_ast_dcg([], C, C, []).
