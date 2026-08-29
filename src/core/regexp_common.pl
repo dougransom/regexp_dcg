@@ -20,7 +20,9 @@
     char_equal_ci_t/3,
     parse_flags/2,
     match_class/2,
-    match_class_ci/2
+    match_class_t/3,
+    match_class_ci/2,
+    match_class_ci_t/3
 ]).
 
 :- use_module(library(lists)).
@@ -82,7 +84,7 @@ extract_match(Full, Rest, Match) :-
 %% take_n(+N, +List, -Prefix)
 %
 % Take first `N` elements from `List`.
-take_n(0, _, []) :- !.
+take_n(0, _, []).
 take_n(N, [H|T], [H|R]) :-
     N #> 0,
     N1 #= N - 1,
@@ -173,16 +175,14 @@ member_char_t(C, [H|T], Truth) :-
         Truth = true,
         member_char_t(C, T, Truth)).
 
-char_ge_t(A, B, true) :- A @>= B, !.
-char_ge_t(_, _, false).
-
-char_le_t(A, B, true) :- A @=< B, !.
-char_le_t(_, _, false).
-
 char_range_t(Min, Max, Char, Truth) :-
-    if_(char_ge_t(Char, Min),
-        char_le_t(Char, Max, Truth),
-        Truth = false).
+    char_code(Min, MinCode),
+    char_code(Max, MaxCode),
+    char_code(Char, Code),
+    MinCode #=< Code #<==> B1,
+    Code #=< MaxCode #<==> B2,
+    B1 #/\ B2 #<==> B,
+    if_(B = 1, Truth = true, Truth = false).
 
 reif_not(true, false).
 reif_not(false, true).
@@ -224,48 +224,59 @@ char_equal_ci_t(C1, C2, Truth) :-
     char_lower(C2, L2),
     =(L1, L2, Truth).
 
-/* Standard Non-Reified Character Class Matcher */
+/* Pure Reified Character Class Matcher */
 
 %% match_class(+Items, +Char)
-match_class(neg(List), C) :-
-    !,
-    \+ match_class_list(List, C).
-match_class(List, C) :-
+match_class(Items, C) :-
+    match_class_t(Items, C, true).
+
+%% match_class_t(+Items, +Char, -Truth)
+match_class_t(neg(List), C, Truth) :-
+    match_class_items_t(List, C, T0),
+    reif_not(T0, Truth).
+match_class_t(List, C, Truth) :-
     list_si(List),
-    match_class_list(List, C).
+    match_class_items_t(List, C, Truth).
 
-match_class_list([H|T], C) :-
-    (   match_class_item(H, C) ->
-        true
-    ;   match_class_list(T, C)
-    ).
+match_class_items_t([], _C, false).
+match_class_items_t([Item|Items], C, Truth) :-
+    match_class_item_t(Item, C, T0),
+    if_(T0 = true,
+        Truth = true,
+        match_class_items_t(Items, C, Truth)).
 
-match_class_item(char(C), C).
-match_class_item(range(A, B), C) :-
-    C @>= A, C @=< B.
-match_class_item(builtin(Class), C) :-
-    match_builtin(Class, C).
+match_class_item_t(char(Ch), C, Truth) :-
+    =(Ch, C, Truth).
+match_class_item_t(range(Min, Max), C, Truth) :-
+    char_range_t(Min, Max, C, Truth).
+match_class_item_t(builtin(Class), C, Truth) :-
+    match_builtin_t(Class, C, Truth).
 
 %% match_class_ci(+Items, +Char)
-match_class_ci(neg(List), C) :-
-    !,
-    \+ match_class_list_ci(List, C).
-match_class_ci(List, C) :-
+match_class_ci(Items, C) :-
+    match_class_ci_t(Items, C, true).
+
+%% match_class_ci_t(+Items, +Char, -Truth)
+match_class_ci_t(neg(List), C, Truth) :-
+    match_class_items_ci_t(List, C, T0),
+    reif_not(T0, Truth).
+match_class_ci_t(List, C, Truth) :-
     list_si(List),
-    match_class_list_ci(List, C).
+    match_class_items_ci_t(List, C, Truth).
 
-match_class_list_ci([H|T], C) :-
-    (   match_class_item_ci(H, C) ->
-        true
-    ;   match_class_list_ci(T, C)
-    ).
+match_class_items_ci_t([], _C, false).
+match_class_items_ci_t([Item|Items], C, Truth) :-
+    match_class_item_ci_t(Item, C, T0),
+    if_(T0 = true,
+        Truth = true,
+        match_class_items_ci_t(Items, C, Truth)).
 
-match_class_item_ci(char(CharPattern), C) :-
-    char_equal_ci(CharPattern, C).
-match_class_item_ci(range(A, B), C) :-
-    char_lower(A, LowerA),
-    char_lower(B, LowerB),
+match_class_item_ci_t(char(CharPattern), C, Truth) :-
+    char_equal_ci_t(CharPattern, C, Truth).
+match_class_item_ci_t(range(Min, Max), C, Truth) :-
+    char_lower(Min, LowerA),
+    char_lower(Max, LowerB),
     char_lower(C, LowerC),
-    LowerC @>= LowerA, LowerC @=< LowerB.
-match_class_item_ci(builtin(Class), C) :-
-    match_builtin(Class, C).
+    char_range_t(LowerA, LowerB, LowerC, Truth).
+match_class_item_ci_t(builtin(Class), C, Truth) :-
+    match_builtin_t(Class, C, Truth).
