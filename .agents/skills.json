@@ -1,8 +1,6 @@
 {
   "entries": [
-    { "path": "skills" }
-  ],
-  "inherits": [
-    { "path": "/home/doug/code/prolog-agent-toolkit/.agents/skills.json" }
+    { "path": "skills" },
+    { "path": ".agents-toolkit/.agents/skills" }
   ]
 }
