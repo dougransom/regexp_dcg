@@ -268,6 +268,9 @@ regex_tree_run(Chars, named_close(Name, Idx, Next), S0, SF, Rest) :-
     update_named_close(S0, Name, Idx, Chars, S1),
     regex_tree_run(Chars, Next, S1, SF, Rest).
 
+% Note on ->: Soft-cut is used for lookahead assertions because SubNode execution
+% is a recursive goal search (not a reified boolean value for if_/3). Soft-cut commits
+% to the first successful match of the zero-width lookahead assertion.
 regex_tree_run(Chars, lookahead(SubNode, Next, Fail), S0, SF, Rest) :-
     (   regex_tree_run(Chars, SubNode, S0, _, _) ->
         regex_tree_run(Chars, Next, S0, SF, Rest)
@@ -297,6 +300,8 @@ regex_tree_run(Chars, scoped_flags(Flags, SubNode, Next), S0, SF, Rest) :-
     SFinal = state(Full2, Groups2, Named2, OldFlags),
     regex_tree_run(Rest1, Next, SFinal, SF, Rest).
 
+% Note on ->: Soft-cut is used here as a deterministic guard condition for
+% compound prefix extraction (nth0 lookup, chars_si check, and prefix matching).
 regex_tree_run(Chars, backref(Idx, Next), S0, SF, Rest) :-
     S0 = state(_, Groups, _, _),
     (   nth0(Idx, Groups, Captured),
@@ -445,27 +450,40 @@ update_named_close(state(Full, Groups, Named, Flags), Name, Idx, RemainingChars,
     set_named_end(Full, Named, Name, Idx, RemainingChars, NewNamed).
 
 set_group_start(Groups, Idx, RemainingChars, NewGroups) :-
-    (   nth0(Idx, Groups, capture(RemainingChars, _)) ->
-        NewGroups = Groups
-    ;   replace_nth(Groups, Idx, capture(RemainingChars, _), NewGroups)
+    if_(group_captured_t(Groups, Idx, RemainingChars),
+        NewGroups = Groups,
+        replace_nth(Groups, Idx, capture(RemainingChars, _), NewGroups)
     ).
 
+group_captured_t(Groups, Idx, RemainingChars, true) :-
+    nth0(Idx, Groups, capture(CapChars, _)),
+    CapChars == RemainingChars, !.
+group_captured_t(_Groups, _Idx, _RemainingChars, false).
+
 set_group_end(Full, Groups, Idx, RemainingChars, NewGroups) :-
-    (   nth0(Idx, Groups, capture(StartChars, _)) ->
-        extract_substring(Full, StartChars, RemainingChars, Substr),
-        replace_nth(Groups, Idx, Substr, NewGroups)
-    ;   NewGroups = Groups
+    if_(group_start_captured_t(Groups, Idx, StartChars),
+        ( extract_substring(Full, StartChars, RemainingChars, Substr),
+          replace_nth(Groups, Idx, Substr, NewGroups) ),
+        NewGroups = Groups
     ).
+
+group_start_captured_t(Groups, Idx, StartChars, true) :-
+    nth0(Idx, Groups, capture(StartChars, _)), !.
+group_start_captured_t(_Groups, _Idx, _StartChars, false).
 
 set_named_start(Named, Name, _, RemainingChars, [Name-capture(RemainingChars, _)|Named1]) :-
     delete_key(Named, Name, Named1).
 
 set_named_end(Full, Named, Name, _, RemainingChars, [Name-Substr|Named1]) :-
-    (   member(Name-capture(StartChars, _), Named) ->
-        extract_substring(Full, StartChars, RemainingChars, Substr),
-        delete_key(Named, Name, Named1)
-    ;   Named1 = Named
+    if_(named_captured_t(Named, Name, StartChars),
+        ( extract_substring(Full, StartChars, RemainingChars, Substr),
+          delete_key(Named, Name, Named1) ),
+        Named1 = Named
     ).
+
+named_captured_t(Named, Name, StartChars, true) :-
+    member(Name-capture(StartChars, _), Named), !.
+named_captured_t(_Named, _Name, _StartChars, false).
 
 delete_key([], _, []).
 delete_key([K0-V|T], K, R) :-
@@ -545,7 +563,10 @@ is_word_char(C) :-
     is_word_char_t(C, true).
 
 is_word_char_t(C, Truth) :-
-    (   nonvar(C) ->
+    if_(var_t(C),
+        Truth = false,
         match_builtin_t(word, C, Truth)
-    ;   Truth = false
     ).
+
+var_t(X, true) :- var(X).
+var_t(X, false) :- nonvar(X).
