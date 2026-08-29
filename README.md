@@ -1,4 +1,4 @@
-# Regular Expression Engine for Scryer Prolog and ISO Prolog Systems (`regexp_dcg`)
+# Regular Expression Engine for Scryer Prolog and ISO Prolog Systems (`regexp`)
 
 A pure, ISO-compliant regular expression engine providing both **Definite Clause Grammar (DCG) non-terminal** and **direct character list (`chars`) matching interfaces** for [Scryer Prolog](https://github.com/mthom/scryer-prolog) and other ISO-compliant Prolog implementations.
 
@@ -17,16 +17,16 @@ The primary goals of this project are:
 2. **Dual Matching Interfaces**: Support both:
    - **DCG Non-Terminal Interface**: Pure DCG non-terminal grammars (`phrase(re_match(Pattern, Match), Input)`) for seamlessly embedding regular expression rules inside Prolog DCG parsing logic.
    - **Direct Character List Interface**: Standard 2/3/4/5-argument list matching predicates (`re_match(Pattern, Input)`, `re_match(Pattern, Input, Rest)`, `re_match_groups/4-5`, `re_match_named/4-5`) for direct string matching without needing `phrase/2-3` wrappers.
-3. **Engine Parity & Choice**: Provide multiple, 1:1 API-compatible matching engines:
-   - **DCG Backtracking Engine** (`regexp_dcg.pl`): Full-featured regex parser with group extractions, lookaheads, and inline flags.
-   - **Rational Tree Automaton Engine** (`regexp_tree.pl`): Fast, pure `if_/3`-driven cyclic term finite state automaton matching.
-   - **DFA Engine** (`src/regexp_compile_dfa.pl`): Deterministic finite automaton execution.
+3. **Engine Parity & Choice**: Provide multiple 1:1 API-compatible matching engines:
+   - **Rational Tree Automaton Engine** (`src/core/regexp_tree.pl`): Re-exported by default via `src/regexp.pl`; fast, pure `if_/3`-driven cyclic term finite state automaton matching.
+   - **DCG Backtracking Engine** (`src/core/regexp_compile_dcg.pl`): Direct substitute; full-featured regex parser with group extractions, lookaheads, and inline flags.
+   - **DFA Engine** (`src/core/regexp_compile_dfa.pl`): Direct substitute; deterministic finite automaton execution.
 
 ---
 
 ## Packaging & Installation
 
-Bakage is **optional**. Because `regexp_dcg` is written in pure ISO Prolog, you can use it either with Bakage or by directly importing the files into any Prolog project.
+Bakage is **optional**. Because `regexp` is written in pure ISO Prolog, you can use it either with Bakage or by directly importing the files into any Prolog project.
 
 ### Option 1: With Bakage Package Manager ([`bakage`](https://github.com/bakaq/bakage))
 
@@ -62,29 +62,35 @@ Bakage is **optional**. Because `regexp_dcg` is written in pure ISO Prolog, you 
    ```
 
 2. **Direct Import via `use_module/1`**:
-   Import `regexp_dcg.pl` (or `regexp_tree.pl`) using its relative path:
+   Import `regexp.pl` using its relative path:
 
    ```prolog
-   :- use_module('path/to/regexp_dcg/regexp_dcg').
+   :- use_module('path/to/regexp_dcg/src/regexp').
 
-   % Direct Character Matching
+   % Direct Character Matching (Rational Tree Engine by default)
    ?- re_match("[a-z]+", "hello").
 
    % DCG Non-Terminal Matching
    ?- phrase(re_match("[a-z]+", Match), "hello").
-   ```
 
-   > [!NOTE]
-   > If your Prolog system provides this package out-of-the-box (or on its library path), you can import it directly:
-   > ```prolog
-   > :- use_module(library(regexp_dcg)).  % or :- use_module(regexp_dcg).
-   > ```
+   % Or import DCG engine directly as a substitute:
+   :- use_module('path/to/regexp_dcg/src/core/regexp_compile_dcg').
+   ```
 
 ---
 
-## Primary Interface (`regexp_dcg` & `regexp_tree`)
+## Primary Interface (`regexp`)
 
-The main entry point for matching patterns is either the [`regexp_dcg`](regexp_dcg.pl) or [`regexp_tree`](regexp_tree.pl) module. For a comprehensive walkthrough of supported pattern constructs and REPL output examples, see the [`docs/usage.md`](docs/usage.md) guide.
+The main entry point for matching patterns is the [`regexp`](src/regexp.pl) module. By default, it uses the Rational Tree Automaton implementation (`regexp_tree`). You can switch the active engine globally by asserting `user:regexp_mode(dcg)` or `user:regexp_mode(dfa)` prior to or after importing, or per-call via mode options (`[mode(dcg)]`, `[mode(dfa)]`).
+
+```prolog
+% Global mode selection before or after importing regexp:
+?- assertz(user:regexp_mode(dcg)).
+   true.
+
+?- use_module('src/regexp').
+   true.
+```
 
 ### Quick Usage Examples
 
@@ -92,10 +98,10 @@ The main entry point for matching patterns is either the [`regexp_dcg`](regexp_d
 Match character lists directly without needing DCG `phrase/2-3` wrappers:
 
 ```prolog
-?- use_module(regexp_dcg). % or :- use_module(regexp_tree).
+?- use_module('src/regexp').
    true.
 
-% Direct full match (anchored)
+% Direct full match (anchored, Rational Tree engine default)
 ?- re_match("a*b", "aaab").
    true.
 
@@ -269,7 +275,7 @@ The regular expression syntax and semantics supported by this library are inspir
   "@context": "https://schema.org",
   "@type": "SoftwareSourceCode",
   "name": "regexp_dcg",
-  "version": "0.1.1",
+  "version": "0.1.2.dev1",
   "description": "A pure, ISO-compliant Definite Clause Grammar (DCG) regular expression engine designed for Scryer Prolog and other ISO-compliant Prolog implementations.",
   "programmingLanguage": {
     "@type": "ComputerLanguage",
@@ -294,3 +300,10 @@ The regular expression syntax and semantics supported by this library are inspir
   ]
 }
 </script>
+
+<!-- Open Graph Metadata -->
+<meta property="og:title" content="regexp_dcg: ISO Scryer Prolog Regular Expression Engine">
+<meta property="og:description" content="A pure, ISO-compliant Definite Clause Grammar (DCG) regular expression engine for Scryer Prolog supporting backtracking, DFA execution, and cyclic tree automata.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://github.com/dougransom/regexp_dcg">
+<meta property="og:site_name" content="regexp_dcg">

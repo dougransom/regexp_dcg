@@ -59,7 +59,7 @@
   > [!NOTE]
   > **Case-Insensitivity Limitation (`(?i)`)**: Inline flag `(?i)` case folding is currently scoped to ASCII characters (`'A'-'Z'` $\leftrightarrow$ `'a'-'z'`). Non-ASCII international uppercase/lowercase foldings (e.g. `'É'` $\leftrightarrow$ `'é'`) are not automatically folded by `(?i)`.
 */
-:- module(regexp_dcg, [
+:- module(regexp_compile_dcg, [
     /* =========================================================================
        Public User Interface
        All matching predicates are pure DCG non-terminals.
@@ -78,14 +78,24 @@
     re_group/3,              % Lookup captured group by name
     re_compile/2,            % Compile pattern to a reusable compiled structure
     re_clear_cache/0,        % Clear compiled pattern cache database
-    re_cache_info/2          % Inspect compiled pattern cache (Count, Keys)
+    re_cache_info/2,         % Inspect compiled pattern cache (Count, Keys)
+    ast_dcg/4,
+    ast_dcg_goal/4,
+    pattern_compiled/3,
+    pattern_ast/2,
+    to_chars/2,
+    pattern_cache/3
 ]).
 
-:- use_module('src/regexp_ast').
+:- use_module(regexp_ast).
+:- use_module(regexp_common).
 :- use_module(library(si)).
 :- use_module(library(lists)).
 :- use_module(library(dcgs)).
 :- use_module(library(error)).
+:- use_module(library(clpz)).
+:- use_module(library(reif)).
+:- use_module(library(dif)).
 
 :- dynamic(pattern_cache/3).
 
@@ -109,16 +119,29 @@ re_compile(Pattern, compiled(Goal, GroupCount)) :-
     pattern_ast(Pattern, AST),
     ast_dcg_goal(AST, 0, GroupCount, Goal).
 
-pattern_compiled(compiled(Goal, GroupCount), Goal, GroupCount) :- !.
 pattern_compiled(Pattern, Goal, GroupCount) :-
-    to_chars(Pattern, Key),
-    (   pattern_cache(Key, Goal0, GroupCount0) ->
-        Goal = Goal0,
-        GroupCount = GroupCount0
-    ;   pattern_ast(Pattern, AST),
-        ast_dcg_goal(AST, 0, GroupCount, Goal),
-        assertz(pattern_cache(Key, Goal, GroupCount))
+    if_(is_compiled_t(Pattern),
+        Pattern = compiled(Goal, GroupCount),
+        pattern_compiled_cache(Pattern, Goal, GroupCount)
     ).
+
+is_compiled_t(compiled(_, _), true).
+is_compiled_t(Pattern, false) :-
+    dif(Pattern, compiled(_, _)).
+
+pattern_compiled_cache(Pattern, Goal, GroupCount) :-
+    to_chars(Pattern, Key),
+    if_(pattern_cache_t(Key, Goal0, GroupCount0),
+        ( Goal = Goal0, GroupCount = GroupCount0 ),
+        ( pattern_ast(Pattern, AST),
+          ast_dcg_goal(AST, 0, GroupCount, Goal),
+          assertz(pattern_cache(Key, Goal, GroupCount))
+        )
+    ).
+
+pattern_cache_t(Key, Goal, GroupCount, true) :-
+    pattern_cache(Key, Goal, GroupCount), !.
+pattern_cache_t(_Key, _Goal, _GroupCount, false).
 
 %% re_clear_cache
 %
@@ -134,11 +157,6 @@ re_cache_info(Count, Keys) :-
     findall(Key, pattern_cache(Key, _, _), Keys),
     length(Keys, Count).
 
-%% re_group(+NamedGroups, +Name, -Value)
-%
-% Retrieve the value of a named capturing group by its `Name`.
-re_group(NamedGroups, Name, Value) :-
-    member(Name-Value, NamedGroups).
 
 %% re_match(+Pattern, ?Chars)
 re_match(Pattern, Chars) :-
@@ -147,12 +165,12 @@ re_match(Pattern, Chars) :-
 %% re_match(+Pattern, ?Chars, -Rest)
 % Direct 3-arg matcher and DCG //1 matcher
 re_match(Pattern, Chars, Rest) :-
-    phrase(re_match_groups(Pattern, _Match, _Groups), Chars, Rest).
+    phrase(re_match_groups_dcg(Pattern, _Match, _Groups), Chars, Rest).
 
 %% re_match(+Pattern, -Match)//
 % DCG //2 matcher (expanded to 4 args)
 re_match(Pattern, Match, S0, S) :-
-    phrase(re_match_groups(Pattern, Match, _Groups), S0, S).
+    phrase(re_match_groups_dcg(Pattern, Match, _Groups), S0, S).
 
 %% re_match_groups(+Pattern, ?Chars, -Match, -Groups)
 re_match_groups(Pattern, Chars, Match, Groups) :-
@@ -161,10 +179,10 @@ re_match_groups(Pattern, Chars, Match, Groups) :-
 %% re_match_groups(+Pattern, ?Arg2, ?Arg3, ?Arg4, ?Arg5)
 % Direct 5-arg matcher and DCG //3 expanded matcher.
 re_match_groups(Pattern, Arg2, Arg3, Arg4, Arg5) :-
-    (   (nonvar(Arg2), (list_si(Arg2) ; atom_si(Arg2))) ->
-        to_chars(Arg2, Input),
-        phrase(re_match_groups_dcg(Pattern, Arg3, Arg4), Input, Arg5)
-    ;   phrase(re_match_groups_dcg(Pattern, Arg2, Arg3), Arg4, Arg5)
+    if_(is_input_arg_t(Arg2),
+        ( to_chars(Arg2, Input),
+          phrase(re_match_groups_dcg(Pattern, Arg3, Arg4), Input, Arg5) ),
+        phrase(re_match_groups_dcg(Pattern, Arg2, Arg3), Arg4, Arg5)
     ).
 
 re_match_groups_dcg(Pattern, Match, Groups, S0, S) :-
@@ -178,10 +196,10 @@ re_match_named(Pattern, Chars, Match, NamedGroups) :-
 %% re_match_named(+Pattern, ?Arg2, ?Arg3, ?Arg4, ?Arg5)
 % Direct 5-arg matcher and DCG //3 expanded matcher.
 re_match_named(Pattern, Arg2, Arg3, Arg4, Arg5) :-
-    (   (nonvar(Arg2), (list_si(Arg2) ; atom_si(Arg2))) ->
-        to_chars(Arg2, Input),
-        phrase(re_match_named_dcg(Pattern, Arg3, Arg4), Input, Arg5)
-    ;   phrase(re_match_named_dcg(Pattern, Arg2, Arg3), Arg4, Arg5)
+    if_(is_input_arg_t(Arg2),
+        ( to_chars(Arg2, Input),
+          phrase(re_match_named_dcg(Pattern, Arg3, Arg4), Input, Arg5) ),
+        phrase(re_match_named_dcg(Pattern, Arg2, Arg3), Arg4, Arg5)
     ).
 
 re_match_named_dcg(Pattern, Match, NamedGroups, S0, S) :-
@@ -195,51 +213,17 @@ re_match_named_dcg(Pattern, Match, NamedGroups, S0, S) :-
 %   L0: Initial input char list | L: Remaining unparsed input char list (L0 = Match + L)
 re_match_dcg_state(Pattern, Match, S0, SF, L0, L) :-
     pattern_compiled(Pattern, Goal, GroupCount),
-    (   var(S0) ->
-        % Initialize fresh state for top-level call
-        length(Groups, GroupCount),
-        S0 = state(L0, Groups, [], [])
-    ;   % Use existing initial state
+    if_(var_t(S0),
+        ( length(Groups, GroupCount), S0 = state(L0, Groups, [], []) ),
         S0 = state(L0, _, _, _)
     ),
     % SF is the final state after Goal matches. L0 is input, L is remainder.
     call(Goal, S0, SF, L0, L),
     append(Match, L, L0).
 
-% Pattern already an AST
-pattern_ast(AST, AST) :-
-    nonvar(AST),
-    is_ast(AST),
-    !.
+var_t(X, true) :- var(X).
+var_t(X, false) :- nonvar(X).
 
-% Pattern is a string/atom: tokenize + parse
-pattern_ast(Pattern, AST) :-
-    to_chars(Pattern, Chars),
-    phrase(re_ast_chars(AST), Chars).
-
-%% state(?Full, ?Groups, ?Named, ?Flags)
-%
-% Matcher state term `state(Full, Groups, Named, Flags)` threaded through DCG goals:
-%   1. Full:   Initial full input character list before matching (L0).
-%   2. Groups: List of captured positional subgroup values [Group0, Group1, ...] ordered by group index.
-%   3. Named:  List of captured named group Key-Value pairs [Name1-Val1, Name2-Val2, ...].
-%   4. Flags:  Execution flags and options (e.g. `[case_insensitive]`).
-state(_Full, _Groups, _Named, _Flags).
-
-%% state_full(+State, -Full)
-%
-% Extract the initial full input character list `Full` from matcher `State`.
-state_full(state(Full, _, _, _), Full).
-
-%% state_groups(+State, -Groups)
-%
-% Extract the positional captured group substrings list `Groups` from matcher `State`.
-state_groups(state(_, Groups, _, _), Groups).
-
-%% state_named(+State, -Named)
-%
-% Extract the named captured group Key-Value pairs `Named` from matcher `State`.
-state_named(state(_, _, Named, _), Named).
 
 %% state_tree(+State, -Flags)
 %
@@ -272,71 +256,51 @@ ast_dcg(AST, S0, SF, DCG) :-
 %
 % Compiles an AST term into an executable runtime DCG goal term `Goal`.
 % Threads state accumulator `SIn -> SOut` at match-time and counts capture group indices `C0 -> CF` at compile-time.
-%
-% ### Accumulator Behavior:
-% Any AST node that does not create a capturing group (e.g. `lit/1`, `dot`, `anchor/1`, `class/1`) passes
-% the capture group index through unchanged (`C0 = CF = C`). Nodes creating capturing groups (`capture/1`,
-% `named_capture/2`) increment the counter (`C1 is C0 + 1`).
-%
-% ### Deterministic Compilation & Cut (`!`) Rationale:
-% Compilation is 100% deterministic (zero choicepoint overhead). Cuts (`!`) are placed on specific clauses for:
-% 1. _Arity Disambiguation_: Cuts on `concat(A, B)` (`concat/2`) vs `concat(List)` (`concat/1`) and `flags(Flags, Sub)` (`flags/2`)
-%    vs `flags(Flags)` (`flags/1`) commit immediately to multi-argument clauses.
-% 2. _Sub-Functor Disambiguation_: Cuts on lazy quantifiers `postfix(Expr, lazy(Op))` commit when `Op = lazy(...)` matches,
-%    cutting choicepoints against greedy `postfix/2` clauses.
-% 3. _Error Containment_: Commits to the matching clause so sub-AST compilation errors fail immediately without spurious backtracking.
-ast_dcg_goal(lit(Chars), C, C, regexp_dcg:dcg_lit(Chars)).
-ast_dcg_goal(concat(A, B), C0, CF, regexp_dcg:dcg_concat([GA, GB])) :-
-    !,
+ast_dcg_goal(lit(Chars), C, C, regexp_compile_dcg:dcg_lit(Chars)).
+ast_dcg_goal(concat(A, B), C0, CF, regexp_compile_dcg:dcg_concat([GA, GB])) :-
     ast_dcg_goal(A, C0, C1, GA),
     ast_dcg_goal(B, C1, CF, GB).
-ast_dcg_goal(concat(List), C0, CF, regexp_dcg:dcg_concat(SubGoals)) :-
+ast_dcg_goal(concat(List), C0, CF, regexp_compile_dcg:dcg_concat(SubGoals)) :-
     seq_ast_dcg(List, C0, CF, SubGoals).
-ast_dcg_goal(or(A, B), C0, CF, regexp_dcg:dcg_or(GA, GB)) :-
+ast_dcg_goal(or(A, B), C0, CF, regexp_compile_dcg:dcg_or(GA, GB)) :-
     ast_dcg_goal(A, C0, C1, GA),
     ast_dcg_goal(B, C1, CF, GB).
 ast_dcg_goal(group(Inner), C0, CF, Goal) :-
     ast_dcg_goal(Inner, C0, CF, Goal).
-ast_dcg_goal(capture(Inner), C0, CF, regexp_dcg:dcg_capture(C0, GInner)) :-
-    C1 is C0 + 1,
+ast_dcg_goal(capture(Inner), C0, CF, regexp_compile_dcg:dcg_capture(C0, GInner)) :-
+    C1 #= C0 + 1,
     ast_dcg_goal(Inner, C1, CF, GInner).
-ast_dcg_goal(postfix(Expr, star), C0, CF, regexp_dcg:dcg_star(GExpr)) :-
+ast_dcg_goal(postfix(Expr, star), C0, CF, regexp_compile_dcg:dcg_star(GExpr)) :-
     ast_dcg_goal(Expr, C0, CF, GExpr).
-ast_dcg_goal(postfix(Expr, plus), C0, CF, regexp_dcg:dcg_plus(GExpr)) :-
+ast_dcg_goal(postfix(Expr, plus), C0, CF, regexp_compile_dcg:dcg_plus(GExpr)) :-
     ast_dcg_goal(Expr, C0, CF, GExpr).
-ast_dcg_goal(postfix(Expr, question), C0, CF, regexp_dcg:dcg_question(GExpr)) :-
+ast_dcg_goal(postfix(Expr, question), C0, CF, regexp_compile_dcg:dcg_question(GExpr)) :-
     ast_dcg_goal(Expr, C0, CF, GExpr).
-ast_dcg_goal(quant(Expr, mn(M, N)), C0, CF, regexp_dcg:dcg_quant(GExpr, M, N)) :-
+ast_dcg_goal(quant(Expr, mn(M, N)), C0, CF, regexp_compile_dcg:dcg_quant(GExpr, M, N)) :-
     ast_dcg_goal(Expr, C0, CF, GExpr).
-ast_dcg_goal(dot, C, C, regexp_dcg:dcg_dot).
-ast_dcg_goal(escaped(Char), C, C, regexp_dcg:dcg_lit([Char])).
-ast_dcg_goal(anchor(bol), C, C, regexp_dcg:dcg_bol).
-ast_dcg_goal(anchor(eol), C, C, regexp_dcg:dcg_eol).
-ast_dcg_goal(builtin(Class), C, C, regexp_dcg:dcg_builtin(Class)).
-ast_dcg_goal(class(Items), C, C, regexp_dcg:dcg_class(Items)).
-ast_dcg_goal(lookahead(Sub), C0, CF, regexp_dcg:dcg_lookahead(GSub)) :-
+ast_dcg_goal(dot, C, C, regexp_compile_dcg:dcg_dot).
+ast_dcg_goal(escaped(Char), C, C, regexp_compile_dcg:dcg_lit([Char])).
+ast_dcg_goal(anchor(bol), C, C, regexp_compile_dcg:dcg_bol).
+ast_dcg_goal(anchor(eol), C, C, regexp_compile_dcg:dcg_eol).
+ast_dcg_goal(builtin(Class), C, C, regexp_compile_dcg:dcg_builtin(Class)).
+ast_dcg_goal(class(Items), C, C, regexp_compile_dcg:dcg_class(Items)).
+ast_dcg_goal(lookahead(Sub), C0, CF, regexp_compile_dcg:dcg_lookahead(GSub)) :-
     ast_dcg_goal(Sub, C0, CF, GSub).
-ast_dcg_goal(neg_lookahead(Sub), C0, CF, regexp_dcg:dcg_neg_lookahead(GSub)) :-
+ast_dcg_goal(neg_lookahead(Sub), C0, CF, regexp_compile_dcg:dcg_neg_lookahead(GSub)) :-
     ast_dcg_goal(Sub, C0, CF, GSub).
-ast_dcg_goal(postfix(Expr, lazy(star)), C0, CF, regexp_dcg:dcg_star_lazy(GExpr)) :-
-    !,
+ast_dcg_goal(postfix(Expr, lazy(star)), C0, CF, regexp_compile_dcg:dcg_star_lazy(GExpr)) :-
     ast_dcg_goal(Expr, C0, CF, GExpr).
-ast_dcg_goal(postfix(Expr, lazy(plus)), C0, CF, regexp_dcg:dcg_plus_lazy(GExpr)) :-
-    !,
+ast_dcg_goal(postfix(Expr, lazy(plus)), C0, CF, regexp_compile_dcg:dcg_plus_lazy(GExpr)) :-
     ast_dcg_goal(Expr, C0, CF, GExpr).
-ast_dcg_goal(postfix(Expr, lazy(question)), C0, CF, regexp_dcg:dcg_question_lazy(GExpr)) :-
-    !,
+ast_dcg_goal(postfix(Expr, lazy(question)), C0, CF, regexp_compile_dcg:dcg_question_lazy(GExpr)) :-
     ast_dcg_goal(Expr, C0, CF, GExpr).
-ast_dcg_goal(quant(Expr, lazy(mn(M, N))), C0, CF, regexp_dcg:dcg_quant_lazy(GExpr, M, N)) :-
-    !,
+ast_dcg_goal(quant(Expr, lazy(mn(M, N))), C0, CF, regexp_compile_dcg:dcg_quant_lazy(GExpr, M, N)) :-
     ast_dcg_goal(Expr, C0, CF, GExpr).
-ast_dcg_goal(named_capture(Name, Inner), C0, CF, regexp_dcg:dcg_named_capture(Name, C0, GInner)) :-
-    !,
-    C1 is C0 + 1,
+ast_dcg_goal(named_capture(Name, Inner), C0, CF, regexp_compile_dcg:dcg_named_capture(Name, C0, GInner)) :-
+    C1 #= C0 + 1,
     ast_dcg_goal(Inner, C1, CF, GInner).
-ast_dcg_goal(flags(Flags), C, C, regexp_dcg:dcg_flags(Flags)).
-ast_dcg_goal(flags(Flags, Sub), C0, CF, regexp_dcg:dcg_flags_group(Flags, GSub)) :-
-    !,
+ast_dcg_goal(flags(Flags), C, C, regexp_compile_dcg:dcg_flags(Flags)).
+ast_dcg_goal(flags(Flags, Sub), C0, CF, regexp_compile_dcg:dcg_flags_group(Flags, GSub)) :-
     ast_dcg_goal(Sub, C0, CF, GSub).
 
 seq_ast_dcg([], C, C, []).
@@ -348,31 +312,17 @@ seq_ast_dcg([H|T], C0, CF, [G|Gs]) :-
 literal_match([]) --> [].
 literal_match([C|Cs]) --> [C], literal_match(Cs).
 
-% Convert input to character list safely without SWI-specifics (var check first!)
-to_chars(Input, _) :-
-    var(Input),
-    !,
-    instantiation_error(to_chars/2).
-to_chars(Input, Input) :-
-    list_si(Input),
-    !.
-to_chars(Input, Chars) :-
-    atom_si(Input),
-    !,
-    atom_chars(Input, Chars).
-to_chars(Input, _) :-
-    domain_error(chars, Input).
+
 
 /* ---------- Runtime DCG combinators ---------- */
 
-dcg_lit(Chars, S0, SF) -->
-    { S0 = state(_, _, _, Flags),
-      member(case_insensitive, Flags) },
-    !,
-    literal_match_case_insensitive(Chars),
-    { SF = S0 }.
 dcg_lit(Chars, S0, S0) -->
-    literal_match(Chars).
+    { S0 = state(_, _, _, Flags) },
+    { if_(memberd_t(case_insensitive, Flags), Case = ci, Case = exact) },
+    dcg_lit_case(Case, Chars).
+
+dcg_lit_case(ci, Chars) --> literal_match_case_insensitive(Chars).
+dcg_lit_case(exact, Chars) --> literal_match(Chars).
 
 dcg_concat([], S, S) --> [].
 dcg_concat([G|Gs], S0, SF) -->
@@ -410,17 +360,17 @@ dcg_question(GExpr, S0, SF) -->
   ; { S0 = SF }.
 
 dcg_quant(GExpr, M, N, S0, SF) -->
-    { ( N == inf -> Max = inf ; integer(N) -> Max = N ) },
+    { if_(N = inf, Max = inf, Max = N) },
     dcg_quant_loop(GExpr, 0, M, Max, S0, SF).
 
 dcg_quant_loop(GExpr, Count, Min, Max, S0, SF) -->
-    { (Max == inf ; Count < Max) },
+    { (Max == inf ; Count #< Max) },
     call(GExpr, S0, S1),
-    { Count1 is Count + 1 },
+    { Count1 #= Count + 1 },
     dcg_quant_loop(GExpr, Count1, Min, Max, S1, SF).
 
 dcg_quant_loop(_GExpr, Count, Min, _Max, S, S) -->
-    { Count >= Min }.
+    { Count #>= Min }.
 
 dcg_dot(S, S) -->
     [_].
@@ -435,70 +385,16 @@ dcg_builtin(Class, S, S) -->
     [C],
     { match_builtin(Class, C) }.
 
-match_builtin(digit, C) :-
-    C @>= '0', C @=< '9'.
-match_builtin(not_digit, C) :-
-    \+ (C @>= '0', C @=< '9').
-match_builtin(word, C) :-
-    (C @>= 'a', C @=< 'z') ; (C @>= 'A', C @=< 'Z') ; (C @>= '0', C @=< '9') ; C == '_'.
-match_builtin(not_word, C) :-
-    \+ match_builtin(word, C).
-match_builtin(space, C) :-
-    member(C, [' ', '\t', '\r', '\n']).
-match_builtin(not_space, C) :-
-    \+ match_builtin(space, C).
 
-dcg_class(Items, S0, SF) -->
+dcg_class(Items, S0, S0) -->
     [C],
-    { S0 = SF,
-      S0 = state(_, _, _, Flags),
-      (   member(case_insensitive, Flags) ->
-          match_class_ci(Items, C)
-      ;   match_class(Items, C)
+    { S0 = state(_, _, _, Flags),
+      if_(memberd_t(case_insensitive, Flags),
+          match_class_ci(Items, C),
+          match_class(Items, C)
       )
     }.
 
-match_class(neg(List), C) :-
-    !,
-    \+ match_class_list(List, C).
-match_class(List, C) :-
-    list_si(List),
-    match_class_list(List, C).
-
-match_class_list([H|T], C) :-
-    (   match_class_item(H, C) ->
-        true
-    ;   match_class_list(T, C)
-    ).
-
-match_class_item(char(C), C).
-match_class_item(range(A, B), C) :-
-    C @>= A, C @=< B.
-match_class_item(builtin(Class), C) :-
-    match_builtin(Class, C).
-
-match_class_ci(neg(List), C) :-
-    !,
-    \+ match_class_list_ci(List, C).
-match_class_ci(List, C) :-
-    list_si(List),
-    match_class_list_ci(List, C).
-
-match_class_list_ci([H|T], C) :-
-    (   match_class_item_ci(H, C) ->
-        true
-    ;   match_class_list_ci(T, C)
-    ).
-
-match_class_item_ci(char(CharPattern), C) :-
-    char_equal_ci(CharPattern, C).
-match_class_item_ci(range(A, B), C) :-
-    char_lower(A, LowerA),
-    char_lower(B, LowerB),
-    char_lower(C, LowerC),
-    LowerC @>= LowerA, LowerC @=< LowerB.
-match_class_item_ci(builtin(Class), C) :-
-    match_builtin(Class, C).
 
 dcg_lookahead(GSub, S0, SF, L0, L0) :-
     phrase(call(GSub, S0, SF), L0, _).
@@ -522,7 +418,7 @@ dcg_question_lazy(GExpr, S0, SF) -->
   ; call(GExpr, S0, SF).
 
 dcg_quant_lazy(GExpr, M, N, S0, SF) -->
-    { ( N == inf -> Max = inf ; integer(N) -> Max = N ) },
+    { if_(N = inf, Max = inf, Max = N) },
     dcg_quant_loop_lazy(GExpr, 0, M, Max, S0, SF).
 
 dcg_quant_loop_lazy(_GExpr, Count, Min, _Max, S, S) -->
@@ -545,28 +441,7 @@ dcg_named_capture(Name, Index, GInner, S0, SF) -->
 
 /* ---------- Case-insensitive support helpers ---------- */
 
-parse_flags(Flags, Parsed) :-
-    to_chars(Flags, Chars),
-    map_flags(Chars, Parsed).
 
-map_flags([], []).
-map_flags([C|Cs], [P|Ps]) :-
-    map_flag_char(C, P),
-    map_flags(Cs, Ps).
-
-map_flag_char('i', case_insensitive).
-
-char_lower(C, L) :-
-    (   C @>= 'A', C @=< 'Z' ->
-        char_code(C, Code),
-        LowerCode is Code + 32,
-        char_code(L, LowerCode)
-    ;   L = C
-    ).
-
-char_equal_ci(C1, C2) :-
-    char_lower(C1, L),
-    char_lower(C2, L).
 
 literal_match_case_insensitive([]) --> [].
 literal_match_case_insensitive([C|Cs]) -->

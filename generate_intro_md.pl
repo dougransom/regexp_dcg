@@ -1,4 +1,4 @@
-:- use_module(regexp_dcg).
+:- use_module('src/regexp').
 :- use_module(library(format)).
 :- use_module(library(si)).
 :- use_module(library(lists)).

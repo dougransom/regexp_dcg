@@ -40,6 +40,7 @@
 :- use_module(library(lists)).
 :- use_module(library(dif)).
 :- use_module(library(si)).
+:- use_module(library(reif)).
 
 % Reusable expansion to turn a string into O(1) facts for a predicate.
 user:term_expansion(generate_char_predicate(Name, String), [PluralFact|Clauses]) :-
@@ -117,9 +118,9 @@ re_concat(AST) -->
     re_factor(F),
     re_concat_more(F, AST0),
     {
-        ( AST0 = concat([Single]) ->
-            AST = Single
-        ;   AST = AST0
+        if_(AST0 = concat([Single]),
+            AST = Single,
+            AST = AST0
         )
     }.
 
@@ -127,9 +128,9 @@ re_concat_more(Acc, AST) -->
     re_factor(F),
     !,
     {
-        ( Acc = concat(List0) ->
-            append(List0, [F], List)
-        ;   List = [Acc, F]
+        if_(Acc = concat(List0),
+            append(List0, [F], List),
+            List = [Acc, F]
         ),
         Acc1 = concat(List)
     },
@@ -138,8 +139,9 @@ re_concat_more(Acc, AST) -->
 re_concat_more(Acc, Acc) -->
     [].
 
-normalize_concat(concat([X]), X) :- !.
-normalize_concat(X, X).
+normalize_concat(concat([X]), X).
+normalize_concat(X, X) :-
+    dif(X, concat([_])).
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -322,19 +324,19 @@ sequence([]) --> [].
 
 re_literal_run_recognize([C|Cs]) -->
     [C],
-    { \+ metachar(C) },
+    { metachar_t(C, false) },
     not_postfix_next_char,
     !,
     re_literal_run_more(Cs).
 
 re_literal_run_recognize([C]) -->
     [C],
-    { \+ metachar(C) },
+    { metachar_t(C, false) },
     postfix_next_char.
 
 re_literal_run_more([C|Cs]) -->
     [C],
-    { \+ metachar(C) },
+    { metachar_t(C, false) },
     not_postfix_next_char,
     !,
     re_literal_run_more(Cs).
@@ -344,13 +346,27 @@ re_literal_run_more([]) --> [].
 eos([], []).  % for detecting end of input
 
 not_postfix_next_char --> call(eos)
-    | (look_ahead(D), { \+ postfixchar(D) }).
+    | (look_ahead(D), { postfixchar_t(D, false) }).
 
 postfix_next_char --> look_ahead(D), { postfixchar(D) }.
 
 %% Define metacharacters and postfix characters using the expansion mechanism.
 generate_char_predicate(metachar, ".^$*+?()[]|\\{}:,=!<>").
 generate_char_predicate(postfixchar, "*+?").
+
+member_char_t(_C, [], false).
+member_char_t(C, [H|T], Truth) :-
+    if_(C = H,
+        Truth = true,
+        member_char_t(C, T, Truth)).
+
+metachar_t(C, Truth) :-
+    metachars(Chars),
+    member_char_t(C, Chars, Truth).
+
+postfixchar_t(C, Truth) :-
+    postfixchars(Chars),
+    member_char_t(C, Chars, Truth).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% 3. TOKEN-LEVEL PARSER (DCG over tokens)

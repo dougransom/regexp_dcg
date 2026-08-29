@@ -1,8 +1,8 @@
 :- use_module(library(dcgs)).
 :- use_module(library(format)).
 :- use_module(library(si)).
-:- use_module('../regexp_tree').
-:- use_module(test_regexp_compile_shared).
+:- use_module('../../src/core/regexp_tree').
+:- use_module('../portable/test_regexp_compile_shared').
 
 run_test(Name, Goal) :-
     (   catch(Goal, Error, (format("FAIL (~s): ~w~n", [Name, Error]), flush_output, fail)) ->

@@ -52,7 +52,7 @@ All engines maintain identical 1:1 API signatures:
 - [Full Consolidated Documentation](llms-full.txt): Complete user guide, pattern reference, and full documentation for LLMs.
 - [User Guide & Pattern Reference](docs/usage.md): Detailed regex syntax reference (character classes, quantifiers, lookarounds, flags).
 - [Machine-Readable Metadata (JSON-LD)](schema.jsonld): Schema.org structured metadata for `regexp_dcg`.
-- [README](readme.md): Project overview and Bakage installation guide.
+- [README](README.md): Project overview and Bakage installation guide.
 - [Scryer Prolog Standards](.agents/skills/scryer-prolog-standards/SKILL.md): Repository coding rules and ISO Prolog standards.
 
 
@@ -848,7 +848,7 @@ The regular expression syntax and semantics supported by this library are inspir
   "@context": "https://schema.org",
   "@type": "SoftwareSourceCode",
   "name": "regexp_dcg",
-  "version": "0.1.0",
+  "version": "0.1.2.dev1",
   "description": "A pure, ISO-compliant Definite Clause Grammar (DCG) regular expression engine designed for Scryer Prolog and other ISO-compliant Prolog implementations.",
   "programmingLanguage": {
     "@type": "ComputerLanguage",
@@ -873,3 +873,10 @@ The regular expression syntax and semantics supported by this library are inspir
   ]
 }
 </script>
+
+<!-- Open Graph Metadata -->
+<meta property="og:title" content="regexp_dcg: ISO Scryer Prolog Regular Expression Engine">
+<meta property="og:description" content="A pure, ISO-compliant Definite Clause Grammar (DCG) regular expression engine for Scryer Prolog supporting backtracking, DFA execution, and cyclic tree automata.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://github.com/dougransom/regexp_dcg">
+<meta property="og:site_name" content="regexp_dcg">

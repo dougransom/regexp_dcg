@@ -5,8 +5,57 @@
   `sym(Condition, SuccState, FailState)`, `alt(NodeA, NodeB)`, `star(SubNode, Cont)`, `opt(SubNode, Cont)`,
   `end`, `stp`, and capture nodes.
 
-  This was built by Antigravity with instructions to base on the https://github.com/mthom/scryer-prolog/discussions/2758
-  
+  Based on the Scryer Prolog rational tree automaton matching model:
+  https://github.com/mthom/scryer-prolog/discussions/2758
+
+  ### Matching Paradigms
+
+  1. **Rational Tree Automaton Execution (`regex_tree_run/5`)**:
+     Evaluates compiled automaton nodes using pure `if_/3` character condition tests:
+     ```prolog
+     ?- compile_ast_tree(AST, Automaton, Groups),
+        regex_tree_run(Automaton, Input, Rest, State0, StateF).
+     ```
+
+  2. **Pre-Compiling AST to Tree Automata (`compile_ast_tree/3`)**:
+     Translates regular expression AST structures into cyclic tree automaton nodes.
+
+  ### Supported Regular Expression Syntax
+
+  | Feature Category | Syntax | Description |
+  |---|---|---|
+  | **Literals** | `abc` | Match literal characters exactly. Escaped metacharacters (e.g. `\*`) match the metacharacter itself. |
+  | **Wildcard** | `.` | Match any single character (except newline unless inline flag `s` is set). |
+  | **Alternation** | `A\|B` | Match either sub-expression `A` or `B`. |
+  | **Anchors** | `^` / `$` | Match the beginning or end of the input string. |
+  | **Word Boundaries**| `\b` / `\B` | Match a word boundary or a non-word boundary. |
+  | **Builtin Classes**| `\d` / `\D` | Match a digit `[0-9]` or not a digit `[^0-9]`. |
+  | | `\w` / `\W` | Match a word character `[a-zA-Z0-9_]` or not a word character. |
+  | | `\s` / `\S` | Match a whitespace character (space, tab, newline, carriage return, form feed, vertical tab) or not a whitespace. |
+  | **Custom Classes** | `[abc]` / `[^abc]` | Match any character in the class (or not in the class if negated with `^`). |
+  | | `[a-z]` / `[^a-z]` | Range matching inside character classes. |
+  | | `[:digit:]` / `[:alpha:]` | POSIX character classes inside brackets (e.g. `[:alnum:]`, `[:space:]`). |
+  | **Quantifiers** | `*` / `*?` | Greedy or lazy Kleene star (0 or more repetitions). |
+  | | `+` / `+?` | Greedy or lazy Kleene plus (1 or more repetitions). |
+  | | `?` / `??` | Greedy or lazy optional (0 or 1 repetition). |
+  | | `{n}` / `{n}?` | Repetition exactly `n` times. |
+  | | `{n,}` / `{n,}?` | Open-ended repetition: at least `n` times. |
+  | | `{n,m}` / `{n,m}?`| Bounded repetition: between `n` and `m` times. |
+  | **Groups & Captures**| `(...)` | Capturing group (extracts substring into numbered capture list). |
+  | | `(?:...)` | Non-capturing group. |
+  | | `(?P<name>...)` | Named capturing group. |
+  | **Assertions** | `(?=...)` | Positive lookahead assertion. |
+  | | `(?!...)` | Negative lookahead assertion. |
+  | **Flags** | `(?flags)` | Inline flags setting: `i` (case-insensitive), `m` (multi-line), `s` (dot-all), `x` (verbose), etc. |
+  | | `(?flags:...)` | Flags applied locally to a sub-expression group. |
+
+  ### Multilingual & International Character Support
+
+  In ISO Prolog systems treating `double_quotes` as character lists (`chars`), strings represent sequences of native character code points.
+  Exact literal matching, wildcards (`.`), custom character classes (`[α-ω]`), capturing groups, Emojis, and non-Latin scripts (e.g. Greek, CJK, Klingon script PUA) work out of the box.
+
+  > [!NOTE]
+  > **Case-Insensitivity Limitation (`(?i)`)**: Inline flag `(?i)` case folding is currently scoped to ASCII characters (`'A'-'Z'` $\leftrightarrow$ `'a'-'z'`). Non-ASCII international uppercase/lowercase foldings (e.g. `'É'` $\leftrightarrow$ `'é'`) are not automatically folded by `(?i)`.
 */
 :- module(regexp_compile_tree, [
     compile_ast_tree/3,
@@ -19,6 +68,18 @@
 :- use_module(library(reif)).
 :- use_module(library(si)).
 :- use_module(library(dif)).
+:- use_module(library(clpz)).
+:- use_module(regexp_common, [
+    match_builtin_t/3,
+    char_range_t/4,
+    parse_flags/2,
+    char_lower/2,
+    char_equal_ci/2,
+    char_equal_ci_t/3,
+    to_chars/2,
+    match_class_t/3,
+    match_class_ci_t/3
+]).
 
 %% compile_ast_tree(+AST, -Automaton, -GroupCount)
 %
@@ -29,129 +90,106 @@ compile_ast_tree(AST, Automaton, GroupCount) :-
 %% compile_node(+AST, +C0, -CF, +Cont, -Node)
 %
 % Compiles an AST node into an automaton node with continuation `Cont`.
-compile_node(lit([]), C, C, Cont, Cont) :- !.
-compile_node(lit([Char]), C, C, Cont, sym(char(Char), Cont, stp)) :- !.
+compile_node(lit([]), C, C, Cont, Cont).
+compile_node(lit([Char]), C, C, Cont, sym(char(Char), Cont, stp)).
 compile_node(lit([C1, C2 | Cs]), C, C, Cont, Node) :-
-    !,
     compile_node(lit([C2 | Cs]), C, C, Cont, RestNode),
     Node = sym(char(C1), RestNode, stp).
 
 compile_node(concat(A, B), C0, CF, Cont, Node) :-
-    !,
     compile_node(A, C0, C1, NodeB, Node),
     compile_node(B, C1, CF, Cont, NodeB).
 compile_node(concat(List), C0, CF, Cont, Node) :-
-    !,
     compile_seq(List, C0, CF, Cont, Node).
 
 compile_node(or(A, B), C0, CF, Cont, alt(NodeA, NodeB)) :-
-    !,
     compile_node(A, C0, C1, Cont, NodeA),
     compile_node(B, C1, CF, Cont, NodeB).
 
 compile_node(group(Inner), C0, CF, Cont, Node) :-
-    !,
     compile_node(Inner, C0, CF, Cont, Node).
 
 compile_node(capture(Inner), C0, CF, Cont, cap_open(C0, NodeInner)) :-
-    !,
-    C1 is C0 + 1,
+    C1 #= C0 + 1,
     compile_node(Inner, C1, CF, cap_close(C0, Cont), NodeInner).
 
 compile_node(named_capture(Name, Inner), C0, CF, Cont, named_open(Name, C0, NodeInner)) :-
-    !,
-    C1 is C0 + 1,
+    C1 #= C0 + 1,
     compile_node(Inner, C1, CF, named_close(Name, C0, Cont), NodeInner).
 
 compile_node(postfix(Expr, star), C0, CF, Cont, star(SubNode, Cont)) :-
-    !,
     compile_node(Expr, C0, CF, end, SubNode).
 
 compile_node(postfix(Expr, lazy(star)), C0, CF, Cont, lazy_star(SubNode, Cont)) :-
-    !,
     compile_node(Expr, C0, CF, end, SubNode).
 
 compile_node(postfix(Expr, plus), C0, CF, Cont, Node) :-
-    !,
     compile_node(Expr, C0, C1, star(SubNode, Cont), Node),
     compile_node(Expr, C1, CF, end, SubNode).
 
 compile_node(postfix(Expr, lazy(plus)), C0, CF, Cont, Node) :-
-    !,
     compile_node(Expr, C0, C1, lazy_star(SubNode, Cont), Node),
     compile_node(Expr, C1, CF, end, SubNode).
 
 compile_node(postfix(Expr, question), C0, CF, Cont, opt(SubNode, Cont)) :-
-    !,
     compile_node(Expr, C0, CF, Cont, SubNode).
 
 compile_node(postfix(Expr, lazy(question)), C0, CF, Cont, lazy_opt(SubNode, Cont)) :-
-    !,
     compile_node(Expr, C0, CF, Cont, SubNode).
 
 compile_node(quant(Expr, mn(M, M)), C0, CF, Cont, Node) :-
-    !,
     compile_exact_n(M, Expr, C0, CF, Cont, Node).
 compile_node(quant(Expr, mn(0, inf)), C0, CF, Cont, Node) :-
-    !,
     compile_node(postfix(Expr, star), C0, CF, Cont, Node).
 compile_node(quant(Expr, mn(M, inf)), C0, CF, Cont, Node) :-
-    !,
+    M #> 0,
     compile_node(postfix(Expr, star), C0, C1, Cont, NodeStar),
     compile_exact_n(M, Expr, C1, CF, NodeStar, Node).
 compile_node(quant(Expr, mn(M, N)), C0, CF, Cont, Node) :-
-    !,
-    M =< N,
-    RestCount is N - M,
+    M #=< N,
+    dif(N, inf),
+    RestCount #= N - M,
     compile_optionals(RestCount, Expr, C0, C1, Cont, NodeOpt),
     compile_exact_n(M, Expr, C1, CF, NodeOpt, Node).
 
 compile_node(quant(Expr, lazy(mn(M, M))), C0, CF, Cont, Node) :-
-    !,
     compile_exact_n(M, Expr, C0, CF, Cont, Node).
 compile_node(quant(Expr, lazy(mn(0, inf))), C0, CF, Cont, Node) :-
-    !,
     compile_node(postfix(Expr, lazy(star)), C0, CF, Cont, Node).
 compile_node(quant(Expr, lazy(mn(M, inf))), C0, CF, Cont, Node) :-
-    !,
+    M #> 0,
     compile_node(postfix(Expr, lazy(star)), C0, C1, Cont, NodeStar),
     compile_exact_n(M, Expr, C1, CF, NodeStar, Node).
 compile_node(quant(Expr, lazy(mn(M, N))), C0, CF, Cont, Node) :-
-    !,
-    M =< N,
-    RestCount is N - M,
+    M #=< N,
+    dif(N, inf),
+    RestCount #= N - M,
     compile_lazy_optionals(RestCount, Expr, C0, C1, Cont, NodeOpt),
     compile_exact_n(M, Expr, C1, CF, NodeOpt, Node).
 
-compile_node(dot, C, C, Cont, sym(dot, Cont, stp)) :- !.
+compile_node(dot, C, C, Cont, sym(dot, Cont, stp)).
 compile_node(escaped(Char), C, C, Cont, Node) :-
-    !,
-    (   char_range_t('1', '9', Char, true) ->
-        char_code(Char, Code),
-        Idx is Code - 49,
-        Node = backref(Idx, Cont)
-    ;   Node = sym(char(Char), Cont, stp)
-    ).
-compile_node(anchor(bol), C, C, Cont, sym(bol, Cont, stp)) :- !.
-compile_node(anchor(eol), C, C, Cont, sym(eol, Cont, stp)) :- !.
-compile_node(boundary, C, C, Cont, sym(boundary, Cont, stp)) :- !.
-compile_node(boundary(word), C, C, Cont, sym(boundary, Cont, stp)) :- !.
-compile_node(not_boundary, C, C, Cont, sym(not_boundary, Cont, stp)) :- !.
-compile_node(boundary(not_word), C, C, Cont, sym(not_boundary, Cont, stp)) :- !.
-compile_node(backref(Idx), C, C, Cont, backref(Idx, Cont)) :- !.
-compile_node(builtin(Class), C, C, Cont, sym(builtin(Class), Cont, stp)) :- !.
-compile_node(class(neg(Items)), C, C, Cont, sym(neg_class(Items), Cont, stp)) :- !.
-compile_node(class(Items), C, C, Cont, sym(class(Items), Cont, stp)) :- !.
-compile_node(neg_class(Items), C, C, Cont, sym(neg_class(Items), Cont, stp)) :- !.
+    if_(char_range_t('1', '9', Char),
+        ( char_code(Char, Code), Idx #= Code - 49, Node = backref(Idx, Cont) ),
+        Node = sym(char(Char), Cont, stp)).
+
+compile_node(anchor(bol), C, C, Cont, sym(bol, Cont, stp)).
+compile_node(anchor(eol), C, C, Cont, sym(eol, Cont, stp)).
+compile_node(boundary, C, C, Cont, sym(boundary, Cont, stp)).
+compile_node(boundary(word), C, C, Cont, sym(boundary, Cont, stp)).
+compile_node(not_boundary, C, C, Cont, sym(not_boundary, Cont, stp)).
+compile_node(boundary(not_word), C, C, Cont, sym(not_boundary, Cont, stp)).
+compile_node(backref(Idx), C, C, Cont, backref(Idx, Cont)).
+compile_node(builtin(Class), C, C, Cont, sym(builtin(Class), Cont, stp)).
+compile_node(class(neg(Items)), C, C, Cont, sym(neg_class(Items), Cont, stp)).
+compile_node(class(Items), C, C, Cont, sym(class(Items), Cont, stp)).
+compile_node(neg_class(Items), C, C, Cont, sym(neg_class(Items), Cont, stp)).
 compile_node(lookahead(Sub), C0, CF, Cont, lookahead(SubNode, Cont, stp)) :-
-    !,
     compile_node(Sub, C0, CF, end, SubNode).
 compile_node(neg_lookahead(Sub), C0, CF, Cont, neg_lookahead(SubNode, Cont, stp)) :-
-    !,
     compile_node(Sub, C0, CF, end, SubNode).
-compile_node(flags(Flags), C, C, Cont, set_flags(Flags, Cont)) :- !.
+compile_node(flags(Flags), C, C, Cont, set_flags(Flags, Cont)).
 compile_node(flags(Flags, Sub), C0, CF, Cont, scoped_flags(Flags, SubNode, Cont)) :-
-    !,
     compile_node(Sub, C0, CF, Cont, SubNode).
 
 compile_seq([], C, C, Cont, Cont).
@@ -159,24 +197,24 @@ compile_seq([H|T], C0, CF, Cont, Node) :-
     compile_node(H, C0, C1, RestNode, Node),
     compile_seq(T, C1, CF, Cont, RestNode).
 
-compile_exact_n(0, _, C, C, Cont, Cont) :- !.
+compile_exact_n(0, _, C, C, Cont, Cont).
 compile_exact_n(N, Expr, C0, CF, Cont, Node) :-
-    N > 0,
-    N1 is N - 1,
+    N #> 0,
+    N1 #= N - 1,
     compile_exact_n(N1, Expr, C0, C1, Cont, RestNode),
     compile_node(Expr, C1, CF, RestNode, Node).
 
-compile_optionals(0, _, C, C, Cont, Cont) :- !.
+compile_optionals(0, _, C, C, Cont, Cont).
 compile_optionals(N, Expr, C0, CF, Cont, Node) :-
-    N > 0,
-    N1 is N - 1,
+    N #> 0,
+    N1 #= N - 1,
     compile_optionals(N1, Expr, C0, C1, Cont, RestNode),
     compile_node(postfix(Expr, question), C1, CF, RestNode, Node).
 
-compile_lazy_optionals(0, _, C, C, Cont, Cont) :- !.
+compile_lazy_optionals(0, _, C, C, Cont, Cont).
 compile_lazy_optionals(N, Expr, C0, CF, Cont, Node) :-
-    N > 0,
-    N1 is N - 1,
+    N #> 0,
+    N1 #= N - 1,
     compile_lazy_optionals(N1, Expr, C0, C1, Cont, RestNode),
     compile_node(postfix(Expr, lazy(question)), C1, CF, RestNode, Node).
 
@@ -232,6 +270,9 @@ regex_tree_run(Chars, named_close(Name, Idx, Next), S0, SF, Rest) :-
     update_named_close(S0, Name, Idx, Chars, S1),
     regex_tree_run(Chars, Next, S1, SF, Rest).
 
+% Note on ->: Soft-cut is used for lookahead assertions because SubNode execution
+% is a recursive goal search (not a reified boolean value for if_/3). Soft-cut commits
+% to the first successful match of the zero-width lookahead assertion.
 regex_tree_run(Chars, lookahead(SubNode, Next, Fail), S0, SF, Rest) :-
     (   regex_tree_run(Chars, SubNode, S0, _, _) ->
         regex_tree_run(Chars, Next, S0, SF, Rest)
@@ -263,40 +304,16 @@ regex_tree_run(Chars, scoped_flags(Flags, SubNode, Next), S0, SF, Rest) :-
 
 regex_tree_run(Chars, backref(Idx, Next), S0, SF, Rest) :-
     S0 = state(_, Groups, _, _),
-    (   nth0(Idx, Groups, Captured),
-        chars_si(Captured),
-        append(Captured, RestChars, Chars) ->
-        regex_tree_run(RestChars, Next, S0, SF, Rest)
-    ;   fail
+    if_(backref_matched_t(Idx, Groups, Chars, RestChars),
+        regex_tree_run(RestChars, Next, S0, SF, Rest),
+        fail
     ).
 
-regex_tree_run(Chars, sym(bol, Succ, Fail), S0, SF, Rest) :-
-    !,
-    (   is_bol(S0, Chars) ->
-        regex_tree_run(Chars, Succ, S0, SF, Rest)
-    ;   regex_tree_run(Chars, Fail, S0, SF, Rest)
-    ).
-
-regex_tree_run(Chars, sym(eol, Succ, Fail), S0, SF, Rest) :-
-    !,
-    (   is_eol(Chars) ->
-        regex_tree_run(Chars, Succ, S0, SF, Rest)
-    ;   regex_tree_run(Chars, Fail, S0, SF, Rest)
-    ).
-
-regex_tree_run(Chars, sym(boundary, Succ, Fail), S0, SF, Rest) :-
-    !,
-    (   is_boundary(S0, Chars) ->
-        regex_tree_run(Chars, Succ, S0, SF, Rest)
-    ;   regex_tree_run(Chars, Fail, S0, SF, Rest)
-    ).
-
-regex_tree_run(Chars, sym(not_boundary, Succ, Fail), S0, SF, Rest) :-
-    !,
-    (   \+ is_boundary(S0, Chars) ->
-        regex_tree_run(Chars, Succ, S0, SF, Rest)
-    ;   regex_tree_run(Chars, Fail, S0, SF, Rest)
-    ).
+regex_tree_run(Chars, sym(Cond, Succ, Fail), S0, SF, Rest) :-
+    is_zero_width_cond(Cond),
+    if_(match_cond_zero_t(Cond, S0, Chars),
+        regex_tree_run(Chars, Succ, S0, SF, Rest),
+        regex_tree_run(Chars, Fail, S0, SF, Rest)).
 
 % Empty input handling: check end-of-line anchor or fail fallback
 regex_tree_run([], sym(Cond, Succ, Fail), S0, SF, Rest) :-
@@ -311,16 +328,36 @@ regex_tree_run([H|T], sym(Cond, Succ, Fail), S0, SF, Rest) :-
         regex_tree_run(T, Succ, S0, SF, Rest),
         regex_tree_run([H|T], Fail, S0, SF, Rest)).
 
+backref_matched_t(Idx, Groups, Chars, RestChars, true) :-
+    nth0(Idx, Groups, Captured),
+    chars_si(Captured),
+    append(Captured, RestChars, Chars), !.
+backref_matched_t(_Idx, _Groups, _Chars, _RestChars, false).
+
+is_zero_width_cond(bol).
+is_zero_width_cond(eol).
+is_zero_width_cond(boundary).
+is_zero_width_cond(not_boundary).
+
+match_cond_zero_t(bol, S0, Chars, Truth) :-
+    is_bol_t(S0, Chars, Truth).
+match_cond_zero_t(eol, _S0, Chars, Truth) :-
+    is_eol_t(Chars, Truth).
+match_cond_zero_t(boundary, S0, Chars, Truth) :-
+    is_boundary_t(S0, Chars, Truth).
+match_cond_zero_t(not_boundary, S0, Chars, Truth) :-
+    is_boundary_t(S0, Chars, T0),
+    if_(T0 = true, Truth = false, Truth = true).
+
 %% match_cond_empty(+Cond, -Truth)
-match_cond_empty(eol, true) :- !.
-match_cond_empty(_, false).
+match_cond_empty(Cond, Truth) :-
+    if_(Cond = eol, Truth = true, Truth = false).
 
 %% match_cond_flags(+Cond, +Char, +Flags, -Truth)
 match_cond_flags(Cond, H, Flags, Truth) :-
-    (   member(case_insensitive, Flags) ->
-        match_cond_ci(Cond, H, Truth)
-    ;   match_cond(Cond, H, Truth)
-    ).
+    if_(memberd_t(case_insensitive, Flags),
+        match_cond_ci(Cond, H, Truth),
+        match_cond(Cond, H, Truth)).
 
 %% match_cond(+Cond, +Char, -Truth)
 match_cond(char(C), H, Truth) :-
@@ -335,158 +372,23 @@ match_cond(boundary, _H, true).
 match_cond(not_boundary, _H, true).
 
 match_cond(builtin(Code), H, Truth) :-
-    match_builtin_class(Code, H, Truth).
+    match_builtin_t(Code, H, Truth).
 
 match_cond(class(Items), H, Truth) :-
-    match_class_items(Items, H, Truth).
+    match_class_t(Items, H, Truth).
 
 match_cond(neg_class(Items), H, Truth) :-
-    match_class_items(Items, H, T0),
-    if_(T0 = true, Truth = false, Truth = true).
+    match_class_t(neg(Items), H, Truth).
 
 %% match_cond_ci(+Cond, +Char, -Truth)
 match_cond_ci(char(C), H, Truth) :-
     char_equal_ci_t(C, H, Truth).
 match_cond_ci(class(Items), H, Truth) :-
-    match_class_items_ci(Items, H, Truth).
+    match_class_ci_t(Items, H, Truth).
 match_cond_ci(neg_class(Items), H, Truth) :-
-    match_class_items_ci(Items, H, T0),
-    if_(T0 = true, Truth = false, Truth = true).
+    match_class_ci_t(neg(Items), H, Truth).
 match_cond_ci(Cond, H, Truth) :-
     match_cond(Cond, H, Truth).
-
-match_class_items_ci([], _H, false).
-match_class_items_ci([Item|Items], H, Truth) :-
-    match_class_item_ci(Item, H, T0),
-    if_(T0 = true,
-        Truth = true,
-        match_class_items_ci(Items, H, Truth)).
-
-match_class_item_ci(char(C), H, Truth) :-
-    char_equal_ci_t(C, H, Truth).
-match_class_item_ci(range(Min, Max), H, Truth) :-
-    char_lower(Min, LowerA),
-    char_lower(Max, LowerB),
-    char_lower(H, LowerC),
-    char_range_t(LowerA, LowerB, LowerC, Truth).
-match_class_item_ci(Item, H, Truth) :-
-    match_class_item(Item, H, Truth).
-
-char_equal_ci_t(C1, C2, true) :- char_equal_ci(C1, C2), !.
-char_equal_ci_t(_, _, false).
-
-char_equal_ci(C1, C2) :-
-    char_lower(C1, L),
-    char_lower(C2, L).
-
-char_lower(C, L) :-
-    (   C @>= 'A', C @=< 'Z' ->
-        char_code(C, Code),
-        LowerCode is Code + 32,
-        char_code(L, LowerCode)
-    ;   L = C
-    ).
-
-parse_flags(Flags, Parsed) :-
-    to_chars(Flags, Chars),
-    map_flags(Chars, Parsed).
-
-map_flags([], []).
-map_flags([C|Cs], [P|Ps]) :-
-    map_flag_char(C, P),
-    map_flags(Cs, Ps).
-
-map_flag_char('i', case_insensitive).
-map_flag_char(_, unknown).
-
-to_chars(Input, Input) :- list_si(Input), !.
-to_chars(Input, Chars) :- atom_si(Input), atom_chars(Input, Chars).
-
-/* Standard match_class_items and helpers */
-match_class_items([], _H, false).
-match_class_items([Item|Items], H, Truth) :-
-    match_class_item(Item, H, T0),
-    if_(T0 = true,
-        Truth = true,
-        match_class_items(Items, H, Truth)).
-
-char_le_t(A, B, true) :- A @=< B, !.
-char_le_t(_, _, false).
-
-char_ge_t(A, B, true) :- A @>= B, !.
-char_ge_t(_, _, false).
-
-char_range_t(Min, Max, Char, Truth) :-
-    if_(char_ge_t(Char, Min),
-        char_le_t(Char, Max, Truth),
-        Truth = false).
-
-match_class_item(range(Min, Max), H, Truth) :-
-    char_range_t(Min, Max, H, Truth).
-match_class_item(char(C), H, Truth) :-
-    =(C, H, Truth).
-match_class_item(lit([C]), H, Truth) :-
-    =(C, H, Truth).
-match_class_item(lit(Cs), H, Truth) :-
-    match_char_in_list(Cs, H, Truth).
-match_class_item(builtin(Code), H, Truth) :-
-    match_builtin_class(Code, H, Truth).
-match_class_item(posix(Name), H, Truth) :-
-    match_posix_class(Name, H, Truth).
-
-match_char_in_list([], _H, false).
-match_char_in_list([C|Cs], H, Truth) :-
-    if_(C = H,
-        Truth = true,
-        match_char_in_list(Cs, H, Truth)).
-
-match_builtin_class(digit, H, Truth) :-
-    char_range_t('0', '9', H, Truth).
-match_builtin_class('d', H, Truth) :- match_builtin_class(digit, H, Truth).
-
-match_builtin_class(not_digit, H, Truth) :-
-    match_builtin_class(digit, H, T0),
-    if_(T0 = true, Truth = false, Truth = true).
-match_builtin_class('D', H, Truth) :- match_builtin_class(not_digit, H, Truth).
-
-match_builtin_class(word, H, Truth) :-
-    if_(char_range_t('a', 'z', H), Truth = true,
-    if_(char_range_t('A', 'Z', H), Truth = true,
-    if_(char_range_t('0', '9', H), Truth = true,
-    =(H, '_', Truth)))).
-match_builtin_class('w', H, Truth) :- match_builtin_class(word, H, Truth).
-
-match_builtin_class(not_word, H, Truth) :-
-    match_builtin_class(word, H, T0),
-    if_(T0 = true, Truth = false, Truth = true).
-match_builtin_class('W', H, Truth) :- match_builtin_class(not_word, H, Truth).
-
-match_builtin_class(space, H, Truth) :-
-    if_(H = ' ', Truth = true,
-    if_(H = '\t', Truth = true,
-    if_(H = '\n', Truth = true,
-    if_(H = '\r', Truth = true,
-    if_(H = '\f', Truth = true,
-    if_(H = '\v', Truth = true, Truth = false)))))).
-match_builtin_class('s', H, Truth) :- match_builtin_class(space, H, Truth).
-
-match_builtin_class(not_space, H, Truth) :-
-    match_builtin_class(space, H, T0),
-    if_(T0 = true, Truth = false, Truth = true).
-match_builtin_class('S', H, Truth) :- match_builtin_class(not_space, H, Truth).
-
-match_posix_class(alnum, H, Truth) :- match_builtin_class(word, H, Truth).
-match_posix_class(alpha, H, Truth) :-
-    if_(char_range_t('a', 'z', H), Truth = true,
-    char_range_t('A', 'Z', H, Truth)).
-match_posix_class(digit, H, Truth) :- match_builtin_class(digit, H, Truth).
-match_posix_class(lower, H, Truth) :- char_range_t('a', 'z', H, Truth).
-match_posix_class(upper, H, Truth) :- char_range_t('A', 'Z', H, Truth).
-match_posix_class(space, H, Truth) :- match_builtin_class(space, H, Truth).
-match_posix_class(xdigit, H, Truth) :-
-    if_(char_range_t('0', '9', H), Truth = true,
-    if_(char_range_t('a', 'f', H), Truth = true,
-    char_range_t('A', 'F', H, Truth))).
 
 /* Helper state modifiers for group capture tracking */
 
@@ -505,88 +407,124 @@ update_named_close(state(Full, Groups, Named, Flags), Name, Idx, RemainingChars,
     set_named_end(Full, Named, Name, Idx, RemainingChars, NewNamed).
 
 set_group_start(Groups, Idx, RemainingChars, NewGroups) :-
-    (   nth0(Idx, Groups, capture(RemainingChars, _)) ->
-        NewGroups = Groups
-    ;   replace_nth(Groups, Idx, capture(RemainingChars, _), NewGroups)
+    if_(group_captured_t(Groups, Idx, RemainingChars),
+        NewGroups = Groups,
+        replace_nth(Groups, Idx, capture(RemainingChars, _), NewGroups)
     ).
 
+group_captured_t(Groups, Idx, RemainingChars, true) :-
+    nth0(Idx, Groups, capture(CapChars, _)),
+    CapChars == RemainingChars, !.
+group_captured_t(_Groups, _Idx, _RemainingChars, false).
+
 set_group_end(Full, Groups, Idx, RemainingChars, NewGroups) :-
-    (   nth0(Idx, Groups, capture(StartChars, _)) ->
-        extract_substring(Full, StartChars, RemainingChars, Substr),
-        replace_nth(Groups, Idx, Substr, NewGroups)
-    ;   NewGroups = Groups
+    if_(group_start_captured_t(Groups, Idx, StartChars),
+        ( extract_substring(Full, StartChars, RemainingChars, Substr),
+          replace_nth(Groups, Idx, Substr, NewGroups) ),
+        NewGroups = Groups
     ).
+
+group_start_captured_t(Groups, Idx, StartChars, true) :-
+    nth0(Idx, Groups, capture(StartChars, _)), !.
+group_start_captured_t(_Groups, _Idx, _StartChars, false).
 
 set_named_start(Named, Name, _, RemainingChars, [Name-capture(RemainingChars, _)|Named1]) :-
     delete_key(Named, Name, Named1).
 
 set_named_end(Full, Named, Name, _, RemainingChars, [Name-Substr|Named1]) :-
-    (   member(Name-capture(StartChars, _), Named) ->
-        extract_substring(Full, StartChars, RemainingChars, Substr),
-        delete_key(Named, Name, Named1)
-    ;   Named1 = Named
+    if_(named_captured_t(Named, Name, StartChars),
+        ( extract_substring(Full, StartChars, RemainingChars, Substr),
+          delete_key(Named, Name, Named1) ),
+        Named1 = Named
     ).
 
-delete_key([], _, []).
-delete_key([K-_|T], K, T1) :- !, delete_key(T, K, T1).
-delete_key([H|T], K, [H|T1]) :- delete_key(T, K, T1).
+named_captured_t(Named, Name, StartChars, true) :-
+    member(Name-capture(StartChars, _), Named), !.
+named_captured_t(_Named, _Name, _StartChars, false).
 
-replace_nth([], _, _, []).
-replace_nth([_|T], 0, Val, [Val|T]) :- !.
-replace_nth([H|T], N, Val, [H|R]) :-
-    N > 0,
-    N1 is N - 1,
-    replace_nth(T, N1, Val, R).
+delete_key([], _, []).
+delete_key([K0-V|T], K, R) :-
+    if_(K0 = K,
+        delete_key(T, K, R),
+        ( R = [K0-V|R1], delete_key(T, K, R1) )).
+
+replace_nth(List, N, Val, NewList) :-
+    list_split_at(N, List, Prefix, [_|Suffix]),
+    append(Prefix, [Val|Suffix], NewList).
 
 extract_substring(Full, StartChars, EndChars, Substr) :-
     length(Full, LFull),
     length(StartChars, LStart),
     length(EndChars, LEnd),
-    Skip is LFull - LStart,
-    Take is LStart - LEnd,
+    Skip #= LFull - LStart,
+    Take #= LStart - LEnd,
     drop_n(Skip, Full, Rest),
     take_n(Take, Rest, Substr).
 
-drop_n(0, L, L) :- !.
-drop_n(N, [_|T], R) :- N > 0, N1 is N - 1, drop_n(N1, T, R).
+list_split_at(N, List, Prefix, Suffix) :-
+    length(Prefix, N),
+    append(Prefix, Suffix, List).
 
-take_n(0, _, []) :- !.
-take_n(N, [H|T], [H|R]) :- N > 0, N1 is N - 1, take_n(N1, T, R).
+drop_n(N, List, Drop) :-
+    list_split_at(N, List, _, Drop).
 
-is_bol(state(Full, _, _, _), Chars) :-
-    (   Full == Chars ->
-        true
-    ;   length(Full, LFull),
-        length(Chars, LChars),
-        Skip is LFull - LChars - 1,
-        Skip >= 0,
-        nth0(Skip, Full, '\n')
-    ).
+take_n(N, List, Take) :-
+    list_split_at(N, List, Take, _).
 
-is_eol([]) :- !.
-is_eol(['\n'|_]).
+is_bol_t(state(Full, _, _, _), Chars, Truth) :-
+    if_(Full = Chars,
+        Truth = true,
+        ( length(Full, LFull),
+          length(Chars, LChars),
+          Skip #= LFull - LChars - 1,
+          Skip #>= 0 #<==> B,
+          if_(B = 1,
+              ( nth0(Skip, Full, NL), if_(NL = '\n', Truth = true, Truth = false) ),
+              Truth = false)
+        )).
 
-is_boundary(state(Full, _, _, _), Chars) :-
-    (   Full == Chars ->
-        Chars = [H|_],
-        is_word_char(H)
-    ;   Chars == [] ->
-        length(Full, LFull),
-        Skip is LFull - 1,
-        Skip >= 0,
-        nth0(Skip, Full, Prev),
-        is_word_char(Prev)
-    ;   length(Full, LFull),
-        length(Chars, LChars),
-        Skip is LFull - LChars - 1,
-        Skip >= 0,
-        nth0(Skip, Full, Prev),
-        Chars = [Curr|_],
-        (   is_word_char(Prev), \+ is_word_char(Curr)
-        ;   \+ is_word_char(Prev), is_word_char(Curr)
-        )
-    ).
+is_eol_t(Chars, Truth) :-
+    if_(Chars = [],
+        Truth = true,
+        if_(Chars = ['\n'|_], Truth = true, Truth = false)).
+
+is_boundary_t(state(Full, _, _, _), Chars, Truth) :-
+    if_(Full = Chars,
+        ( Chars = [H|_], is_word_char_t(H, Truth) ),
+        if_(Chars = [],
+            ( length(Full, LFull),
+              Skip #= LFull - 1,
+              Skip #>= 0 #<==> B,
+              if_(B = 1,
+                  ( nth0(Skip, Full, Prev), is_word_char_t(Prev, Truth) ),
+                  Truth = false)
+            ),
+            ( length(Full, LFull),
+              length(Chars, LChars),
+              Skip #= LFull - LChars - 1,
+              Skip #>= 0 #<==> B,
+              if_(B = 1,
+                  ( nth0(Skip, Full, Prev),
+                    Chars = [Curr|_],
+                    is_word_char_t(Prev, T1),
+                    is_word_char_t(Curr, T2),
+                    if_(T1 = T2, Truth = false, Truth = true)
+                  ),
+                  Truth = false)
+            ))).
+
+is_bol(State, Chars) :- is_bol_t(State, Chars, true).
+is_eol(Chars) :- is_eol_t(Chars, true).
+is_boundary(State, Chars) :- is_boundary_t(State, Chars, true).
 
 is_word_char(C) :-
-    nonvar(C),
-    match_builtin_class(word, C, true).
+    is_word_char_t(C, true).
+
+is_word_char_t(C, Truth) :-
+    if_(var_t(C),
+        Truth = false,
+        match_builtin_t(word, C, Truth)
+    ).
+
+var_t(X, true) :- var(X).
+var_t(X, false) :- nonvar(X).
