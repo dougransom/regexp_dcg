@@ -257,29 +257,11 @@ regex_tree_run(Chars, backref(Idx, Next), S0, SF, Rest) :-
     ;   fail
     ).
 
-regex_tree_run(Chars, sym(bol, Succ, Fail), S0, SF, Rest) :-
-    (   is_bol(S0, Chars) ->
-        regex_tree_run(Chars, Succ, S0, SF, Rest)
-    ;   regex_tree_run(Chars, Fail, S0, SF, Rest)
-    ).
-
-regex_tree_run(Chars, sym(eol, Succ, Fail), S0, SF, Rest) :-
-    (   is_eol(Chars) ->
-        regex_tree_run(Chars, Succ, S0, SF, Rest)
-    ;   regex_tree_run(Chars, Fail, S0, SF, Rest)
-    ).
-
-regex_tree_run(Chars, sym(boundary, Succ, Fail), S0, SF, Rest) :-
-    (   is_boundary(S0, Chars) ->
-        regex_tree_run(Chars, Succ, S0, SF, Rest)
-    ;   regex_tree_run(Chars, Fail, S0, SF, Rest)
-    ).
-
-regex_tree_run(Chars, sym(not_boundary, Succ, Fail), S0, SF, Rest) :-
-    (   \+ is_boundary(S0, Chars) ->
-        regex_tree_run(Chars, Succ, S0, SF, Rest)
-    ;   regex_tree_run(Chars, Fail, S0, SF, Rest)
-    ).
+regex_tree_run(Chars, sym(Cond, Succ, Fail), S0, SF, Rest) :-
+    is_zero_width_cond(Cond),
+    if_(match_cond_zero_t(Cond, S0, Chars),
+        regex_tree_run(Chars, Succ, S0, SF, Rest),
+        regex_tree_run(Chars, Fail, S0, SF, Rest)).
 
 % Empty input handling: check end-of-line anchor or fail fallback
 regex_tree_run([], sym(Cond, Succ, Fail), S0, SF, Rest) :-
@@ -294,16 +276,30 @@ regex_tree_run([H|T], sym(Cond, Succ, Fail), S0, SF, Rest) :-
         regex_tree_run(T, Succ, S0, SF, Rest),
         regex_tree_run([H|T], Fail, S0, SF, Rest)).
 
+is_zero_width_cond(bol).
+is_zero_width_cond(eol).
+is_zero_width_cond(boundary).
+is_zero_width_cond(not_boundary).
+
+match_cond_zero_t(bol, S0, Chars, Truth) :-
+    is_bol_t(S0, Chars, Truth).
+match_cond_zero_t(eol, _S0, Chars, Truth) :-
+    is_eol_t(Chars, Truth).
+match_cond_zero_t(boundary, S0, Chars, Truth) :-
+    is_boundary_t(S0, Chars, Truth).
+match_cond_zero_t(not_boundary, S0, Chars, Truth) :-
+    is_boundary_t(S0, Chars, T0),
+    if_(T0 = true, Truth = false, Truth = true).
+
 %% match_cond_empty(+Cond, -Truth)
 match_cond_empty(Cond, Truth) :-
     if_(Cond = eol, Truth = true, Truth = false).
 
 %% match_cond_flags(+Cond, +Char, +Flags, -Truth)
 match_cond_flags(Cond, H, Flags, Truth) :-
-    (   member(case_insensitive, Flags) ->
-        match_cond_ci(Cond, H, Truth)
-    ;   match_cond(Cond, H, Truth)
-    ).
+    if_(memberd_t(case_insensitive, Flags),
+        match_cond_ci(Cond, H, Truth),
+        match_cond(Cond, H, Truth)).
 
 %% match_cond(+Cond, +Char, -Truth)
 match_cond(char(C), H, Truth) :-
@@ -450,40 +446,57 @@ drop_n(N, [_|T], R) :- N #> 0, N1 #= N - 1, drop_n(N1, T, R).
 take_n(0, _, []).
 take_n(N, [H|T], [H|R]) :- N #> 0, N1 #= N - 1, take_n(N1, T, R).
 
-is_bol(state(Full, _, _, _), Chars) :-
-    (   Full == Chars ->
-        true
-    ;   length(Full, LFull),
-        length(Chars, LChars),
-        Skip #= LFull - LChars - 1,
-        Skip #>= 0,
-        nth0(Skip, Full, '\n')
-    ).
+is_bol_t(state(Full, _, _, _), Chars, Truth) :-
+    if_(Full = Chars,
+        Truth = true,
+        ( length(Full, LFull),
+          length(Chars, LChars),
+          Skip #= LFull - LChars - 1,
+          Skip #>= 0 #<==> B,
+          if_(B = 1,
+              ( nth0(Skip, Full, NL), if_(NL = '\n', Truth = true, Truth = false) ),
+              Truth = false)
+        )).
 
-is_eol([]).
-is_eol(['\n'|_]).
+is_eol_t(Chars, Truth) :-
+    if_(Chars = [],
+        Truth = true,
+        if_(Chars = ['\n'|_], Truth = true, Truth = false)).
 
-is_boundary(state(Full, _, _, _), Chars) :-
-    (   Full == Chars ->
-        Chars = [H|_],
-        is_word_char(H)
-    ;   Chars == [] ->
-        length(Full, LFull),
-        Skip #= LFull - 1,
-        Skip #>= 0,
-        nth0(Skip, Full, Prev),
-        is_word_char(Prev)
-    ;   length(Full, LFull),
-        length(Chars, LChars),
-        Skip #= LFull - LChars - 1,
-        Skip #>= 0,
-        nth0(Skip, Full, Prev),
-        Chars = [Curr|_],
-        (   is_word_char(Prev), \+ is_word_char(Curr)
-        ;   \+ is_word_char(Prev), is_word_char(Curr)
-        )
-    ).
+is_boundary_t(state(Full, _, _, _), Chars, Truth) :-
+    if_(Full = Chars,
+        ( Chars = [H|_], is_word_char_t(H, Truth) ),
+        if_(Chars = [],
+            ( length(Full, LFull),
+              Skip #= LFull - 1,
+              Skip #>= 0 #<==> B,
+              if_(B = 1,
+                  ( nth0(Skip, Full, Prev), is_word_char_t(Prev, Truth) ),
+                  Truth = false)
+            ),
+            ( length(Full, LFull),
+              length(Chars, LChars),
+              Skip #= LFull - LChars - 1,
+              Skip #>= 0 #<==> B,
+              if_(B = 1,
+                  ( nth0(Skip, Full, Prev),
+                    Chars = [Curr|_],
+                    is_word_char_t(Prev, T1),
+                    is_word_char_t(Curr, T2),
+                    if_(T1 = T2, Truth = false, Truth = true)
+                  ),
+                  Truth = false)
+            ))).
+
+is_bol(State, Chars) :- is_bol_t(State, Chars, true).
+is_eol(Chars) :- is_eol_t(Chars, true).
+is_boundary(State, Chars) :- is_boundary_t(State, Chars, true).
 
 is_word_char(C) :-
-    nonvar(C),
-    match_builtin_t(word, C, true).
+    is_word_char_t(C, true).
+
+is_word_char_t(C, Truth) :-
+    (   nonvar(C) ->
+        match_builtin_t(word, C, Truth)
+    ;   Truth = false
+    ).

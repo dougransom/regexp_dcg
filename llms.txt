@@ -1,12 +1,13 @@
-# regexp_dcg: Regular Expression Engine for Scryer Prolog and ISO Prolog
+# regexp: Regular Expression Engine for Scryer Prolog and ISO Prolog
 
-> A pure, ISO-compliant regular expression library for Scryer Prolog providing dual DCG non-terminal and direct character list (`chars`) matching interfaces across multiple 1:1 API-compatible engines (DCG, DFA, Cyclic Tree Automata).
+> A pure, ISO-compliant regular expression library for Scryer Prolog providing dual DCG non-terminal and direct character list (`chars`) matching interfaces across multiple 1:1 API-compatible engines (Rational Tree Automata, DCG, DFA).
 
 ## Overview & Key Entry Points
 
-- **Primary Module**: `regexp_dcg.pl` - Full-featured backtracking DCG engine with capturing groups, lookaheads, named groups, and inline flags.
-- **Tree Automaton Engine**: `regexp_tree.pl` - Pure, deterministic `if_/3`-driven cyclic term finite state automaton matching engine.
-- **DFA Engine**: `src/regexp_compile_dfa.pl` - Deterministic finite automaton execution.
+- **Primary Module**: `src/regexp.pl` (`regexp`) - Main entry point using Rational Tree Automaton by default, with DCG engine mode option (`mode(dcg)`) support.
+- **Tree Automaton Engine**: `src/adapters/regexp_tree.pl` - Pure, deterministic `if_/3`-driven cyclic term finite state automaton matching engine.
+- **DCG Engine**: `src/core/regexp_compile_dcg.pl` / `src/regexp_dcg.pl` - Full-featured backtracking DCG engine with capturing groups, lookaheads, named groups, and inline flags.
+- **DFA Engine**: `src/core/regexp_compile_dfa.pl` - Deterministic finite automaton execution.
 - **Package Manifest**: `scryer-manifest.pl` - Bakage package definition (`pkg(regexp)`).
 
 ## Core Public API Interface
@@ -22,17 +23,22 @@ All engines maintain identical 1:1 API signatures:
 ### Direct List Matching Predicates
 - `re_match(Pattern, Input)` - Anchored full match against `Input` character list (`chars`).
 - `re_match(Pattern, Input, Rest)` - Matches prefix of `Input`, returning unparsed remainder `Rest`.
+- `re_match(Pattern, Input, Rest, Options)` - Matches prefix with mode options (e.g. `[mode(dcg)]`, `[mode(tree)]`).
 - `re_match_groups(Pattern, Input, Match, Groups)` - Direct match returning `Match` and `Groups` list.
 - `re_match_named(Pattern, Input, Match, NamedMap)` - Direct match returning `Match` and named group list `[Name-Value, ...]`.
 
 ## Usage Examples
 
 ```prolog
-:- use_module(regexp_dcg).
+:- use_module('src/regexp').
 
-% Direct character list matching
+% Direct character list matching (Rational Tree engine default)
 ?- re_match("[a-z]+", "hello").
    true.
+
+% Select DCG engine via mode option
+?- re_match("[a-z]+", "hello", Rest, [mode(dcg)]).
+   Rest = "".
 
 % DCG non-terminal phrase matching
 ?- phrase(re_match("[0-9]+", Match), "12345").
@@ -51,6 +57,6 @@ All engines maintain identical 1:1 API signatures:
 
 - [Full Consolidated Documentation](llms-full.txt): Complete user guide, pattern reference, and full documentation for LLMs.
 - [User Guide & Pattern Reference](docs/usage.md): Detailed regex syntax reference (character classes, quantifiers, lookarounds, flags).
-- [Machine-Readable Metadata (JSON-LD)](schema.jsonld): Schema.org structured metadata for `regexp_dcg`.
+- [Machine-Readable Metadata (JSON-LD)](schema.jsonld): Schema.org structured metadata for `regexp`.
 - [README](README.md): Project overview and Bakage installation guide.
 - [Scryer Prolog Standards](.agents/skills/scryer-prolog-standards/SKILL.md): Repository coding rules and ISO Prolog standards.

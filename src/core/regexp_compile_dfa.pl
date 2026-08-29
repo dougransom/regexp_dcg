@@ -36,6 +36,8 @@
 :- use_module(library(si)).
 :- use_module(library(error)).
 :- use_module(library(clpz)).
+:- use_module(library(dif)).
+:- use_module(library(reif)).
 :- use_module(regexp_ast, [re_ast_chars/3, is_ast/1]).
 :- use_module(regexp_common).
 
@@ -150,21 +152,18 @@ compile_ast_nfa(AST, nfa(Start, Accept, Trans, Eps)) :-
 
 ast_nfa(lit([]), _, Start, Accept, [], [eps(Start, Accept, always)], SIn, SIn).
 ast_nfa(lit([C|Cs]), Flags, Start, Accept, Trans, [], SIn, SOut) :-
-    (   member(case_insensitive, Flags) ->
-        chars_nfa_ci([C|Cs], Start, Accept, Trans, SIn, SOut)
-    ;   chars_nfa([C|Cs], Start, Accept, Trans, SIn, SOut)
-    ).
+    if_(memberd_t(case_insensitive, Flags),
+        chars_nfa_ci([C|Cs], Start, Accept, Trans, SIn, SOut),
+        chars_nfa([C|Cs], Start, Accept, Trans, SIn, SOut)).
 ast_nfa(escaped(C), Flags, Start, Accept, [trans(Start, Cond, Accept)], [], SIn, SIn) :-
-    (   member(case_insensitive, Flags) ->
-        Cond = char_ci(C)
-    ;   Cond = char(C)
-    ).
+    if_(memberd_t(case_insensitive, Flags),
+        Cond = char_ci(C),
+        Cond = char(C)).
 ast_nfa(dot, _, Start, Accept, [trans(Start, any, Accept)], [], SIn, SIn).
 ast_nfa(class(Items), Flags, Start, Accept, [trans(Start, Cond, Accept)], [], SIn, SIn) :-
-    (   member(case_insensitive, Flags) ->
-        Cond = class_ci(Items)
-    ;   Cond = class(Items)
-    ).
+    if_(memberd_t(case_insensitive, Flags),
+        Cond = class_ci(Items),
+        Cond = class(Items)).
 ast_nfa(builtin(Class), _, Start, Accept, [trans(Start, builtin(Class), Accept)], [], SIn, SIn).
 ast_nfa(anchor(bol), _, Start, Accept, [], [eps(Start, Accept, bol)], SIn, SIn).
 ast_nfa(anchor(eol), _, Start, Accept, [], [eps(Start, Accept, eol)], SIn, SIn).
@@ -363,7 +362,7 @@ epsilon_closure_loop([], _, Closure, Closure, _, _).
 epsilon_closure_loop([S|Ss], Epsilons, Acc, Closure, Prev, Curr) :-
     findall(To, (
         member(eps(S, To, Cond), Epsilons),
-        \+ member(To, Acc),
+        maplist(dif(To), Acc),
         check_eps_cond(Cond, Prev, Curr)
     ), Reached),
     (   Reached = [] ->

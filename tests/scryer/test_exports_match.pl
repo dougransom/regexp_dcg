@@ -27,9 +27,13 @@ test("Public user interfaces are identical across all modules",
             re_cache_info/2
         ],
         % Read exports from all engine files
+        module_exports('src/regexp.pl', RegexpExports),
         module_exports('src/regexp_dcg.pl', DcgExports),
         module_exports('src/core/regexp_compile_dfa.pl', DfaExports),
         module_exports('src/adapters/regexp_tree.pl', TreeExports),
+
+        % 0. All public interface predicates must be exported by regexp.pl
+        maplist(member_of(RegexpExports), PublicInterface),
         
         % 1. All public interface predicates must be exported by the DCG engine
         maplist(member_of(DcgExports), PublicInterface),

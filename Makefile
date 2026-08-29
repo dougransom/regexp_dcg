@@ -1,11 +1,11 @@
-NAME = regexp_dcg
+NAME = regexp
 VERSION = 0.1.2.dev1
 
 export PROLOG_ENGINE ?= scryer
 SCRYER ?= scryer-safe
 PROLOG_AGENT ?= prolog-agent
 
-.PHONY: all test test_curr_pred test_exports_match test_format test_regexp_ast test_regexp_dcg test_regexp_compile_dfa test_regexp_tree test_si test_time test_re_token test_international test_toml docs html llms packages package_bakage package_swi clean
+.PHONY: all test test_regexp test_curr_pred test_exports_match test_format test_regexp_ast test_regexp_dcg test_regexp_compile_dfa test_regexp_tree test_si test_time test_re_token test_international test_toml docs html llms packages package_bakage package_swi clean
 
 all: test docs
 
@@ -13,7 +13,7 @@ all: test docs
 # Testing Targets (Executed via scryer-safe safety runner)
 # ==============================================================================
 
-test: test_curr_pred test_exports_match test_format test_regexp_ast test_regexp_dcg test_regexp_compile_dfa test_regexp_tree test_si test_time test_re_token test_international test_toml
+test: test_regexp test_curr_pred test_exports_match test_format test_regexp_ast test_regexp_dcg test_regexp_compile_dfa test_regexp_tree test_si test_time test_re_token test_international test_toml
 
 test_curr_pred:
 	@echo "=== Running test_curr_pred.pl ==="
@@ -33,6 +33,11 @@ test_format:
 test_regexp_ast:
 	@echo "=== Running test_regexp_ast.pl ==="
 	$(SCRYER) -g run_tests -g halt tests/scryer/test_regexp_ast.pl
+	@echo ""
+
+test_regexp:
+	@echo "=== Running test_regexp.pl ==="
+	$(SCRYER) -g run_tests -g halt tests/scryer/test_regexp.pl
 	@echo ""
 
 test_regexp_dcg:

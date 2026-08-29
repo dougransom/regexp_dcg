@@ -2,6 +2,8 @@
 
 :- use_module('../testing').
 :- use_module('../../src/core/regexp_ast').
+:- use_module('../../src/core/regexp_common').
+:- use_module('../../src/core/regexp_compile_dcg').
 :- use_module('../../src/regexp_dcg').
 :- use_module(library(debug)).
 :- use_module(library(pio)).
@@ -28,9 +30,9 @@ dformat(_Message) :-
     debug_mode(off).
 
 test("dcg for literal",
-    (regexp_dcg:pattern_ast("abc", AST),
+    (regexp_common:pattern_ast("abc", AST),
     dformat("\nAST: ~w", [AST]),
-    regexp_dcg:ast_dcg(AST, _S0, _S1, DCG),
+    regexp_compile_dcg:ast_dcg(AST, _S0, _S1, DCG),
     dformat("\nDCG: ~w", [DCG]),
     dformat("\nTesting DCG phrase...", []),
     phrase(DCG, "abc") -> 

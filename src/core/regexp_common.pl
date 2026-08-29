@@ -38,9 +38,11 @@
 %
 % Unify `Chars` with a list of character codes from string `Input` (character list or atom).
 % Raises `instantiation_error` if `Input` is unbound, or `domain_error(chars, Input)` if invalid type.
+%
+% Cuts (!) commit to the matched input type branch once validated, ensuring determinism
+% and preventing fallthrough into the domain_error clause on backtracking.
 to_chars(Input, _) :-
     var(Input),
-    !,
     instantiation_error(to_chars/2).
 to_chars(Input, Input) :-
     list_si(Input),
@@ -55,9 +57,11 @@ to_chars(Input, _) :-
 %% pattern_ast(+Pattern, -AST)
 %
 % Convert a pattern string, atom, or pre-built AST term into a canonical AST term.
+%
+% Cut (!) commits to pre-built AST terms once validated by is_ast/1, preventing
+% fallthrough into to_chars/2 (which would raise domain_error) on backtracking.
 pattern_ast(AST, _) :-
     var(AST),
-    !,
     instantiation_error(pattern_ast/2).
 pattern_ast(AST, AST) :-
     is_ast(AST),
@@ -109,17 +113,17 @@ builtin_class_spec('d',   [range('0', '9')]).
 builtin_class_spec(word,  [range('a', 'z'), range('A', 'Z'), range('0', '9'), char('_')]).
 builtin_class_spec('w',   [range('a', 'z'), range('A', 'Z'), range('0', '9'), char('_')]).
 
-builtin_class_spec(space, [set([' ', '\t', '\r', '\n', '\f', '\v'])]).
-builtin_class_spec('s',   [set([' ', '\t', '\r', '\n', '\f', '\v'])]).
+builtin_class_spec(space, [set(" \t\r\n\f\v")]).
+builtin_class_spec('s',   [set(" \t\r\n\f\v")]).
 
 builtin_class_spec(alnum, [range('a', 'z'), range('A', 'Z'), range('0', '9')]).
 builtin_class_spec(alpha, [range('a', 'z'), range('A', 'Z')]).
-builtin_class_spec(blank, [set([' ', '\t'])]).
+builtin_class_spec(blank, [set(" \t")]).
 builtin_class_spec(cntrl, [range('\x00\', '\x1F\'), char('\x7F\')]).
 builtin_class_spec(graph, [range('!', '~')]).
 builtin_class_spec(lower, [range('a', 'z')]).
 builtin_class_spec(print, [range(' ', '~')]).
-builtin_class_spec(punct, [set(['!', '"', '#', '$', '%', '&', '\'', '(', ')', '*', '+', ',', '-', '.', '/', ':', ';', '<', '=', '>', '?', '@', '[', '\\', ']', '^', '_', '`', '{', '|', '}', '~'])]).
+builtin_class_spec(punct, [set("!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~")]).
 builtin_class_spec(upper, [range('A', 'Z')]).
 builtin_class_spec(xdigit,[range('0', '9'), range('a', 'f'), range('A', 'F')]).
 
@@ -141,17 +145,17 @@ match_builtin_t(digit, C, Truth)     :- match_specs_t([range('0', '9')], C, Trut
 match_builtin_t('d', C, Truth)       :- match_specs_t([range('0', '9')], C, Truth).
 match_builtin_t(word, C, Truth)      :- match_specs_t([range('a', 'z'), range('A', 'Z'), range('0', '9'), char('_')], C, Truth).
 match_builtin_t('w', C, Truth)       :- match_specs_t([range('a', 'z'), range('A', 'Z'), range('0', '9'), char('_')], C, Truth).
-match_builtin_t(space, C, Truth)     :- match_specs_t([set([' ', '\t', '\r', '\n', '\f', '\v'])], C, Truth).
-match_builtin_t('s', C, Truth)       :- match_specs_t([set([' ', '\t', '\r', '\n', '\f', '\v'])], C, Truth).
+match_builtin_t(space, C, Truth)     :- match_specs_t([set(" \t\r\n\f\v")], C, Truth).
+match_builtin_t('s', C, Truth)       :- match_specs_t([set(" \t\r\n\f\v")], C, Truth).
 
 match_builtin_t(alnum, C, Truth)     :- match_specs_t([range('a', 'z'), range('A', 'Z'), range('0', '9')], C, Truth).
 match_builtin_t(alpha, C, Truth)     :- match_specs_t([range('a', 'z'), range('A', 'Z')], C, Truth).
-match_builtin_t(blank, C, Truth)     :- match_specs_t([set([' ', '\t'])], C, Truth).
+match_builtin_t(blank, C, Truth)     :- match_specs_t([set(" \t")], C, Truth).
 match_builtin_t(cntrl, C, Truth)     :- match_specs_t([range('\x00\', '\x1F\'), char('\x7F\')], C, Truth).
 match_builtin_t(graph, C, Truth)     :- match_specs_t([range('!', '~')], C, Truth).
 match_builtin_t(lower, C, Truth)     :- match_specs_t([range('a', 'z')], C, Truth).
 match_builtin_t(print, C, Truth)     :- match_specs_t([range(' ', '~')], C, Truth).
-match_builtin_t(punct, C, Truth)     :- match_specs_t([set(['!', '"', '#', '$', '%', '&', '\'', '(', ')', '*', '+', ',', '-', '.', '/', ':', ';', '<', '=', '>', '?', '@', '[', '\\', ']', '^', '_', '`', '{', '|', '}', '~'])], C, Truth).
+match_builtin_t(punct, C, Truth)     :- match_specs_t([set("!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~")], C, Truth).
 match_builtin_t(upper, C, Truth)     :- match_specs_t([range('A', 'Z')], C, Truth).
 match_builtin_t(xdigit, C, Truth)    :- match_specs_t([range('0', '9'), range('a', 'f'), range('A', 'F')], C, Truth).
 
