@@ -491,12 +491,9 @@ delete_key([K0-V|T], K, R) :-
         delete_key(T, K, R),
         ( R = [K0-V|R1], delete_key(T, K, R1) )).
 
-replace_nth([], _, _, []).
-replace_nth([_|T], 0, Val, [Val|T]).
-replace_nth([H|T], N, Val, [H|R]) :-
-    N #> 0,
-    N1 #= N - 1,
-    replace_nth(T, N1, Val, R).
+replace_nth(List, N, Val, NewList) :-
+    list_split_at(N, List, Prefix, [_|Suffix]),
+    append(Prefix, [Val|Suffix], NewList).
 
 extract_substring(Full, StartChars, EndChars, Substr) :-
     length(Full, LFull),
@@ -507,11 +504,15 @@ extract_substring(Full, StartChars, EndChars, Substr) :-
     drop_n(Skip, Full, Rest),
     take_n(Take, Rest, Substr).
 
-drop_n(0, L, L).
-drop_n(N, [_|T], R) :- N #> 0, N1 #= N - 1, drop_n(N1, T, R).
+list_split_at(N, List, Prefix, Suffix) :-
+    length(Prefix, N),
+    append(Prefix, Suffix, List).
 
-take_n(0, _, []).
-take_n(N, [H|T], [H|R]) :- N #> 0, N1 #= N - 1, take_n(N1, T, R).
+drop_n(N, List, Drop) :-
+    list_split_at(N, List, _, Drop).
+
+take_n(N, List, Take) :-
+    list_split_at(N, List, Take, _).
 
 is_bol_t(state(Full, _, _, _), Chars, Truth) :-
     if_(Full = Chars,
