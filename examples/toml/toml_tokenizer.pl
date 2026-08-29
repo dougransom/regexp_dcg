@@ -5,7 +5,7 @@
 :- use_module(library(dcgs)).
 :- use_module(library(lists)).
 :- use_module(library(charsio)).
-:- use_module('../../regexp_dcg').
+:- use_module('../../src/regexp_dcg').
 
 %% tokenize_toml(+Chars, -Tokens)
 %

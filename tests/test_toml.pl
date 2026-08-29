@@ -1,5 +1,4 @@
-:- use_module('../bakage').
-:- use_module(pkg(testing)).
+:- use_module(testing).
 :- use_module(library(pio)).
 :- use_module(library(dcgs)).
 :- use_module('../examples/toml/toml_tokenizer').

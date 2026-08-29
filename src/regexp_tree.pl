@@ -60,9 +60,9 @@
 :- use_module(library(si)).
 :- use_module(library(error)).
 
-:- use_module(src/regexp_ast, [re_ast_chars//1, is_ast/1]).
-:- use_module(src/regexp_common).
-:- use_module(src/regexp_compile_tree, [compile_ast_tree/3, regex_tree_run/5]).
+:- use_module(regexp_ast, [re_ast_chars//1, is_ast/1]).
+:- use_module(regexp_common).
+:- use_module(regexp_compile_tree, [compile_ast_tree/3, regex_tree_run/5]).
 
 :- dynamic(tree_pattern_cache/3).
 

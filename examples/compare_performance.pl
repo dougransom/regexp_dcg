@@ -2,9 +2,9 @@
 :- use_module(library(format)).
 :- use_module(library(lists)).
 
-:- use_module('../regexp_dcg').
+:- use_module('../src/regexp_dcg').
 :- use_module('../src/regexp_compile_dfa').
-:- use_module('../regexp_tree').
+:- use_module('../src/regexp_tree').
 
 % 20 C tokens and their corresponding regex patterns
 c_tokens([
