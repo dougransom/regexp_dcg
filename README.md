@@ -17,10 +17,10 @@ The primary goals of this project are:
 2. **Dual Matching Interfaces**: Support both:
    - **DCG Non-Terminal Interface**: Pure DCG non-terminal grammars (`phrase(re_match(Pattern, Match), Input)`) for seamlessly embedding regular expression rules inside Prolog DCG parsing logic.
    - **Direct Character List Interface**: Standard 2/3/4/5-argument list matching predicates (`re_match(Pattern, Input)`, `re_match(Pattern, Input, Rest)`, `re_match_groups/4-5`, `re_match_named/4-5`) for direct string matching without needing `phrase/2-3` wrappers.
-3. **Engine Parity & Choice**: Provide multiple 1:1 API-compatible matching engines via `src/regexp.pl`:
-   - **Rational Tree Automaton Engine** (`src/core/regexp_tree.pl`): Default engine; fast, pure `if_/3`-driven cyclic term finite state automaton matching.
-   - **DCG Backtracking Engine** (`src/core/regexp_compile_dcg.pl`): Direct substitute and mode option (`mode(dcg)`); full-featured regex parser with group extractions, lookaheads, and inline flags.
-   - **DFA Engine** (`src/core/regexp_compile_dfa.pl`): Deterministic finite automaton execution.
+3. **Engine Parity & Choice**: Provide multiple 1:1 API-compatible matching engines:
+   - **Rational Tree Automaton Engine** (`src/core/regexp_tree.pl`): Re-exported by default via `src/regexp.pl`; fast, pure `if_/3`-driven cyclic term finite state automaton matching.
+   - **DCG Backtracking Engine** (`src/core/regexp_compile_dcg.pl`): Direct substitute; full-featured regex parser with group extractions, lookaheads, and inline flags.
+   - **DFA Engine** (`src/core/regexp_compile_dfa.pl`): Direct substitute; deterministic finite automaton execution.
 
 ---
 
@@ -73,15 +73,15 @@ Bakage is **optional**. Because `regexp` is written in pure ISO Prolog, you can 
    % DCG Non-Terminal Matching
    ?- phrase(re_match("[a-z]+", Match), "hello").
 
-   % Select DCG Engine via Mode Option
-   ?- re_match("[a-z]+", "hello", Rest, [mode(dcg)]).
+   % Or import DCG engine directly as a substitute:
+   :- use_module('path/to/regexp_dcg/src/core/regexp_compile_dcg').
    ```
 
 ---
 
 ## Primary Interface (`regexp`)
 
-The main entry point for matching patterns is the [`regexp`](src/regexp.pl) module. By default, it uses the Rational Tree Automaton implementation (`regexp_tree`), with the DCG-based engine (`regexp_compile_dcg`) available as a direct substitute or selectable via mode options (`mode(dcg)` or `engine(dcg)`).
+The main entry point for matching patterns is the [`regexp`](src/regexp.pl) module. By default, it re-exports the Rational Tree Automaton implementation (`regexp_tree`), with the DCG-based engine (`src/core/regexp_compile_dcg.pl`) and DFA engine (`src/core/regexp_compile_dfa.pl`) available as 1:1 API-compatible direct substitutes.
 
 ### Quick Usage Examples
 
