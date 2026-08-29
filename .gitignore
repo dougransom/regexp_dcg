@@ -1,5 +1,7 @@
 # Bakage package manager dependencies & build directory
 scryer_libs/
+dist/
+llms-full.txt
 
 # Prolog compiled objects & logs
 *.po

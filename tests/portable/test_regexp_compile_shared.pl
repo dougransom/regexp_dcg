@@ -161,10 +161,10 @@ shared_test(Engine, "compilation cache matches",
     (Engine:re_clear_cache,
      phrase(Engine:re_match("c*d", Match), "cccd"),
      Match == "cccd",
-     (   Engine == regexp_dcg ->
-         regexp_dcg:to_chars("c*d", Key),
-         regexp_dcg:pattern_cache(Key, _, _)
-     ;   Engine == regexp_tree ->
+     (   (Engine == regexp_dcg ; Engine == regexp_compile_dcg) ->
+         regexp_compile_dcg:to_chars("c*d", Key),
+         regexp_compile_dcg:pattern_cache(Key, _, _)
+     ;   (Engine == regexp ; Engine == regexp_tree) ->
          regexp_tree:tree_pattern_cache("c*d", _, _)
      ;   regexp_dfa:dfa_pattern_cache("c*d", _)
      ))).
@@ -172,12 +172,12 @@ shared_test(Engine, "compilation cache matches",
 shared_test(Engine, "compilation cache clearing",
     (Engine:re_clear_cache,
      phrase(Engine:re_match("c*d", _Match), "cccd"),
-     (   Engine == regexp_dcg ->
-         regexp_dcg:to_chars("c*d", Key),
-         regexp_dcg:pattern_cache(Key, _, _),
+     (   (Engine == regexp_dcg ; Engine == regexp_compile_dcg) ->
+         regexp_compile_dcg:to_chars("c*d", Key),
+         regexp_compile_dcg:pattern_cache(Key, _, _),
          Engine:re_clear_cache,
-         \+ regexp_dcg:pattern_cache(Key, _, _)
-     ;   Engine == regexp_tree ->
+         \+ regexp_compile_dcg:pattern_cache(Key, _, _)
+     ;   (Engine == regexp ; Engine == regexp_tree) ->
          regexp_tree:tree_pattern_cache("c*d", _, _),
          Engine:re_clear_cache,
          \+ regexp_tree:tree_pattern_cache("c*d", _, _)

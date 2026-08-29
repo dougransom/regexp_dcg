@@ -2,9 +2,9 @@
 :- use_module(library(format)).
 :- use_module(library(lists)).
 
-:- use_module('../regexp_dcg').
-:- use_module('../src/regexp_compile_dfa').
-:- use_module('../regexp_tree').
+:- use_module('../src/core/regexp_compile_dcg').
+:- use_module('../src/core/regexp_compile_dfa').
+:- use_module('../src/core/regexp_tree').
 
 % 20 C tokens and their corresponding regex patterns
 c_tokens([
@@ -60,13 +60,13 @@ repeat_goal(N, Goal) :-
 % Match all 20 tokens using DCG (no cache)
 dcg_nocache :-
     c_tokens(Tokens),
-    regexp_dcg:re_clear_cache,
+    regexp_compile_dcg:re_clear_cache,
     match_all_dcg_nocache(Tokens).
 
 match_all_dcg_nocache([]).
 match_all_dcg_nocache([token(Input, Pattern)|Ts]) :-
-    regexp_dcg:re_compile(Pattern, Compiled),
-    regexp_dcg:re_match(Compiled, Input, _),
+    regexp_compile_dcg:re_compile(Pattern, Compiled),
+    regexp_compile_dcg:re_match(Compiled, Input, _),
     match_all_dcg_nocache(Ts).
 
 % Match all 20 tokens using DCG (with cache)
@@ -76,7 +76,7 @@ dcg_cached :-
 
 match_all_dcg_cached([]).
 match_all_dcg_cached([token(Input, Pattern)|Ts]) :-
-    regexp_dcg:re_match(Pattern, Input, _),
+    regexp_compile_dcg:re_match(Pattern, Input, _),
     match_all_dcg_cached(Ts).
 
 % Match all 20 tokens using DFA (no cache)
@@ -130,7 +130,7 @@ precompiled_dcg(Precompiled) :-
 
 match_precompiled_dcg([], []).
 match_precompiled_dcg([token(Input, _)|Ts], [Goal|Gs]) :-
-    regexp_dcg:re_match(Goal, Input, _),
+    regexp_compile_dcg:re_match(Goal, Input, _),
     match_precompiled_dcg(Ts, Gs).
 
 precompiled_dfa(Precompiled) :-
