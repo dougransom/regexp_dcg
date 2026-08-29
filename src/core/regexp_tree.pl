@@ -98,6 +98,7 @@
 :- use_module(library(dcgs)).
 :- use_module(library(si)).
 :- use_module(library(error)).
+:- use_module(library(reif)).
 
 :- use_module(regexp_ast, [re_ast_chars//1, is_ast/1]).
 :- use_module(regexp_common).
@@ -153,9 +154,9 @@ re_tree_match_groups(Pattern, Chars, Match, Groups) :-
 
 %% re_tree_match_groups(+Pattern, ?Arg2, ?Arg3, ?Arg4, ?Arg5)
 re_tree_match_groups(Pattern, Arg2, Arg3, Arg4, Arg5) :-
-    (   (nonvar(Arg2), (list_si(Arg2) ; atom_si(Arg2))) ->
-        re_tree_match_groups_impl(Pattern, Arg2, Arg3, Arg4, Arg5)
-    ;   re_tree_match_groups_impl(Pattern, Arg4, Arg2, Arg3, Arg5)
+    if_(is_input_arg_t(Arg2),
+        re_tree_match_groups_impl(Pattern, Arg2, Arg3, Arg4, Arg5),
+        re_tree_match_groups_impl(Pattern, Arg4, Arg2, Arg3, Arg5)
     ).
 
 %% re_tree_match_named(+Pattern, ?Chars, -Match, -NamedGroups)
@@ -164,9 +165,9 @@ re_tree_match_named(Pattern, Chars, Match, NamedGroups) :-
 
 %% re_tree_match_named(+Pattern, ?Arg2, ?Arg3, ?Arg4, ?Arg5)
 re_tree_match_named(Pattern, Arg2, Arg3, Arg4, Arg5) :-
-    (   (nonvar(Arg2), (list_si(Arg2) ; atom_si(Arg2))) ->
-        re_tree_match_named_impl(Pattern, Arg2, Arg3, Arg4, Arg5)
-    ;   re_tree_match_named_impl(Pattern, Arg4, Arg2, Arg3, Arg5)
+    if_(is_input_arg_t(Arg2),
+        re_tree_match_named_impl(Pattern, Arg2, Arg3, Arg4, Arg5),
+        re_tree_match_named_impl(Pattern, Arg4, Arg2, Arg3, Arg5)
     ).
 
 /* Internal Implementations */
@@ -195,18 +196,24 @@ get_tree_automaton(Pattern, _, _) :-
     var(Pattern),
     !,
     instantiation_error(get_tree_automaton/3).
-get_tree_automaton(compiled_tree(Automaton, GroupCount), Automaton, GroupCount).
+get_tree_automaton(compiled_tree(Automaton, GroupCount), Automaton, GroupCount) :- !.
 get_tree_automaton(Pattern, Automaton, GroupCount) :-
     nonvar(Pattern),
     Pattern \= compiled_tree(_, _),
-    (   tree_pattern_cache(Pattern, AST, GroupCount) ->
-        compile_ast_tree(AST, Automaton, GroupCount)
-    ;   pattern_ast(Pattern, AST),
+    if_(tree_pattern_cache_t(Pattern, AST, GroupCount),
         compile_ast_tree(AST, Automaton, GroupCount),
-        (   (list_si(Pattern) ; atom_si(Pattern)) ->
-            assertz(tree_pattern_cache(Pattern, AST, GroupCount))
-        ;   true
+        ( pattern_ast(Pattern, AST),
+          compile_ast_tree(AST, Automaton, GroupCount),
+          if_(is_input_arg_t(Pattern),
+              assertz(tree_pattern_cache(Pattern, AST, GroupCount)),
+              true
+          )
         )
     ).
+
+tree_pattern_cache_t(Pattern, AST, GroupCount, true) :-
+    tree_pattern_cache(Pattern, AST, GroupCount).
+tree_pattern_cache_t(Pattern, _AST, _GroupCount, false) :-
+    \+ tree_pattern_cache(Pattern, _, _).
 
 

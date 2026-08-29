@@ -63,17 +63,22 @@ re_match(Pattern, Match, L0, L) :-
     append(Match, L, L0),
     dfa_match_chars(nfa(Start, Accept, States, Transitions), Match).
 re_match(Pattern, Match, L0, L) :-
-    (   (nonvar(Pattern), dfa_pattern_cache(Pattern, NFA)) ->
-        true
-    ;   pattern_ast(Pattern, AST),
-        compile_ast_nfa(AST, NFA),
-        (   (list_si(Pattern) ; atom_si(Pattern)) ->
-            assertz(dfa_pattern_cache(Pattern, NFA))
-        ;   true
+    if_(dfa_pattern_cache_t(Pattern, NFA),
+        true,
+        ( pattern_ast(Pattern, AST),
+          compile_ast_nfa(AST, NFA),
+          if_(is_input_arg_t(Pattern),
+              assertz(dfa_pattern_cache(Pattern, NFA)),
+              true
+          )
         )
     ),
     append(Match, L, L0),
     dfa_match_chars(NFA, Match).
+
+dfa_pattern_cache_t(Pattern, NFA, true) :-
+    nonvar(Pattern), dfa_pattern_cache(Pattern, NFA), !.
+dfa_pattern_cache_t(_Pattern, _NFA, false).
 
 dfa_match_chars(NFA, Match) :-
     to_chars(Match, Chars),
@@ -86,10 +91,10 @@ re_match_groups(Pattern, Chars, Match, Groups) :-
 %% re_match_groups(+Pattern, ?Arg2, ?Arg3, ?Arg4, ?Arg5)
 % Direct 5-arg matcher and DCG //3 expanded matcher.
 re_match_groups(Pattern, Arg2, Arg3, Arg4, Arg5) :-
-    (   (nonvar(Arg2), (list_si(Arg2) ; atom_si(Arg2))) ->
-        to_chars(Arg2, Input),
-        phrase(re_match_groups_dcg(Pattern, Arg3, Arg4), Input, Arg5)
-    ;   phrase(re_match_groups_dcg(Pattern, Arg2, Arg3), Arg4, Arg5)
+    if_(is_input_arg_t(Arg2),
+        ( to_chars(Arg2, Input),
+          phrase(re_match_groups_dcg(Pattern, Arg3, Arg4), Input, Arg5) ),
+        phrase(re_match_groups_dcg(Pattern, Arg2, Arg3), Arg4, Arg5)
     ).
 
 re_match_groups_dcg(Pattern, _Match, _Groups), _S --> _S,
@@ -106,10 +111,10 @@ re_match_named(Pattern, Chars, Match, NamedGroups) :-
 %% re_match_named(+Pattern, ?Arg2, ?Arg3, ?Arg4, ?Arg5)
 % Direct 5-arg matcher and DCG //3 expanded matcher.
 re_match_named(Pattern, Arg2, Arg3, Arg4, Arg5) :-
-    (   (nonvar(Arg2), (list_si(Arg2) ; atom_si(Arg2))) ->
-        to_chars(Arg2, Input),
-        phrase(re_match_named_dcg(Pattern, Arg3, Arg4), Input, Arg5)
-    ;   phrase(re_match_named_dcg(Pattern, Arg2, Arg3), Arg4, Arg5)
+    if_(is_input_arg_t(Arg2),
+        ( to_chars(Arg2, Input),
+          phrase(re_match_named_dcg(Pattern, Arg3, Arg4), Input, Arg5) ),
+        phrase(re_match_named_dcg(Pattern, Arg2, Arg3), Arg4, Arg5)
     ).
 
 re_match_named_dcg(Pattern, _Match, _NamedGroups), _S --> _S,
@@ -403,11 +408,8 @@ check_eps_cond(boundary(not_word), Prev, Curr) :-
 is_word_char(start, false).
 is_word_char(end, false).
 is_word_char(C, W) :-
-    C \== start,
-    C \== end,
-    (   match_builtin(word, C) ->
-        W = true
-    ;   W = false
-    ).
+    dif(C, start),
+    dif(C, end),
+    match_builtin_t(word, C, W).
 
 

@@ -22,7 +22,8 @@
     match_class/2,
     match_class_t/3,
     match_class_ci/2,
-    match_class_ci_t/3
+    match_class_ci_t/3,
+    is_input_arg_t/2
 ]).
 
 :- use_module(library(lists)).
@@ -31,6 +32,7 @@
 :- use_module(library(error)).
 :- use_module(library(clpz)).
 :- use_module(library(reif)).
+:- use_module(library(dif)).
 
 :- use_module(regexp_ast, [re_ast_chars//1, is_ast/1]).
 
@@ -69,6 +71,14 @@ pattern_ast(AST, AST) :-
 pattern_ast(Pattern, AST) :-
     to_chars(Pattern, Chars),
     phrase(re_ast_chars(AST), Chars).
+
+%% is_input_arg_t(+Arg, -Truth)
+%
+% Reified test for whether `Arg` is an instantiated input string (character list) or atom.
+is_input_arg_t(Arg, true) :-
+    nonvar(Arg),
+    ( list_si(Arg) ; atom_si(Arg) ), !.
+is_input_arg_t(_Arg, false).
 
 %% re_group(+NamedGroups, +Name, -Value)
 %

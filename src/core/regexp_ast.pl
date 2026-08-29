@@ -118,9 +118,9 @@ re_concat(AST) -->
     re_factor(F),
     re_concat_more(F, AST0),
     {
-        ( AST0 = concat([Single]) ->
-            AST = Single
-        ;   AST = AST0
+        if_(AST0 = concat([Single]),
+            AST = Single,
+            AST = AST0
         )
     }.
 
@@ -128,9 +128,9 @@ re_concat_more(Acc, AST) -->
     re_factor(F),
     !,
     {
-        ( Acc = concat(List0) ->
-            append(List0, [F], List)
-        ;   List = [Acc, F]
+        if_(Acc = concat(List0),
+            append(List0, [F], List),
+            List = [Acc, F]
         ),
         Acc1 = concat(List)
     },

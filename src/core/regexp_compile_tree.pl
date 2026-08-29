@@ -76,7 +76,9 @@
     char_lower/2,
     char_equal_ci/2,
     char_equal_ci_t/3,
-    to_chars/2
+    to_chars/2,
+    match_class_t/3,
+    match_class_ci_t/3
 ]).
 
 %% compile_ast_tree(+AST, -Automaton, -GroupCount)
@@ -300,15 +302,11 @@ regex_tree_run(Chars, scoped_flags(Flags, SubNode, Next), S0, SF, Rest) :-
     SFinal = state(Full2, Groups2, Named2, OldFlags),
     regex_tree_run(Rest1, Next, SFinal, SF, Rest).
 
-% Note on ->: Soft-cut is used here as a deterministic guard condition for
-% compound prefix extraction (nth0 lookup, chars_si check, and prefix matching).
 regex_tree_run(Chars, backref(Idx, Next), S0, SF, Rest) :-
     S0 = state(_, Groups, _, _),
-    (   nth0(Idx, Groups, Captured),
-        chars_si(Captured),
-        append(Captured, RestChars, Chars) ->
-        regex_tree_run(RestChars, Next, S0, SF, Rest)
-    ;   fail
+    if_(backref_matched_t(Idx, Groups, Chars, RestChars),
+        regex_tree_run(RestChars, Next, S0, SF, Rest),
+        fail
     ).
 
 regex_tree_run(Chars, sym(Cond, Succ, Fail), S0, SF, Rest) :-
@@ -329,6 +327,12 @@ regex_tree_run([H|T], sym(Cond, Succ, Fail), S0, SF, Rest) :-
     if_(match_cond_flags(Cond, H, Flags),
         regex_tree_run(T, Succ, S0, SF, Rest),
         regex_tree_run([H|T], Fail, S0, SF, Rest)).
+
+backref_matched_t(Idx, Groups, Chars, RestChars, true) :-
+    nth0(Idx, Groups, Captured),
+    chars_si(Captured),
+    append(Captured, RestChars, Chars), !.
+backref_matched_t(_Idx, _Groups, _Chars, _RestChars, false).
 
 is_zero_width_cond(bol).
 is_zero_width_cond(eol).
@@ -371,67 +375,20 @@ match_cond(builtin(Code), H, Truth) :-
     match_builtin_t(Code, H, Truth).
 
 match_cond(class(Items), H, Truth) :-
-    match_class_items(Items, H, Truth).
+    match_class_t(Items, H, Truth).
 
 match_cond(neg_class(Items), H, Truth) :-
-    match_class_items(Items, H, T0),
-    if_(T0 = true, Truth = false, Truth = true).
+    match_class_t(neg(Items), H, Truth).
 
 %% match_cond_ci(+Cond, +Char, -Truth)
 match_cond_ci(char(C), H, Truth) :-
     char_equal_ci_t(C, H, Truth).
 match_cond_ci(class(Items), H, Truth) :-
-    match_class_items_ci(Items, H, Truth).
+    match_class_ci_t(Items, H, Truth).
 match_cond_ci(neg_class(Items), H, Truth) :-
-    match_class_items_ci(Items, H, T0),
-    if_(T0 = true, Truth = false, Truth = true).
+    match_class_ci_t(neg(Items), H, Truth).
 match_cond_ci(Cond, H, Truth) :-
     match_cond(Cond, H, Truth).
-
-match_class_items_ci([], _H, false).
-match_class_items_ci([Item|Items], H, Truth) :-
-    match_class_item_ci(Item, H, T0),
-    if_(T0 = true,
-        Truth = true,
-        match_class_items_ci(Items, H, Truth)).
-
-match_class_item_ci(char(C), H, Truth) :-
-    char_equal_ci_t(C, H, Truth).
-match_class_item_ci(range(Min, Max), H, Truth) :-
-    char_lower(Min, LowerA),
-    char_lower(Max, LowerB),
-    char_lower(H, LowerC),
-    char_range_t(LowerA, LowerB, LowerC, Truth).
-match_class_item_ci(Item, H, Truth) :-
-    match_class_item(Item, H, Truth).
-
-
-/* Standard match_class_items and helpers */
-match_class_items([], _H, false).
-match_class_items([Item|Items], H, Truth) :-
-    match_class_item(Item, H, T0),
-    if_(T0 = true,
-        Truth = true,
-        match_class_items(Items, H, Truth)).
-
-match_class_item(range(Min, Max), H, Truth) :-
-    char_range_t(Min, Max, H, Truth).
-match_class_item(char(C), H, Truth) :-
-    =(C, H, Truth).
-match_class_item(lit([C]), H, Truth) :-
-    =(C, H, Truth).
-match_class_item(lit(Cs), H, Truth) :-
-    match_char_in_list(Cs, H, Truth).
-match_class_item(builtin(Code), H, Truth) :-
-    match_builtin_t(Code, H, Truth).
-match_class_item(posix(Name), H, Truth) :-
-    match_builtin_t(Name, H, Truth).
-
-match_char_in_list([], _H, false).
-match_char_in_list([C|Cs], H, Truth) :-
-    if_(C = H,
-        Truth = true,
-        match_char_in_list(Cs, H, Truth)).
 
 /* Helper state modifiers for group capture tracking */
 

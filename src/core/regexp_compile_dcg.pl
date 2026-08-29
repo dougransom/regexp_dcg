@@ -140,9 +140,8 @@ pattern_compiled_cache(Pattern, Goal, GroupCount) :-
     ).
 
 pattern_cache_t(Key, Goal, GroupCount, true) :-
-    pattern_cache(Key, Goal, GroupCount).
-pattern_cache_t(Key, _Goal, _GroupCount, false) :-
-    \+ pattern_cache(Key, _, _).
+    pattern_cache(Key, Goal, GroupCount), !.
+pattern_cache_t(_Key, _Goal, _GroupCount, false).
 
 %% re_clear_cache
 %
@@ -202,16 +201,6 @@ re_match_named(Pattern, Arg2, Arg3, Arg4, Arg5) :-
           phrase(re_match_named_dcg(Pattern, Arg3, Arg4), Input, Arg5) ),
         phrase(re_match_named_dcg(Pattern, Arg2, Arg3), Arg4, Arg5)
     ).
-
-is_input_arg_t(Arg, true) :-
-    nonvar(Arg),
-    ( list_si(Arg) ; atom_si(Arg) ).
-is_input_arg_t(Arg, false) :-
-    var(Arg).
-is_input_arg_t(Arg, false) :-
-    nonvar(Arg),
-    \+ list_si(Arg),
-    \+ atom_si(Arg).
 
 re_match_named_dcg(Pattern, Match, NamedGroups, S0, S) :-
     re_match_dcg_state(Pattern, Match, _State0, SF, S0, S),
