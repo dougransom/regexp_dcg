@@ -205,11 +205,12 @@ map_flag_char('i', case_insensitive).
 
 %% char_lower(+Char, -LowerChar)
 char_lower(C, L) :-
-    (   C @>= 'A', C @=< 'Z' ->
-        char_code(C, Code),
-        LowerCode is Code + 32,
-        char_code(L, LowerCode)
-    ;   L = C
+    if_(char_range_t('A', 'Z', C),
+        ( char_code(C, Code),
+          LowerCode #= Code + 32,
+          char_code(L, LowerCode)
+        ),
+        L = C
     ).
 
 %% char_equal_ci(+Char1, +Char2)
