@@ -20,6 +20,7 @@
 :- use_module(library(si)).
 :- use_module(library(dif)).
 :- use_module(library(clpz)).
+:- use_module(regexp_common, [match_builtin_t/3, char_range_t/4]).
 
 %% compile_ast_tree(+AST, -Automaton, -GroupCount)
 %
@@ -336,7 +337,7 @@ match_cond(boundary, _H, true).
 match_cond(not_boundary, _H, true).
 
 match_cond(builtin(Code), H, Truth) :-
-    match_builtin_class(Code, H, Truth).
+    match_builtin_t(Code, H, Truth).
 
 match_cond(class(Items), H, Truth) :-
     match_class_items(Items, H, Truth).
@@ -411,17 +412,6 @@ match_class_items([Item|Items], H, Truth) :-
         Truth = true,
         match_class_items(Items, H, Truth)).
 
-char_le_t(A, B, true) :- A @=< B, !.
-char_le_t(_, _, false).
-
-char_ge_t(A, B, true) :- A @>= B, !.
-char_ge_t(_, _, false).
-
-char_range_t(Min, Max, Char, Truth) :-
-    if_(char_ge_t(Char, Min),
-        char_le_t(Char, Max, Truth),
-        Truth = false).
-
 match_class_item(range(Min, Max), H, Truth) :-
     char_range_t(Min, Max, H, Truth).
 match_class_item(char(C), H, Truth) :-
@@ -431,63 +421,15 @@ match_class_item(lit([C]), H, Truth) :-
 match_class_item(lit(Cs), H, Truth) :-
     match_char_in_list(Cs, H, Truth).
 match_class_item(builtin(Code), H, Truth) :-
-    match_builtin_class(Code, H, Truth).
+    match_builtin_t(Code, H, Truth).
 match_class_item(posix(Name), H, Truth) :-
-    match_posix_class(Name, H, Truth).
+    match_builtin_t(Name, H, Truth).
 
 match_char_in_list([], _H, false).
 match_char_in_list([C|Cs], H, Truth) :-
     if_(C = H,
         Truth = true,
         match_char_in_list(Cs, H, Truth)).
-
-match_builtin_class(digit, H, Truth) :-
-    char_range_t('0', '9', H, Truth).
-match_builtin_class('d', H, Truth) :- match_builtin_class(digit, H, Truth).
-
-match_builtin_class(not_digit, H, Truth) :-
-    match_builtin_class(digit, H, T0),
-    if_(T0 = true, Truth = false, Truth = true).
-match_builtin_class('D', H, Truth) :- match_builtin_class(not_digit, H, Truth).
-
-match_builtin_class(word, H, Truth) :-
-    if_(char_range_t('a', 'z', H), Truth = true,
-    if_(char_range_t('A', 'Z', H), Truth = true,
-    if_(char_range_t('0', '9', H), Truth = true,
-    =(H, '_', Truth)))).
-match_builtin_class('w', H, Truth) :- match_builtin_class(word, H, Truth).
-
-match_builtin_class(not_word, H, Truth) :-
-    match_builtin_class(word, H, T0),
-    if_(T0 = true, Truth = false, Truth = true).
-match_builtin_class('W', H, Truth) :- match_builtin_class(not_word, H, Truth).
-
-match_builtin_class(space, H, Truth) :-
-    if_(H = ' ', Truth = true,
-    if_(H = '\t', Truth = true,
-    if_(H = '\n', Truth = true,
-    if_(H = '\r', Truth = true,
-    if_(H = '\f', Truth = true,
-    if_(H = '\v', Truth = true, Truth = false)))))).
-match_builtin_class('s', H, Truth) :- match_builtin_class(space, H, Truth).
-
-match_builtin_class(not_space, H, Truth) :-
-    match_builtin_class(space, H, T0),
-    if_(T0 = true, Truth = false, Truth = true).
-match_builtin_class('S', H, Truth) :- match_builtin_class(not_space, H, Truth).
-
-match_posix_class(alnum, H, Truth) :- match_builtin_class(word, H, Truth).
-match_posix_class(alpha, H, Truth) :-
-    if_(char_range_t('a', 'z', H), Truth = true,
-    char_range_t('A', 'Z', H, Truth)).
-match_posix_class(digit, H, Truth) :- match_builtin_class(digit, H, Truth).
-match_posix_class(lower, H, Truth) :- char_range_t('a', 'z', H, Truth).
-match_posix_class(upper, H, Truth) :- char_range_t('A', 'Z', H, Truth).
-match_posix_class(space, H, Truth) :- match_builtin_class(space, H, Truth).
-match_posix_class(xdigit, H, Truth) :-
-    if_(char_range_t('0', '9', H), Truth = true,
-    if_(char_range_t('a', 'f', H), Truth = true,
-    char_range_t('A', 'F', H, Truth))).
 
 /* Helper state modifiers for group capture tracking */
 
@@ -590,4 +532,4 @@ is_boundary(state(Full, _, _, _), Chars) :-
 
 is_word_char(C) :-
     nonvar(C),
-    match_builtin_class(word, C, true).
+    match_builtin_t(word, C, true).

@@ -428,20 +428,7 @@ is_word_char(C, W) :-
     ;   W = false
     ).
 
-/* ---------- Copy of Helper Predicates from regexp_compile_dcg ---------- */
 
-match_builtin(digit, C) :-
-    C @>= '0', C @=< '9'.
-match_builtin(not_digit, C) :-
-    \+ (C @>= '0', C @=< '9').
-match_builtin(word, C) :-
-    (C @>= 'a', C @=< 'z') ; (C @>= 'A', C @=< 'Z') ; (C @>= '0', C @=< '9') ; C == '_'.
-match_builtin(not_word, C) :-
-    \+ match_builtin(word, C).
-match_builtin(space, C) :-
-    member(C, [' ', '\t', '\r', '\n']).
-match_builtin(not_space, C) :-
-    \+ match_builtin(space, C).
 
 match_class(neg(List), C) :-
     !,

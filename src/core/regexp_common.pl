@@ -10,7 +10,11 @@
     take_n/3,
     state_full/2,
     state_groups/2,
-    state_named/2
+    state_named/2,
+    builtin_class_spec/2,
+    match_builtin/2,
+    match_builtin_t/3,
+    char_range_t/4
 ]).
 
 :- use_module(library(lists)).
@@ -18,6 +22,7 @@
 :- use_module(library(si)).
 :- use_module(library(error)).
 :- use_module(library(clpz)).
+:- use_module(library(reif)).
 
 :- use_module(regexp_ast, [re_ast_chars//1, is_ast/1]).
 
@@ -85,3 +90,89 @@ state_groups(state(_, Groups, _, _), Groups).
 
 %% state_named(+State, -Named)
 state_named(state(_, _, Named, _), Named).
+
+/* Built-in and POSIX Character Class Specifications */
+
+%% builtin_class_spec(+Class, -Specs)
+% Declarative specification of built-in and POSIX character classes.
+builtin_class_spec(digit, [range('0', '9')]).
+builtin_class_spec('d',   [range('0', '9')]).
+
+builtin_class_spec(word,  [range('a', 'z'), range('A', 'Z'), range('0', '9'), char('_')]).
+builtin_class_spec('w',   [range('a', 'z'), range('A', 'Z'), range('0', '9'), char('_')]).
+
+builtin_class_spec(space, [set([' ', '\t', '\r', '\n', '\f', '\v'])]).
+builtin_class_spec('s',   [set([' ', '\t', '\r', '\n', '\f', '\v'])]).
+
+builtin_class_spec(alnum, [range('a', 'z'), range('A', 'Z'), range('0', '9')]).
+builtin_class_spec(alpha, [range('a', 'z'), range('A', 'Z')]).
+builtin_class_spec(blank, [set([' ', '\t'])]).
+builtin_class_spec(cntrl, [range('\x00\', '\x1F\'), char('\x7F\')]).
+builtin_class_spec(graph, [range('!', '~')]).
+builtin_class_spec(lower, [range('a', 'z')]).
+builtin_class_spec(print, [range(' ', '~')]).
+builtin_class_spec(punct, [set(['!', '"', '#', '$', '%', '&', '\'', '(', ')', '*', '+', ',', '-', '.', '/', ':', ';', '<', '=', '>', '?', '@', '[', '\\', ']', '^', '_', '`', '{', '|', '}', '~'])]).
+builtin_class_spec(upper, [range('A', 'Z')]).
+builtin_class_spec(xdigit,[range('0', '9'), range('a', 'f'), range('A', 'F')]).
+
+%% match_builtin(+Class, +Char)
+% Semi-deterministic match for built-in or POSIX character class.
+match_builtin(not_digit, C) :- !, \+ match_builtin(digit, C).
+match_builtin('D', C)       :- !, \+ match_builtin(digit, C).
+match_builtin(not_word, C)  :- !, \+ match_builtin(word, C).
+match_builtin('W', C)       :- !, \+ match_builtin(word, C).
+match_builtin(not_space, C) :- !, \+ match_builtin(space, C).
+match_builtin('S', C)       :- !, \+ match_builtin(space, C).
+match_builtin(Class, C) :-
+    builtin_class_spec(Class, Specs),
+    match_specs(Specs, C).
+
+match_specs([Spec|_], C) :-
+    match_spec_item(Spec, C),
+    !.
+match_specs([_|Specs], C) :-
+    match_specs(Specs, C).
+
+match_spec_item(range(Min, Max), C) :- C @>= Min, C @=< Max.
+match_spec_item(char(Ch), C)         :- C == Ch.
+match_spec_item(set(List), C)       :- member(C, List).
+
+%% match_builtin_t(+Class, +Char, -Truth)
+% Reified pure match for built-in or POSIX character class using if_/3 logic.
+match_builtin_t(not_digit, C, Truth) :- !, match_builtin_t(digit, C, T0), reif_not(T0, Truth).
+match_builtin_t('D', C, Truth)       :- !, match_builtin_t(digit, C, T0), reif_not(T0, Truth).
+match_builtin_t(not_word, C, Truth)  :- !, match_builtin_t(word, C, T0), reif_not(T0, Truth).
+match_builtin_t('W', C, Truth)       :- !, match_builtin_t(word, C, T0), reif_not(T0, Truth).
+match_builtin_t(not_space, C, Truth) :- !, match_builtin_t(space, C, T0), reif_not(T0, Truth).
+match_builtin_t('S', C, Truth)       :- !, match_builtin_t(space, C, T0), reif_not(T0, Truth).
+match_builtin_t(Class, C, Truth) :-
+    builtin_class_spec(Class, Specs),
+    match_specs_t(Specs, C, Truth).
+
+match_specs_t([], _C, false).
+match_specs_t([Spec|Specs], C, Truth) :-
+    match_spec_item_t(Spec, C, T0),
+    if_(T0 = true,
+        Truth = true,
+        match_specs_t(Specs, C, Truth)).
+
+match_spec_item_t(range(Min, Max), C, Truth) :-
+    char_range_t(Min, Max, C, Truth).
+match_spec_item_t(char(Ch), C, Truth) :-
+    =(Ch, C, Truth).
+match_spec_item_t(set(List), C, Truth) :-
+    member_t(C, List, Truth).
+
+char_ge_t(A, B, true) :- A @>= B, !.
+char_ge_t(_, _, false).
+
+char_le_t(A, B, true) :- A @=< B, !.
+char_le_t(_, _, false).
+
+char_range_t(Min, Max, Char, Truth) :-
+    if_(char_ge_t(Char, Min),
+        char_le_t(Char, Max, Truth),
+        Truth = false).
+
+reif_not(true, false).
+reif_not(false, true).
