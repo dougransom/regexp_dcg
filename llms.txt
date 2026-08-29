@@ -52,5 +52,5 @@ All engines maintain identical 1:1 API signatures:
 - [Full Consolidated Documentation](llms-full.txt): Complete user guide, pattern reference, and full documentation for LLMs.
 - [User Guide & Pattern Reference](docs/usage.md): Detailed regex syntax reference (character classes, quantifiers, lookarounds, flags).
 - [Machine-Readable Metadata (JSON-LD)](schema.jsonld): Schema.org structured metadata for `regexp_dcg`.
-- [README](readme.md): Project overview and Bakage installation guide.
+- [README](README.md): Project overview and Bakage installation guide.
 - [Scryer Prolog Standards](.agents/skills/scryer-prolog-standards/SKILL.md): Repository coding rules and ISO Prolog standards.
