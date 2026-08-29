@@ -14,7 +14,13 @@
     builtin_class_spec/2,
     match_builtin/2,
     match_builtin_t/3,
-    char_range_t/4
+    char_range_t/4,
+    char_lower/2,
+    char_equal_ci/2,
+    char_equal_ci_t/3,
+    parse_flags/2,
+    match_class/2,
+    match_class_ci/2
 ]).
 
 :- use_module(library(lists)).
@@ -180,3 +186,85 @@ char_range_t(Min, Max, Char, Truth) :-
 
 reif_not(true, false).
 reif_not(false, true).
+
+/* Flag Parsing */
+
+%% parse_flags(+FlagsInput, -ParsedFlags)
+parse_flags(Flags, Parsed) :-
+    to_chars(Flags, Chars),
+    map_flags(Chars, Parsed).
+
+map_flags([], []).
+map_flags([C|Cs], [P|Ps]) :-
+    map_flag_char(C, P),
+    map_flags(Cs, Ps).
+
+map_flag_char('i', case_insensitive).
+
+/* Character Case Utilities */
+
+%% char_lower(+Char, -LowerChar)
+char_lower(C, L) :-
+    (   C @>= 'A', C @=< 'Z' ->
+        char_code(C, Code),
+        LowerCode is Code + 32,
+        char_code(L, LowerCode)
+    ;   L = C
+    ).
+
+%% char_equal_ci(+Char1, +Char2)
+char_equal_ci(C1, C2) :-
+    char_lower(C1, L),
+    char_lower(C2, L).
+
+%% char_equal_ci_t(+Char1, +Char2, -Truth)
+char_equal_ci_t(C1, C2, Truth) :-
+    char_lower(C1, L1),
+    char_lower(C2, L2),
+    =(L1, L2, Truth).
+
+/* Standard Non-Reified Character Class Matcher */
+
+%% match_class(+Items, +Char)
+match_class(neg(List), C) :-
+    !,
+    \+ match_class_list(List, C).
+match_class(List, C) :-
+    list_si(List),
+    match_class_list(List, C).
+
+match_class_list([H|T], C) :-
+    (   match_class_item(H, C) ->
+        true
+    ;   match_class_list(T, C)
+    ).
+
+match_class_item(char(C), C).
+match_class_item(range(A, B), C) :-
+    C @>= A, C @=< B.
+match_class_item(builtin(Class), C) :-
+    match_builtin(Class, C).
+
+%% match_class_ci(+Items, +Char)
+match_class_ci(neg(List), C) :-
+    !,
+    \+ match_class_list_ci(List, C).
+match_class_ci(List, C) :-
+    list_si(List),
+    match_class_list_ci(List, C).
+
+match_class_list_ci([H|T], C) :-
+    (   match_class_item_ci(H, C) ->
+        true
+    ;   match_class_list_ci(T, C)
+    ).
+
+match_class_item_ci(char(CharPattern), C) :-
+    char_equal_ci(CharPattern, C).
+match_class_item_ci(range(A, B), C) :-
+    char_lower(A, LowerA),
+    char_lower(B, LowerB),
+    char_lower(C, LowerC),
+    LowerC @>= LowerA, LowerC @=< LowerB.
+match_class_item_ci(builtin(Class), C) :-
+    match_builtin(Class, C).

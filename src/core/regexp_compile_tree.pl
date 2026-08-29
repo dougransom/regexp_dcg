@@ -20,7 +20,15 @@
 :- use_module(library(si)).
 :- use_module(library(dif)).
 :- use_module(library(clpz)).
-:- use_module(regexp_common, [match_builtin_t/3, char_range_t/4]).
+:- use_module(regexp_common, [
+    match_builtin_t/3,
+    char_range_t/4,
+    parse_flags/2,
+    char_lower/2,
+    char_equal_ci/2,
+    char_equal_ci_t/3,
+    to_chars/2
+]).
 
 %% compile_ast_tree(+AST, -Automaton, -GroupCount)
 %
@@ -374,35 +382,6 @@ match_class_item_ci(range(Min, Max), H, Truth) :-
 match_class_item_ci(Item, H, Truth) :-
     match_class_item(Item, H, Truth).
 
-char_equal_ci_t(C1, C2, true) :- char_equal_ci(C1, C2), !.
-char_equal_ci_t(_, _, false).
-
-char_equal_ci(C1, C2) :-
-    char_lower(C1, L),
-    char_lower(C2, L).
-
-char_lower(C, L) :-
-    (   C @>= 'A', C @=< 'Z' ->
-        char_code(C, Code),
-        LowerCode #= Code + 32,
-        char_code(L, LowerCode)
-    ;   L = C
-    ).
-
-parse_flags(Flags, Parsed) :-
-    to_chars(Flags, Chars),
-    map_flags(Chars, Parsed).
-
-map_flags([], []).
-map_flags([C|Cs], [P|Ps]) :-
-    map_flag_char(C, P),
-    map_flags(Cs, Ps).
-
-map_flag_char('i', case_insensitive).
-map_flag_char(_, unknown).
-
-to_chars(Input, Input) :- list_si(Input), !.
-to_chars(Input, Chars) :- atom_si(Input), atom_chars(Input, Chars).
 
 /* Standard match_class_items and helpers */
 match_class_items([], _H, false).
