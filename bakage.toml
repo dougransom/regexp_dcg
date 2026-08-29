@@ -2,5 +2,5 @@ name = "regexp"
 version = "0.1.2.dev1"
 description = "Pure ISO Scryer Prolog regular expression engine providing DCG non-terminal and direct list matching"
 authors = ["Doug Ransom"]
-modules = ["src/regexp.pl", "src/regexp_dcg.pl", "src/core/regexp_compile_dcg.pl", "src/core/regexp_compile_tree.pl", "src/core/regexp_compile_dfa.pl"]
+modules = ["src/regexp.pl", "src/core/regexp_tree.pl", "src/core/regexp_compile_dcg.pl", "src/core/regexp_compile_tree.pl", "src/core/regexp_compile_dfa.pl"]
 requires = []

@@ -1,7 +1,7 @@
 :- use_module(library(dcgs)).
 :- use_module(library(format)).
 :- use_module(library(si)).
-:- use_module('../../src/adapters/regexp_tree').
+:- use_module('../../src/core/regexp_tree').
 :- use_module('../portable/test_regexp_compile_shared').
 
 run_test(Name, Goal) :-

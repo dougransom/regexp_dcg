@@ -5,8 +5,8 @@
 ## Overview & Key Entry Points
 
 - **Primary Module**: `src/regexp.pl` (`regexp`) - Main entry point using Rational Tree Automaton by default, with DCG engine mode option (`mode(dcg)`) support.
-- **Tree Automaton Engine**: `src/adapters/regexp_tree.pl` - Pure, deterministic `if_/3`-driven cyclic term finite state automaton matching engine.
-- **DCG Engine**: `src/core/regexp_compile_dcg.pl` / `src/regexp_dcg.pl` - Full-featured backtracking DCG engine with capturing groups, lookaheads, named groups, and inline flags.
+- **Tree Automaton Engine**: `src/core/regexp_tree.pl` - Pure, deterministic `if_/3`-driven cyclic term finite state automaton matching engine.
+- **DCG Engine**: `src/core/regexp_compile_dcg.pl` - Full-featured backtracking DCG engine with capturing groups, lookaheads, named groups, and inline flags.
 - **DFA Engine**: `src/core/regexp_compile_dfa.pl` - Deterministic finite automaton execution.
 - **Package Manifest**: `scryer-manifest.pl` - Bakage package definition (`pkg(regexp)`).
 

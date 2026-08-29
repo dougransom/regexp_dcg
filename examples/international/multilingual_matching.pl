@@ -1,6 +1,6 @@
 :- use_module(library(format)).
 :- use_module(library(lists)).
-:- use_module('../../src/regexp_dcg').
+:- use_module('../../src/regexp').
 
 main :-
     format("====================================================~n", []),

@@ -48,7 +48,7 @@
 :- use_module(library(si)).
 :- use_module(library(error)).
 
-:- use_module('adapters/regexp_tree').
+:- use_module('core/regexp_tree').
 :- use_module('core/regexp_compile_dcg').
 :- use_module('core/regexp_compile_dfa').
 :- use_module('core/regexp_common', [re_group/3]).

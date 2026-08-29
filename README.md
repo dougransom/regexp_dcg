@@ -18,9 +18,9 @@ The primary goals of this project are:
    - **DCG Non-Terminal Interface**: Pure DCG non-terminal grammars (`phrase(re_match(Pattern, Match), Input)`) for seamlessly embedding regular expression rules inside Prolog DCG parsing logic.
    - **Direct Character List Interface**: Standard 2/3/4/5-argument list matching predicates (`re_match(Pattern, Input)`, `re_match(Pattern, Input, Rest)`, `re_match_groups/4-5`, `re_match_named/4-5`) for direct string matching without needing `phrase/2-3` wrappers.
 3. **Engine Parity & Choice**: Provide multiple 1:1 API-compatible matching engines via `src/regexp.pl`:
-   - **Rational Tree Automaton Engine** (`regexp_tree.pl`): Default engine; fast, pure `if_/3`-driven cyclic term finite state automaton matching.
-   - **DCG Backtracking Engine** (`regexp_compile_dcg.pl` / `regexp_dcg.pl`): Direct substitute and mode option (`mode(dcg)`); full-featured regex parser with group extractions, lookaheads, and inline flags.
-   - **DFA Engine** (`src/regexp_compile_dfa.pl`): Deterministic finite automaton execution.
+   - **Rational Tree Automaton Engine** (`src/core/regexp_tree.pl`): Default engine; fast, pure `if_/3`-driven cyclic term finite state automaton matching.
+   - **DCG Backtracking Engine** (`src/core/regexp_compile_dcg.pl`): Direct substitute and mode option (`mode(dcg)`); full-featured regex parser with group extractions, lookaheads, and inline flags.
+   - **DFA Engine** (`src/core/regexp_compile_dfa.pl`): Deterministic finite automaton execution.
 
 ---
 

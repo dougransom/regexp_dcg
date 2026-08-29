@@ -4,7 +4,6 @@
 :- use_module('../../src/core/regexp_ast').
 :- use_module('../../src/core/regexp_common').
 :- use_module('../../src/core/regexp_compile_dcg').
-:- use_module('../../src/regexp_dcg').
 :- use_module(library(debug)).
 :- use_module(library(pio)).
 :- use_module(library(dcgs)).
@@ -40,7 +39,7 @@ test("dcg for literal",
         dformat("\nDCG phrase failed", [])
     )).
 
-engine(regexp_dcg).
+engine(regexp_compile_dcg).
 
 :- use_module('../portable/test_regexp_compile_shared').
 
