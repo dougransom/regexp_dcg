@@ -86,7 +86,8 @@
     pattern_cache_t/5,
     pattern_cache_put/4,
     clear_pattern_cache/1,
-    pattern_cache_info/3
+    pattern_cache_info/3,
+    get_or_compile_pattern/5
 ]).
 
 /**
@@ -94,12 +95,6 @@
 
   `get_tree_automaton/3` resolves an input `Pattern` (either a pre-compiled `compiled_tree/2` term,
   a cached pattern string, or a raw string/atom) into an `Automaton` term graph and `GroupCount`.
-
-  #### Caching Execution Flow:
-  1. **Pre-Compiled Term (`compiled_tree(Automaton, GroupCount)`)**: If `Pattern` is already pre-compiled, extraction is instant ($O(1)$).
-  2. **Tree Cache Hit (`pattern_cache(tree, Pattern, Automaton, GroupCount)`)**: If `Pattern` string was previously compiled, the compiled `Automaton` is retrieved directly from `pattern_cache/4`, bypassing both string parsing AND tree compilation ($O(1)$).
-  3. **AST Cache Hit (`pattern_cache(ast, Pattern, AST, GroupCount)`)**: If `Pattern` string AST was parsed by another engine (e.g. `regexp_dcg`), the parsed `AST` is retrieved, compiled via `compile_ast_tree/3`, and the resulting `Automaton` is cached under `pattern_cache(tree, ...)` for subsequent matches.
-  4. **Cache Miss**: String is parsed into `AST` via `pattern_ast/2`, compiled via `compile_ast_tree/3`, and stored in `pattern_cache/4` under both `ast` and `tree` keys.
 */
 
 %% get_tree_automaton(+Pattern, -Automaton, -GroupCount)
@@ -134,24 +129,7 @@ var_t(X, true) :- var(X).
 var_t(X, false) :- nonvar(X).
 
 get_string_tree_automaton(Pattern, Automaton, GroupCount) :-
-    if_(pattern_cache_t(tree, Pattern, Automaton, GroupCount),
-        true,
-        ( if_(pattern_cache_t(ast, Pattern, AST, GroupCount),
-              compile_ast_tree(AST, Automaton, GroupCount),
-              ( pattern_ast(Pattern, AST),
-                compile_ast_tree(AST, Automaton, GroupCount),
-                if_(is_input_arg_t(Pattern),
-                    pattern_cache_put(ast, Pattern, AST, GroupCount),
-                    true
-                )
-              )
-          ),
-          if_(is_input_arg_t(Pattern),
-              pattern_cache_put(tree, Pattern, Automaton, GroupCount),
-              true
-          )
-        )
-    ).
+    get_or_compile_pattern(tree, Pattern, regexp_compile_tree:compile_ast_tree, Automaton, GroupCount).
 
 %% compile_ast_tree(+AST, -Automaton, -GroupCount)
 %

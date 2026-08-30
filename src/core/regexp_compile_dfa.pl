@@ -54,6 +54,9 @@ re_match(Pattern, Chars) :-
 re_match(Pattern, Chars, Rest) :-
     phrase(re_match(Pattern, _Match), Chars, Rest).
 
+compile_ast_dfa(AST, NFA, 0) :-
+    compile_ast_nfa(AST, NFA).
+
 %% re_match(+Pattern, -Match)//
 % DCG //2 matcher (expanded to 4 args)
 re_match(Pattern, Match, L0, L) :-
@@ -63,24 +66,7 @@ re_match(Pattern, Match, L0, L) :-
     append(Match, L, L0),
     dfa_match_chars(nfa(Start, Accept, States, Transitions), Match).
 re_match(Pattern, Match, L0, L) :-
-    if_(pattern_cache_t(dfa, Pattern, NFA, _Extra),
-        true,
-        ( if_(pattern_cache_t(ast, Pattern, AST, _GroupCount),
-              compile_ast_nfa(AST, NFA),
-              ( pattern_ast(Pattern, AST),
-                compile_ast_nfa(AST, NFA),
-                if_(is_input_arg_t(Pattern),
-                    pattern_cache_put(ast, Pattern, AST, 0),
-                    true
-                )
-              )
-          ),
-          if_(is_input_arg_t(Pattern),
-              pattern_cache_put(dfa, Pattern, NFA, 0),
-              true
-          )
-        )
-    ),
+    get_or_compile_pattern(dfa, Pattern, regexp_compile_dfa:compile_ast_dfa, NFA, _),
     append(Match, L, L0),
     dfa_match_chars(NFA, Match).
 

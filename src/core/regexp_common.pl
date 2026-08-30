@@ -29,7 +29,8 @@
     pattern_cache_get/4,
     pattern_cache_put/4,
     clear_pattern_cache/1,
-    pattern_cache_info/3
+    pattern_cache_info/3,
+    get_or_compile_pattern/5
 ]).
 
 :- use_module(library(lists)).
@@ -158,6 +159,40 @@ pattern_cache_info(Kind, Count, Keys) :-
         findall(Key, pattern_cache(Kind, Key, _, _), Keys)
     ),
     length(Keys, Count).
+
+%% get_or_compile_pattern(+EngineKind, +Pattern, +CompileAstGoal, -CompiledValue, -Extra)
+%
+% Higher-order pattern cache manager shared across all regular expression engines.
+%
+% Resolves input `Pattern` to `CompiledValue` and metadata `Extra` using a 3-tier strategy:
+% 1. **Engine Cache Hit**: If `pattern_cache(EngineKind, Pattern, CompiledValue, Extra)` exists, return it directly ($O(1)$).
+% 2. **AST Cache Hit**: If `pattern_cache(ast, Pattern, AST, Extra)` exists, invoke `call(CompileAstGoal, AST, CompiledValue, Extra)` and cache the compiled result under `EngineKind`.
+% 3. **Cache Miss**: Parse `Pattern` into `AST` via `pattern_ast/2`, compile via `call(CompileAstGoal, AST, CompiledValue, Extra)`, and cache both the `AST` and `CompiledValue`.
+%
+% Reification & Higher-Order Execution:
+% - Uses `if_/3` reification via `pattern_cache_t/5` and `is_input_arg_t/2` to eliminate cuts (`!`).
+% - Uses `call(CompileAstGoal, AST, CompiledValue, Extra)` to invoke the engine-specific compiler predicate dynamically.
+get_or_compile_pattern(EngineKind, Pattern, CompileAstGoal, CompiledValue, Extra) :-
+    if_(pattern_cache_t(EngineKind, Pattern, CompiledValue, Extra),
+        true,
+        get_or_compile_pattern_miss(EngineKind, Pattern, CompileAstGoal, CompiledValue, Extra)
+    ).
+
+get_or_compile_pattern_miss(EngineKind, Pattern, CompileAstGoal, CompiledValue, Extra) :-
+    if_(pattern_cache_t(ast, Pattern, AST, Extra),
+        call(CompileAstGoal, AST, CompiledValue, Extra),
+        ( pattern_ast(Pattern, AST),
+          call(CompileAstGoal, AST, CompiledValue, Extra),
+          if_(is_input_arg_t(Pattern),
+              pattern_cache_put(ast, Pattern, AST, Extra),
+              true
+          )
+        )
+    ),
+    if_(is_input_arg_t(Pattern),
+        pattern_cache_put(EngineKind, Pattern, CompiledValue, Extra),
+        true
+    ).
 
 %% re_group(+NamedGroups, +Name, -Value)
 %

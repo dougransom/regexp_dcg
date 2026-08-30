@@ -128,20 +128,12 @@ is_compiled_t(compiled(_, _), true).
 is_compiled_t(Pattern, false) :-
     dif(Pattern, compiled(_, _)).
 
+compile_ast_dcg(AST, Goal, GroupCount) :-
+    ast_dcg_goal(AST, 0, GroupCount, Goal).
+
 pattern_compiled_cache(Pattern, Goal, GroupCount) :-
     to_chars(Pattern, Key),
-    if_(pattern_cache_t(dcg, Key, Goal0, GroupCount0),
-        ( Goal = Goal0, GroupCount = GroupCount0 ),
-        ( if_(pattern_cache_t(ast, Key, AST, GroupCount),
-              ast_dcg_goal(AST, 0, GroupCount, Goal),
-              ( pattern_ast(Pattern, AST),
-                ast_dcg_goal(AST, 0, GroupCount, Goal),
-                pattern_cache_put(ast, Key, AST, GroupCount)
-              )
-          ),
-          pattern_cache_put(dcg, Key, Goal, GroupCount)
-        )
-    ).
+    get_or_compile_pattern(dcg, Key, regexp_compile_dcg:compile_ast_dcg, Goal, GroupCount).
 
 %% re_clear_cache
 %
