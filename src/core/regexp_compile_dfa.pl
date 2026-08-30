@@ -41,7 +41,7 @@
 :- use_module(regexp_ast, [re_ast_chars/3, is_ast/1]).
 :- use_module(regexp_common).
 
-:- dynamic(dfa_pattern_cache/2).
+
 
 
 
@@ -63,22 +63,26 @@ re_match(Pattern, Match, L0, L) :-
     append(Match, L, L0),
     dfa_match_chars(nfa(Start, Accept, States, Transitions), Match).
 re_match(Pattern, Match, L0, L) :-
-    if_(dfa_pattern_cache_t(Pattern, NFA),
+    if_(pattern_cache_t(dfa, Pattern, NFA, _Extra),
         true,
-        ( pattern_ast(Pattern, AST),
-          compile_ast_nfa(AST, NFA),
+        ( if_(pattern_cache_t(ast, Pattern, AST, _GroupCount),
+              compile_ast_nfa(AST, NFA),
+              ( pattern_ast(Pattern, AST),
+                compile_ast_nfa(AST, NFA),
+                if_(is_input_arg_t(Pattern),
+                    pattern_cache_put(ast, Pattern, AST, 0),
+                    true
+                )
+              )
+          ),
           if_(is_input_arg_t(Pattern),
-              assertz(dfa_pattern_cache(Pattern, NFA)),
+              pattern_cache_put(dfa, Pattern, NFA, 0),
               true
           )
         )
     ),
     append(Match, L, L0),
     dfa_match_chars(NFA, Match).
-
-dfa_pattern_cache_t(Pattern, NFA, true) :-
-    nonvar(Pattern), dfa_pattern_cache(Pattern, NFA), !.
-dfa_pattern_cache_t(_Pattern, _NFA, false).
 
 dfa_match_chars(NFA, Match) :-
     to_chars(Match, Chars),
@@ -103,6 +107,9 @@ re_match_groups_dcg(Pattern, _Match, _Groups), _S --> _S,
     { domain_error(dfa_group_extraction, nfa(Start, Accept, States, Transitions)) }.
 re_match_groups_dcg(Pattern, _Match, _Groups), _S --> _S,
     { domain_error(dfa_group_extraction, Pattern) }.
+
+re_group(_NamedGroups, _Name, _Value) :-
+    domain_error(dfa_group_extraction, re_group).
 
 %% re_match_named(+Pattern, ?Chars, -Match, -NamedGroups)
 re_match_named(Pattern, Chars, Match, NamedGroups) :-

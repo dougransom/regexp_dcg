@@ -23,7 +23,13 @@
     match_class_t/3,
     match_class_ci/2,
     match_class_ci_t/3,
-    is_input_arg_t/2
+    is_input_arg_t/2,
+    pattern_cache/4,
+    pattern_cache_t/5,
+    pattern_cache_get/4,
+    pattern_cache_put/4,
+    clear_pattern_cache/1,
+    pattern_cache_info/3
 ]).
 
 :- use_module(library(lists)).
@@ -72,13 +78,86 @@ pattern_ast(Pattern, AST) :-
     to_chars(Pattern, Chars),
     phrase(re_ast_chars(AST), Chars).
 
+:- dynamic(pattern_cache/4).
+
+/**
+  ### Unified Multi-Engine Pattern Caching System
+
+  To eliminate redundant pattern parsing and automaton compilation overhead across
+  regular expression engines (`regexp_tree`, `regexp_dcg`, `regexp_dfa`), `regexp_common`
+  provides a centralized dynamic pattern cache database `pattern_cache/4`.
+
+  #### Caching Policy:
+  1. **Multi-Stage Caching**:
+     - **AST Tier (`Kind = ast`)**: Stores parsed abstract syntax tree terms (`pattern_cache(ast, Key, AST, GroupCount)`). This tier allows any matching engine to reuse previously parsed ASTs regardless of which engine parsed the pattern string first.
+     - **Engine Tier (`Kind = tree | dcg | dfa`)**: Stores pre-compiled engine structures (`pattern_cache(tree, Key, Automaton, GroupCount)`). On cache hits, matching bypasses both pattern parsing AND tree compilation, reaching $O(1)$ dispatch.
+
+  2. **Lookup & Indexing**:
+     - First-argument indexing on `Kind` ensures instant lookup without scanning unrelated engine entries.
+     - Lookups use reified predicates (such as `pattern_cache_t/5`) compatible with `library(reif)` and `if_/3` conditionals.
+
+  3. **Cache Invalidation & Clearing**:
+     - `clear_pattern_cache(Kind)` clears entries for a specific engine (`tree`, `dcg`, `dfa`, `ast`).
+     - `clear_pattern_cache(all)` clears all pattern cache entries globally across all engines.
+*/
+
 %% is_input_arg_t(+Arg, -Truth)
 %
 % Reified test for whether `Arg` is an instantiated input string (character list) or atom.
+%
+% Reification Explanation:
+% Designed specifically for `library(reif)`'s `if_/3` conditional. Binds `Truth` to `true`
+% if `Arg` is a valid input string (character list `list_si` or atom `atom_si`), or `false` otherwise.
 is_input_arg_t(Arg, true) :-
     nonvar(Arg),
     ( list_si(Arg) ; atom_si(Arg) ), !.
 is_input_arg_t(_Arg, false).
+
+%% pattern_cache_t(+Kind, +Key, -Value, -Extra, -Truth)
+%
+% Reified truth-value helper for querying dynamic `pattern_cache/4` facts under `library(reif)`.
+%
+% Reification Explanation:
+% `if_/3` requires a condition goal whose final argument unifies with `true` or `false`.
+% Because standard dynamic database operations (`clause`, `\+`) are non-reified, `pattern_cache_t/5`
+% encapsulates the double-clause pattern:
+% - Clause 1: If `pattern_cache(Kind, Key, Value, Extra)` exists in the dynamic database, `Truth` unifies with `true` and binds `Value` and `Extra`.
+% - Clause 2: If `\+ pattern_cache(Kind, Key, _, _)` holds, `Truth` unifies with `false`.
+pattern_cache_t(Kind, Key, Value, Extra, true) :-
+    pattern_cache(Kind, Key, Value, Extra).
+pattern_cache_t(Kind, Key, _Value, _Extra, false) :-
+    \+ pattern_cache(Kind, Key, _, _).
+
+%% pattern_cache_get(+Kind, +Key, -Value, -Extra)
+%
+% Direct lookup for dynamic `pattern_cache(Kind, Key, Value, Extra)` fact.
+pattern_cache_get(Kind, Key, Value, Extra) :-
+    pattern_cache(Kind, Key, Value, Extra).
+
+%% pattern_cache_put(+Kind, +Key, +Value, +Extra)
+%
+% Store entry `Value` with metadata `Extra` into `pattern_cache/4` database.
+pattern_cache_put(Kind, Key, Value, Extra) :-
+    assertz(pattern_cache(Kind, Key, Value, Extra)).
+
+%% clear_pattern_cache(+Kind)
+%
+% Clear pattern cache entries for engine `Kind` or all engines (`Kind = all`).
+clear_pattern_cache(all) :-
+    !,
+    retractall(pattern_cache(_, _, _, _)).
+clear_pattern_cache(Kind) :-
+    retractall(pattern_cache(Kind, _, _, _)).
+
+%% pattern_cache_info(+Kind, -Count, -Keys)
+%
+% Retrieve count and list of cached keys for engine `Kind` or all engines (`Kind = all`).
+pattern_cache_info(Kind, Count, Keys) :-
+    if_(Kind = all,
+        findall(Key, pattern_cache(_, Key, _, _), Keys),
+        findall(Key, pattern_cache(Kind, Key, _, _), Keys)
+    ),
+    length(Keys, Count).
 
 %% re_group(+NamedGroups, +Name, -Value)
 %

@@ -185,9 +185,7 @@
 
 :- use_module(regexp_ast, [re_ast_chars//1, is_ast/1]).
 :- use_module(regexp_common).
-:- use_module(regexp_compile_tree, [compile_ast_tree/3, regex_tree_run/5]).
-
-:- dynamic(tree_pattern_cache/3).
+:- use_module(regexp_compile_tree, [compile_ast_tree/3, get_tree_automaton/3, regex_tree_run/5]).
 
 %% Standard Engine Aliases
 re_match(Pattern, Chars) :- re_tree_match(Pattern, Chars).
@@ -198,26 +196,30 @@ re_match_groups(Pattern, Arg2, Arg3, Arg4, Arg5) :- re_tree_match_groups(Pattern
 re_match_named(Pattern, Chars, Match, Named) :- re_tree_match_named(Pattern, Chars, Match, Named).
 re_match_named(Pattern, Arg2, Arg3, Arg4, Arg5) :- re_tree_match_named(Pattern, Arg2, Arg3, Arg4, Arg5).
 re_compile(Pattern, Compiled) :- re_tree_compile(Pattern, Compiled).
-re_clear_cache :- re_tree_clear_cache.
-re_cache_info(Count, Keys) :- re_tree_cache_info(Count, Keys).
+re_clear_cache :- clear_pattern_cache(all).
+re_cache_info(Count, Keys) :- pattern_cache_info(all, Count, Keys).
 
 %% re_tree_clear_cache
+%
+% Clears dynamic pattern cache entries for the Rational Tree Automaton engine.
 re_tree_clear_cache :-
-    retractall(tree_pattern_cache(_, _, _)).
+    clear_pattern_cache(tree).
 
 %% re_tree_cache_info(-Count, -Keys)
+%
+% Retrieves count and list of pattern keys currently cached for the Rational Tree Automaton engine.
 re_tree_cache_info(Count, Keys) :-
-    findall(Key, tree_pattern_cache(Key, _, _), Keys),
-    length(Keys, Count).
+    pattern_cache_info(tree, Count, Keys).
 
 %% re_tree_group(+NamedGroups, +Name, -Value)
 re_tree_group(NamedGroups, Name, Value) :-
     re_group(NamedGroups, Name, Value).
 
 %% re_tree_compile(+Pattern, -CompiledTerm)
+%
+% Pre-compiles `Pattern` into a reusable `compiled_tree(Automaton, GroupCount)` term structure.
 re_tree_compile(Pattern, compiled_tree(Automaton, GroupCount)) :-
-    pattern_ast(Pattern, AST),
-    compile_ast_tree(AST, Automaton, GroupCount).
+    get_tree_automaton(Pattern, Automaton, GroupCount).
 
 %% re_tree_match(+Pattern, ?Chars)
 re_tree_match(Pattern, Chars) :-
@@ -273,39 +275,6 @@ re_tree_match_named_impl(Pattern, Input, Match, NamedGroups, Rest) :-
     state_named(SF, NamedGroups),
     extract_match(Chars, Rest, Match).
 
-/* Internal Helpers */
 
-get_tree_automaton(Pattern, Automaton, GroupCount) :-
-    if_(var_t(Pattern),
-        instantiation_error(get_tree_automaton/3),
-        if_(compiled_tree_t(Pattern),
-            Pattern = compiled_tree(Automaton, GroupCount),
-            get_string_tree_automaton(Pattern, Automaton, GroupCount)
-        )
-    ).
-
-compiled_tree_t(compiled_tree(_, _), true).
-compiled_tree_t(Pattern, false) :-
-    Pattern \= compiled_tree(_, _).
-
-var_t(X, true) :- var(X).
-var_t(X, false) :- nonvar(X).
-
-get_string_tree_automaton(Pattern, Automaton, GroupCount) :-
-    if_(tree_pattern_cache_t(Pattern, AST, GroupCount),
-        compile_ast_tree(AST, Automaton, GroupCount),
-        ( pattern_ast(Pattern, AST),
-          compile_ast_tree(AST, Automaton, GroupCount),
-          if_(is_input_arg_t(Pattern),
-              assertz(tree_pattern_cache(Pattern, AST, GroupCount)),
-              true
-          )
-        )
-    ).
-
-tree_pattern_cache_t(Pattern, AST, GroupCount, true) :-
-    tree_pattern_cache(Pattern, AST, GroupCount).
-tree_pattern_cache_t(Pattern, _AST, _GroupCount, false) :-
-    \+ tree_pattern_cache(Pattern, _, _).
 
 

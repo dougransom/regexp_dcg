@@ -59,6 +59,7 @@
 */
 :- module(regexp_compile_tree, [
     compile_ast_tree/3,
+    get_tree_automaton/3,
     regex_tree_run/5,
     match_cond/3,
     match_cond_empty/2
@@ -69,6 +70,7 @@
 :- use_module(library(si)).
 :- use_module(library(dif)).
 :- use_module(library(clpz)).
+:- use_module(library(error)).
 :- use_module(regexp_common, [
     match_builtin_t/3,
     char_range_t/4,
@@ -78,8 +80,78 @@
     char_equal_ci_t/3,
     to_chars/2,
     match_class_t/3,
-    match_class_ci_t/3
+    match_class_ci_t/3,
+    pattern_ast/2,
+    is_input_arg_t/2,
+    pattern_cache_t/5,
+    pattern_cache_put/4,
+    clear_pattern_cache/1,
+    pattern_cache_info/3
 ]).
+
+/**
+  ### Multi-Tier Pattern Cache for Tree Automata
+
+  `get_tree_automaton/3` resolves an input `Pattern` (either a pre-compiled `compiled_tree/2` term,
+  a cached pattern string, or a raw string/atom) into an `Automaton` term graph and `GroupCount`.
+
+  #### Caching Execution Flow:
+  1. **Pre-Compiled Term (`compiled_tree(Automaton, GroupCount)`)**: If `Pattern` is already pre-compiled, extraction is instant ($O(1)$).
+  2. **Tree Cache Hit (`pattern_cache(tree, Pattern, Automaton, GroupCount)`)**: If `Pattern` string was previously compiled, the compiled `Automaton` is retrieved directly from `pattern_cache/4`, bypassing both string parsing AND tree compilation ($O(1)$).
+  3. **AST Cache Hit (`pattern_cache(ast, Pattern, AST, GroupCount)`)**: If `Pattern` string AST was parsed by another engine (e.g. `regexp_dcg`), the parsed `AST` is retrieved, compiled via `compile_ast_tree/3`, and the resulting `Automaton` is cached under `pattern_cache(tree, ...)` for subsequent matches.
+  4. **Cache Miss**: String is parsed into `AST` via `pattern_ast/2`, compiled via `compile_ast_tree/3`, and stored in `pattern_cache/4` under both `ast` and `tree` keys.
+*/
+
+%% get_tree_automaton(+Pattern, -Automaton, -GroupCount)
+get_tree_automaton(Pattern, Automaton, GroupCount) :-
+    if_(var_t(Pattern),
+        instantiation_error(get_tree_automaton/3),
+        if_(compiled_tree_t(Pattern),
+            Pattern = compiled_tree(Automaton, GroupCount),
+            get_string_tree_automaton(Pattern, Automaton, GroupCount)
+        )
+    ).
+
+%% compiled_tree_t(+Pattern, -Truth)
+%
+% Reified test for whether `Pattern` is a pre-compiled `compiled_tree(Automaton, GroupCount)` term.
+%
+% Reification Explanation:
+% Designed specifically for `library(reif)`'s `if_/3` conditional. Binds `Truth` to `true` if `Pattern`
+% unifies with `compiled_tree(_, _)`, or `false` if `Pattern` is any other term.
+compiled_tree_t(compiled_tree(_, _), true).
+compiled_tree_t(Pattern, false) :-
+    Pattern \= compiled_tree(_, _).
+
+%% var_t(+Term, -Truth)
+%
+% Reified test for term instantiation (`var` vs `nonvar`).
+%
+% Reification Explanation:
+% Designed specifically for `library(reif)`'s `if_/3` conditional. Binds `Truth` to `true` if `Term` is unbound,
+% or `false` if `Term` is instantiated.
+var_t(X, true) :- var(X).
+var_t(X, false) :- nonvar(X).
+
+get_string_tree_automaton(Pattern, Automaton, GroupCount) :-
+    if_(pattern_cache_t(tree, Pattern, Automaton, GroupCount),
+        true,
+        ( if_(pattern_cache_t(ast, Pattern, AST, GroupCount),
+              compile_ast_tree(AST, Automaton, GroupCount),
+              ( pattern_ast(Pattern, AST),
+                compile_ast_tree(AST, Automaton, GroupCount),
+                if_(is_input_arg_t(Pattern),
+                    pattern_cache_put(ast, Pattern, AST, GroupCount),
+                    true
+                )
+              )
+          ),
+          if_(is_input_arg_t(Pattern),
+              pattern_cache_put(tree, Pattern, Automaton, GroupCount),
+              true
+          )
+        )
+    ).
 
 %% compile_ast_tree(+AST, -Automaton, -GroupCount)
 %

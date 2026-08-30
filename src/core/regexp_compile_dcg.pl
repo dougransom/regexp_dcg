@@ -83,8 +83,7 @@
     ast_dcg_goal/4,
     pattern_compiled/3,
     pattern_ast/2,
-    to_chars/2,
-    pattern_cache/3
+    to_chars/2
 ]).
 
 :- use_module(regexp_ast).
@@ -97,7 +96,7 @@
 :- use_module(library(reif)).
 :- use_module(library(dif)).
 
-:- dynamic(pattern_cache/3).
+
 
 /**
   ### Naming Conventions & State Threading
@@ -131,31 +130,31 @@ is_compiled_t(Pattern, false) :-
 
 pattern_compiled_cache(Pattern, Goal, GroupCount) :-
     to_chars(Pattern, Key),
-    if_(pattern_cache_t(Key, Goal0, GroupCount0),
+    if_(pattern_cache_t(dcg, Key, Goal0, GroupCount0),
         ( Goal = Goal0, GroupCount = GroupCount0 ),
-        ( pattern_ast(Pattern, AST),
-          ast_dcg_goal(AST, 0, GroupCount, Goal),
-          assertz(pattern_cache(Key, Goal, GroupCount))
+        ( if_(pattern_cache_t(ast, Key, AST, GroupCount),
+              ast_dcg_goal(AST, 0, GroupCount, Goal),
+              ( pattern_ast(Pattern, AST),
+                ast_dcg_goal(AST, 0, GroupCount, Goal),
+                pattern_cache_put(ast, Key, AST, GroupCount)
+              )
+          ),
+          pattern_cache_put(dcg, Key, Goal, GroupCount)
         )
     ).
 
-pattern_cache_t(Key, Goal, GroupCount, true) :-
-    pattern_cache(Key, Goal, GroupCount), !.
-pattern_cache_t(_Key, _Goal, _GroupCount, false).
-
 %% re_clear_cache
 %
-% Clear all compiled patterns currently stored in the dynamic `pattern_cache/3` database.
+% Clear all compiled patterns currently stored in the dynamic DCG engine cache.
 re_clear_cache :-
-    retractall(pattern_cache(_, _, _)).
+    clear_pattern_cache(dcg).
 
 %% re_cache_info(-Count, -Keys)
 %
-% Unifies `Count` with the total number of compiled patterns currently in the cache,
+% Unifies `Count` with the total number of compiled patterns currently in the DCG cache,
 % and `Keys` with the list of cached pattern key strings.
 re_cache_info(Count, Keys) :-
-    findall(Key, pattern_cache(Key, _, _), Keys),
-    length(Keys, Count).
+    pattern_cache_info(dcg, Count, Keys).
 
 
 %% re_match(+Pattern, ?Chars)
