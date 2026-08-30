@@ -1,8 +1,91 @@
 /**
-  Provides a rational tree automaton regular expression matching interface for ISO Prolog systems.
+  Provides a Rational Tree Automaton regular expression matching engine for ISO Prolog systems.
 
-  This module compiles regular expressions into rational tree (cyclic term) automata and matches
-  them against character sequences using pure `if_/3` conditionals.
+  This module compiles regular expressions into rational tree (cyclic term graph) automata and matches
+  them against character sequences using pure `if_/3` boolean reification.
+
+  ---
+
+  ### Conceptual Primer: Rational Trees & Rational Tree Automata for Prolog Programmers
+
+  #### 1. What is a Rational Tree?
+  In standard Prolog, data terms are finite trees (e.g. `father(john, bob)`). A **rational tree** (or infinite tree with a finite set of distinct subtrees) is a tree term containing cycles or back-pointers (e.g. `X = f(X)`). Modern ISO Prolog systems (such as Scryer Prolog) natively support rational trees, unification of cyclic terms, and infinite tree traversal without stack overflow.
+
+  #### 2. What is a Rational Tree Automaton?
+  In conventional imperative languages (C/Java/Python), a Finite State Automaton (NFA or DFA) is implemented as a two-dimensional state transition table matrix (`DFA[state][char] -> next_state`).
+
+  In Prolog, a finite state automaton can be represented directly as a **compound term graph** (a tree structure), where:
+  - Each automaton state is a compound term node, such as `sym(Condition, SuccessorState, FailState)`, `alt(NodeA, NodeB)`, or `star(SubNode, Continuation)`.
+  - State transitions are term arguments pointing directly to successor state nodes!
+  - Loop transitions (such as Kleene star `a*`) form cycles in the state graph. In Prolog, these cycles are represented either via continuation structure or via cyclic terms (rational trees) where a node's successor argument refers back to a parent or ancestor term ($X = \text{node}(\dots, X)$).
+
+  #### 3. How Rational Trees Match Patterns
+  Matching a list of characters (`[C1, C2, ...]`) against a rational tree automaton is performed by `regex_tree_run/5`:
+  - At each `sym(Condition, Succ, Fail)` node, character `C1` is tested against `Condition` using pure `if_/3`.
+  - If `Condition` holds (`true`), execution moves to `Succ` consuming character `C1`.
+  - If `Condition` fails (`false`), execution falls back to `Fail` without consuming `C1`.
+  - Matching terminates successfully when reaching `end`, or fails when reaching `stp` (stop).
+
+  ---
+
+  ### Comparative Analysis: Why Rational Tree Automata are Unique & Novel
+
+  | Approach | How State Transitions Are Represented | Strengths & Weaknesses vs. Rational Tree Automata |
+  |---|---|---|
+  | **DFA Matrix Tables** (*Thompson / Hopcroft*) | 2D matrix arrays indexed by state integer and input character code. | **Weakness**: Large memory footprint for Unicode code points ($O(\text{States} \times \text{AlphabetSize})$); slow exponential worst-case pre-compilation (subset construction).<br>**Rational Tree Advantage**: Direct term graph assembly with zero matrix allocation; instant compilation latency. |
+  | **Prolog Backtracking NFAs** (*Pure DCGs*) | Prolog choice-points and clause backtracking (`( A, B ; C )`). | **Weakness**: Pushes choice-point frames onto the Prolog stack; vulnerable to exponential catastrophic backtracking on quantifiers.<br>**Rational Tree Advantage**: Evaluates state transitions deterministically via pure `if_/3` reification, eliminating unnecessary choice-points. |
+  | **Brzozowski Derivatives** | Symbolic term differentiation ($d/da(R) \to R'$) for each input symbol. | **Weakness**: Generates new AST compound terms dynamically for every character processed in the input stream.<br>**Rational Tree Advantage**: Pre-allocates static term-graph continuations; zero term allocation during matching runtime. |
+
+  ---
+
+  ### Architectural Advantages of Rational Tree Automata in Prolog
+
+  1. **$O(1)$ Loop Representation**: Loops (`*`, `+`) are represented directly via continuation structures or cyclic term unification, consuming zero additional heap allocations during iteration.
+  2. **Pure Reified Logic (`if_/3` & `dif/2`)**: Eliminates non-logical cuts (`!`), maintaining logical purity and enabling sound bidirectional matching and static analysis.
+  3. **Native Garbage Collection**: Automata are standard Prolog terms managed automatically by Prolog's native garbage collector without requiring foreign memory pointers or manual deallocation.
+  4. **Seamless Composite Node Integration**: Capturing groups (`cap_open`, `cap_close`), lookahead assertions (`lookahead`, `neg_lookahead`), and non-greedy quantifiers (`lazy_star`) wrap directly into node continuations without altering character condition dispatch.
+  5. **Clause Indexing & Direct Caching**: Pre-compiled rational tree terms can be indexed natively by Prolog's clause indexer or cached directly by pattern string key (`re_tree_compile/2`).
+
+  ---
+
+  ### Compiled Pattern Example: `"a.*b"`
+
+  Below is the compiled rational tree representation generated by `re_tree_compile("a.*b", Tree)` (built via `make tree_doc_examples`):
+
+  ```prolog
+  compiled_tree(
+    sym(char(a),
+      star(
+        sym(dot, end, stp),
+        sym(char(b), end, stp)
+      ),
+      stp
+    ),
+    0
+  )
+  ```
+
+  #### Step-by-Step Execution Trace for Pattern `"a.*b"` on Input `"aXb"`:
+  1. **Initial State**: Input = `['a', 'X', 'b']`. Node = `sym(char(a), Succ1, stp)`.
+  2. **Match `'a'`**: Head `'a'` satisfies `char(a)`. Move to `Succ1 = star(SubNode, Cont)` with remaining input `['X', 'b']`.
+  3. **Greedy Star Iteration**:
+     - `SubNode = sym(dot, end, stp)` matches `'X'`. Remaining input = `['b']`.
+     - `Cont = sym(char(b), end, stp)` matches `'b'`. Remaining input = `[]`.
+  4. **Terminal Node**: Reaches `end` with `Rest = []`. Match succeeds!
+
+  ---
+
+  ### Academic & Literature References
+
+  - **Scryer Prolog Discussion #2758**: [Rational tree automaton regular expression matching in Scryer Prolog](https://github.com/mthom/scryer-prolog/discussions/2758) — Architecture & motivation for rational tree automata in Scryer Prolog.
+  - **Alain Colmerauer (1982)**: [Prolog and Infinite Trees](https://alain.colmerauer.perso.luminy.univ-amu.fr/Publis/InfiniteTrees/InfiniteTrees.pdf) — Foundational paper introducing rational terms and infinite trees in Prolog II.
+  - **Bruno Courcelle (1983)**: [Fundamental properties of infinite trees](https://doi.org/10.1016/0304-3975(83)90059-2) — Mathematical theory of infinite and rational tree structures.
+  - **Janusz A. Brzozowski (1964)**: [Derivatives of Regular Expressions](https://dl.acm.org/doi/10.1145/321239.321249) — Classical paper on regular expression differentiation.
+  - **Wikipedia — Rational Tree**: [Rational tree](https://en.wikipedia.org/wiki/Rational_tree) — Overview of rational tree terms and cyclic graphs.
+  - **Wikipedia — Tree Automaton**: [Tree automaton](https://en.wikipedia.org/wiki/Tree_automaton) — Theoretical overview of tree automata.
+  - **Wikipedia — Regular Expression**: [Regular expression](https://en.wikipedia.org/wiki/Regular_expression) — Automata theory and matching models.
+
+  ---
 
   ### Matching Paradigms
 

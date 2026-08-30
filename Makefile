@@ -5,7 +5,7 @@ export PROLOG_ENGINE ?= scryer
 SCRYER ?= scryer-safe
 PROLOG_AGENT ?= prolog-agent
 
-.PHONY: all test test_regexp test_curr_pred test_exports_match test_format test_regexp_ast test_regexp_dcg test_regexp_compile_dfa test_regexp_tree test_si test_time test_re_token test_international test_toml docs html llms packages package_bakage package_swi clean
+.PHONY: all test test_regexp test_curr_pred test_exports_match test_format test_regexp_ast test_regexp_dcg test_regexp_compile_dfa test_regexp_tree test_si test_time test_re_token test_international test_toml docs html llms tree_doc_examples packages package_bakage package_swi clean
 
 all: test docs
 
@@ -84,10 +84,15 @@ test_toml:
 # Documentation Generation Targets
 # ==============================================================================
 
-docs: llms
+docs: llms tree_doc_examples
 	@echo "=== Generating docs/usage.md ==="
 	$(SCRYER) -g main -g halt generate_intro_md.pl
 	@echo "Docs successfully updated."
+	@echo ""
+
+tree_doc_examples:
+	@echo "=== Generating Rational Tree Automata Doc Examples ==="
+	$(SCRYER) -g main -g halt scripts/generate_tree_doc_examples.pl
 	@echo ""
 
 llms:
