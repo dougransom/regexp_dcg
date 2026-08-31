@@ -312,9 +312,13 @@ char_range_t(Min, Max, Char, Truth) :-
     char_code(Min, MinCode),
     char_code(Max, MaxCode),
     char_code(Char, Code),
+    % Reify lower bound constraint (Code >= MinCode) as boolean integer B1 (0 or 1)
     MinCode #=< Code #<==> B1,
+    % Reify upper bound constraint (Code =< MaxCode) as boolean integer B2 (0 or 1)
     Code #=< MaxCode #<==> B2,
+    % Conjoin both bound checks: B is 1 if both hold, 0 otherwise
     B1 #/\ B2 #<==> B,
+    % Map integer boolean B (1 or 0) to reified truth value Truth (true or false)
     =(B, 1, Truth).
 
 reif_not(true, false).
