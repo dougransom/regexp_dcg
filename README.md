@@ -275,43 +275,12 @@ The regular expression syntax and semantics supported by this library are inspir
 - [Python Source for `re`](https://github.com/python/cpython/tree/3.14/Lib/re)
 - [Python Unit Tests for `re`](https://github.com/python/cpython/blob/3.14/Lib/test/test_re.py)
 
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@type": "SoftwareSourceCode",
-  "name": "pure_regex",
-  "version": "0.1.0.dev5",
-  "description": "A pure, ISO-compliant Definite Clause Grammar (DCG) regular expression engine and tokenizing foundation designed for Scryer Prolog and other ISO-compliant Prolog implementations.",
-  "programmingLanguage": {
-    "@type": "ComputerLanguage",
-    "name": "Prolog",
-    "alternateName": "ISO Prolog"
-  },
-  "runtimePlatform": "Scryer Prolog",
-  "codeRepository": "https://github.com/dougransom/regexp_dcg",
-  "license": "https://unlicense.org",
-  "author": {
-    "@type": "Person",
-    "name": "Doug Ransom"
-  },
-  "keywords": [
-    "prolog",
-    "scryer-prolog",
-    "iso-prolog",
-    "dcg",
-    "regular-expressions",
-    "regex",
-    "parser",
-    "dfa",
-    "pure-prolog",
-    "lexer"
-  ]
-}
-</script>
+---
 
-<!-- Open Graph Metadata -->
-<meta property="og:title" content="pure_regex: ISO Scryer Prolog Regular Expression Engine">
-<meta property="og:description" content="A pure, ISO-compliant Definite Clause Grammar (DCG) regular expression engine for Scryer Prolog supporting backtracking, DFA execution, and cyclic tree automata.">
-<meta property="og:type" content="website">
-<meta property="og:url" content="https://github.com/dougransom/regexp_dcg">
-<meta property="og:site_name" content="pure_regex">
+## Machine-Readable Metadata & Standards
+
+This repository provides structured semantic metadata conforming to standard schemas:
+
+- **Schema.org (JSON-LD)**: [`schema.jsonld`](schema.jsonld) (`SoftwareSourceCode` & `SoftwareApplication`)
+- **CodeMeta 2.0**: [`codemeta.json`](codemeta.json) (Cross-platform software & research metadata standard)
+- **AI / LLM Discovery**: [`llms.txt`](llms.txt) & [`llms-full.txt`](llms-full.txt)
