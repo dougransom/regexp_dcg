@@ -1,1 +1,1 @@
-.agents-toolkit/.agents/AGENTS.md
+.agents/AGENTS.md

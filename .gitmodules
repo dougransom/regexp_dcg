@@ -1,4 +1,0 @@
-[submodule ".agents-toolkit"]
-	path = .agents-toolkit
-	url = https://github.com/dougransom/prolog-agent-toolkit.git
-	branch = DEV202608
