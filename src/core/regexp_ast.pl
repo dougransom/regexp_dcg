@@ -105,15 +105,16 @@ re_alt(AST) -->
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Concatenation: implicit adjacency
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Concatenation: implicit adjacency
 %
 % Important: we ONLY build concat/1 when there are 2+ factors.
 % A single factor is returned as-is.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+% Note: cond_t/4 is also defined and exported by regexp_common. However,
+% regexp_common imports regexp_ast (for re_ast_chars//1 and is_ast/1), creating
+% a circular dependency if regexp_ast were to import regexp_common. To avoid the
+% circular dependency, cond_t/4 is re-defined locally here. If a shared utility
+% module is introduced in the future, this duplication should be removed.
 cond_t(If_1, TrueVal, FalseVal, Val) :-
     if_(If_1, Val = TrueVal, Val = FalseVal).
 
@@ -186,6 +187,9 @@ re_atom(lit(S)) -->
 %% 2. re_tokenIZER (DCG, deterministic, greedy)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+% Cut (correctness): commits to the first re_token//1 match so re_tokens//1
+% does not re-try alternative token parses on backtracking. Tokenization is
+% deterministic by design; if_/3 cannot achieve this greedy commit semantics.
 re_tokens([T|Ts]) --> re_token(T), !, re_tokens(Ts).
 re_tokens([])     --> [].
 
@@ -206,20 +210,31 @@ tk(builtin(not_space),  "\\S").
 
 
 % character class (must come before lbrack/rbrack)
+% Cut (correctness): commits to the class(Items) token once "[" is consumed,
+% preventing backtracking into lbrack/lit alternatives. Pure lookahead with
+% dif/2 cannot consume and un-consume the "[" character across DCG alternatives.
 re_token(class(Items)) -->
     "[",
     class_items(Items),
     "]",
     !.
 
+% Cut (correctness): both lit clauses commit once their mode check (var/nonvar)
+% succeeds and the literal run matches. Without the cut, Prolog would attempt
+% the next re_token clause (escaped) on backtracking, incorrectly re-parsing
+% already-consumed characters. if_/3 cannot gate a DCG alternative after
+% characters have been consumed from the stream.
 re_token(lit(Cs)) -->
-    { var(Cs) },                 % tokenizing
+    { var(Cs) },                 % tokenizing mode
     re_literal_run_recognize(Cs), !.
 
 re_token(lit(Cs)) -->
-    { nonvar(Cs) },              % generating
+    { nonvar(Cs) },              % generating mode
     re_literal_run(Cs), !.
 
+% Cut (correctness): commits to escaped(C) once "\" is consumed. Without the
+% cut, the next clause (dot/tk rules) could re-attempt matching after backtrack,
+% incorrectly treating the escape character as a literal.
 re_token(escaped(C)) -->
     "\\", [C], !.
 
@@ -247,6 +262,9 @@ tk(greater_than, ">").
 look_ahead(T), [T] --> [T].
 
 
+% Cut (correctness): commits to negated class once "^" is consumed; prevents
+% re-parse as a non-negated class containing "^". dif/2 cannot prevent
+% re-entry after the character has been consumed from the DCG stream.
 class_items(Items) -->
     "^", !,
     class_items_rest(Rest),
@@ -276,6 +294,9 @@ class_item(posix(Name)) -->
     posix_name(Name),
     ":]".
 
+% Cut (correctness): commits to range(A,B) once A, "-", B are consumed.
+% Without the cut, backtracking would re-try class_item(char(A)) after
+% consuming A and "-", causing double-parse. dif/2 cannot undo consumed input.
 class_item(range(A,B)) -->
     class_char(A),
     "-",
@@ -301,6 +322,7 @@ posix_name_chars([]) -->
 
 
 
+% Cut (correctness): commits to escaped char interpretation once "\" is consumed.
 class_char(C) -->
     "\\", [C], !.     % escaped char
 
@@ -320,6 +342,10 @@ sequence([]) --> [].
 %% The literal run is from the first literal character to the character
 %% not preceded by a postfix operator.
 
+% Cut (correctness): commits to a multi-char literal run when the first character
+% is a non-metachar NOT followed by a postfix operator. Without the cut,
+% backtracking would re-try the single-char clause, causing the same character
+% to be consumed twice. if_/3 cannot prevent re-entry after DCG stream consumption.
 re_literal_run_recognize([C|Cs]) -->
     [C],
     { metachar_t(C, false) },
@@ -332,6 +358,7 @@ re_literal_run_recognize([C]) -->
     { metachar_t(C, false) },
     postfix_next_char.
 
+% Cut (correctness): same greedy-commit rationale as re_literal_run_recognize//1.
 re_literal_run_more([C|Cs]) -->
     [C],
     { metachar_t(C, false) },
@@ -566,4 +593,5 @@ ast_leaf(anchor(_)).
 ast_leaf(boundary(_)).
 ast_leaf(escaped(_)).
 ast_leaf(class(_)).
+ast_leaf(builtin(_)).  % builtin(Class) is produced by \d, \w, \s etc.
 ast_leaf(flags(_)).

@@ -5,7 +5,7 @@
 :- use_module(library(dcgs)).
 :- use_module(library(lists)).
 :- use_module(library(charsio)).
-:- use_module('../../src/regexp').
+:- use_module('../../src/core/regexp_tree'). % avoids regexp.pl entry-point multifile compat issue in Scryer v0.10
 
 %% tokenize_toml(+Chars, -Tokens)
 %

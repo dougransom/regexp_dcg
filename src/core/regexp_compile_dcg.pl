@@ -394,6 +394,11 @@ dcg_class(Items, S0, S0) -->
 dcg_lookahead(GSub, S0, SF, L0, L0) :-
     phrase(call(GSub, S0, SF), L0, _).
 
+% \+ (correctness): Negative lookahead semantics require testing whether a sub-pattern
+% FAILS to match. `if_/3` cannot negate a `phrase/3` goal because `phrase/3` is not a
+% reified predicate (it succeeds or fails, it does not bind a Truth argument).
+% Standard NAF (`\+`) is logically sound here because `L0` (the lookahead input) is
+% fully ground at call time, making the `phrase/3` call deterministic.
 dcg_neg_lookahead(GSub, S0, S0, L0, L0) :-
     \+ phrase(call(GSub, S0, _), L0, _).
 
@@ -417,11 +422,11 @@ dcg_quant_lazy(GExpr, M, N, S0, SF) -->
     dcg_quant_loop_lazy(GExpr, 0, M, Max, S0, SF).
 
 dcg_quant_loop_lazy(_GExpr, Count, Min, _Max, S, S) -->
-    { Count >= Min }.
+    { Count #>= Min }.
 dcg_quant_loop_lazy(GExpr, Count, Min, Max, S0, SF) -->
-    { (Max == inf ; Count < Max) },
+    { (Max == inf ; Count #< Max) },
     call(GExpr, S0, S1),
-    { Count1 is Count + 1 },
+    { Count1 #= Count + 1 },
     dcg_quant_loop_lazy(GExpr, Count1, Min, Max, S1, SF).
 
 /* ---------- Named capture combinator ---------- */

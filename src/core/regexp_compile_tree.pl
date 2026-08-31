@@ -380,6 +380,12 @@ regex_tree_run(scoped_flags(Flags, SubNode, Next), S0, SF) -->
     },
     regex_tree_run(Next, SFinal, SF).
 
+% Note on ->: Soft-cut is used here because `Truth` is a ground boolean atom
+% after `backref_matched_t/5` returns. The then-branch contains DCG goals
+% (`set_remaining//1`, `regex_tree_run//3`) that cannot be expressed as the
+% true/false branches of `if_/3` (which requires plain Prolog goals, not DCG
+% non-terminals inside a `{ }` curly block). `if_/3` could be used if the
+% branches contained only plain goals, but DCG threading prevents it here.
 regex_tree_run(backref(Idx, Next), S0, SF) -->
     { S0 = state(_, Groups, _, _) },
     state_remaining(Chars),
@@ -390,6 +396,11 @@ regex_tree_run(backref(Idx, Next), S0, SF) -->
     ;   { fail }
     ).
 
+% Cut (correctness): The zero-width `sym(Cond, ...)` clause must commit when
+% `is_zero_width_cond(Cond)` succeeds, preventing fallthrough into the
+% non-empty-input clause below. Both clauses share the same head functor
+% `sym/3`, so first-argument indexing cannot distinguish them. `if_/3` cannot
+% be used because both DCG rules consume no characters and share the same head.
 regex_tree_run(sym(Cond, Succ, Fail), S0, SF) -->
     { is_zero_width_cond(Cond) },
     !,
@@ -431,6 +442,10 @@ state_remaining(Chars, Chars, Chars).
 % Updates DCG input character stream to Rest.
 set_remaining(Rest, _OldChars, Rest).
 
+% Cut (correctness): `append/3` with ground `Chars` and ground `Captured` is
+% deterministic (at most one prefix split). The cut prevents fallthrough to the
+% `false` clause after `true` is established. `if_/3` cannot be used because
+% `chars_si/1` is not a reified predicate with a Truth argument.
 backref_matched_t(Idx, Groups, Chars, RestChars, true) :-
     nth0(Idx, Groups, Captured),
     chars_si(Captured),
@@ -516,6 +531,10 @@ set_group_start(Groups, Idx, RemainingChars, NewGroups) :-
         replace_nth(Groups, Idx, capture(RemainingChars, _), NewGroups)
     ).
 
+% Cut (correctness): once `CapChars == RemainingChars` holds for the indexed group,
+% there is exactly one such group entry. The cut prevents Prolog from also
+% returning `false` on backtracking. `if_/3` cannot be used because `nth0/3`
+% and `==/2` are not reified predicates.
 group_captured_t(Groups, Idx, RemainingChars, true) :-
     nth0(Idx, Groups, capture(CapChars, _)),
     CapChars == RemainingChars, !.
@@ -528,6 +547,8 @@ set_group_end(Full, Groups, Idx, RemainingChars, NewGroups) :-
         NewGroups = Groups
     ).
 
+% Cut (correctness): same rationale as group_captured_t/4. Once `capture(StartChars, _)`
+% is found at `Idx`, the result is determined. The cut prevents double-evaluation.
 group_start_captured_t(Groups, Idx, StartChars, true) :-
     nth0(Idx, Groups, capture(StartChars, _)), !.
 group_start_captured_t(_Groups, _Idx, _StartChars, false).
@@ -542,6 +563,8 @@ set_named_end(Full, Named, Name, _, RemainingChars, [Name-Substr|Named1]) :-
         Named1 = Named
     ).
 
+% Cut (correctness): same rationale as group_captured_t/4. Named group lookup
+% via `member/2` finds at most one entry per name; cut prevents double-evaluation.
 named_captured_t(Named, Name, StartChars, true) :-
     member(Name-capture(StartChars, _), Named), !.
 named_captured_t(_Named, _Name, _StartChars, false).

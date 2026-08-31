@@ -110,6 +110,12 @@ pattern_ast(Pattern, AST) :-
 % Reification Explanation:
 % Designed specifically for `library(reif)`'s `if_/3` conditional. Binds `Truth` to `true`
 % if `Arg` is a valid input string (character list `list_si` or atom `atom_si`), or `false` otherwise.
+%
+% Cut + disjunction (correctness): `list_si/1` and `atom_si/1` are deterministic type-tests on
+% ground terms (we already checked `nonvar(Arg)`). The disjunction `( list_si(Arg) ; atom_si(Arg) )`
+% checks two mutually exclusive types. The cut commits to `true` once either type matches,
+% preventing fallthrough to the `false` clause. `if_/3` cannot be used here because neither
+% `list_si/1` nor `atom_si/1` are reified predicates with a Truth argument.
 is_input_arg_t(Arg, true) :-
     nonvar(Arg),
     ( list_si(Arg) ; atom_si(Arg) ), !.
