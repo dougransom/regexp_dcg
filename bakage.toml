@@ -1,5 +1,5 @@
 name = "pure_regex"
-version = "0.1.2.dev1"
+version = "0.1.2"
 description = "Pure ISO Prolog regular expression engine and tokenizing foundation providing DCG non-terminal and direct list matching"
 authors = ["Doug Ransom"]
 modules = ["src/pure_regex.pl", "src/regexp.pl", "src/core/regexp_tree.pl", "src/core/regexp_compile_dcg.pl", "src/core/regexp_compile_tree.pl", "src/core/regexp_compile_dfa.pl"]

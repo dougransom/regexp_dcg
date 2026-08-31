@@ -1,5 +1,5 @@
 NAME = pure_regex
-VERSION = 0.1.2.dev1
+VERSION = 0.1.2
 
 export PROLOG_ENGINE ?= scryer
 SCRYER ?= scryer-safe

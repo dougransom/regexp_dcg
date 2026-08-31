@@ -1,5 +1,5 @@
 name("pure_regex").
-version("0.1.2.dev1").
+version("0.1.2").
 main_file("src/pure_regex.pl").
 license(name("Unlicense"), path("./UNLICENSE")).
 dependencies([]).
