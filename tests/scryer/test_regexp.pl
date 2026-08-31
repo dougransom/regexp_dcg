@@ -1,6 +1,5 @@
 :- use_module('../testing').
 :- use_module('../../src/pure_regex').
-:- use_module('../../src/regexp').
 :- use_module('../../src/core/regexp_compile_dcg').
 :- use_module(library(dcgs)).
 
@@ -16,13 +15,6 @@ test("default tree engine matching via pure_regex facade",
       Rest == "c"
     )).
 
-test("default tree engine matching via legacy regexp facade",
-    ( regexp:re_compile("a*b", CompiledTree),
-      CompiledTree = compiled_tree(_, _),
-      regexp:re_match("a*b", "aaabc", Rest),
-      Rest == "c"
-    )).
-
 test("direct substitute DCG engine matching",
     ( regexp_compile_dcg:re_compile("a*b", Compiled),
       phrase(regexp_compile_dcg:re_match(Compiled, Match), "aaabc", Rest),
@@ -30,7 +22,7 @@ test("direct substitute DCG engine matching",
       Rest == "c"
     )).
 
-engine(regexp).
+engine(pure_regex).
 
 :- use_module('../portable/test_regexp_compile_shared').
 

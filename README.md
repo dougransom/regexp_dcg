@@ -81,7 +81,7 @@ Bakage is **optional**. Because `pure_regex` is written in pure ISO Prolog, you 
 
 ## Primary Interface (`pure_regex`)
 
-The main entry point for matching patterns is the [`pure_regex`](src/pure_regex.pl) module (with [`regexp`](src/regexp.pl) provided as a backwards-compatible alias). By default, it uses the Rational Tree Automaton implementation (`regexp_tree`). You can switch the active engine globally by asserting `user:regexp_mode(dcg)` or `user:regexp_mode(dfa)` prior to or after importing, or per-call via mode options (`[mode(dcg)]`, `[mode(dfa)]`).
+The main entry point for matching patterns is the [`pure_regex`](src/pure_regex.pl) module. By default, it uses the Rational Tree Automaton implementation (`regexp_tree`). You can switch the active engine globally by asserting `user:regexp_mode(dcg)` or `user:regexp_mode(dfa)` prior to or after importing, or per-call via mode options (`[mode(dcg)]`, `[mode(dfa)]`).
 
 ```prolog
 % Global mode selection before or after importing pure_regex:

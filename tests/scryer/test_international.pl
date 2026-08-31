@@ -1,5 +1,5 @@
 :- use_module('../testing').
-:- use_module('../../src/core/regexp_tree').   % load tree engine directly (avoids regexp.pl entry-point compat issue)
+:- use_module('../../src/core/regexp_tree').
 :- use_module('../../src/core/regexp_compile_dfa').
 :- use_module(library(lists)).
 :- use_module(library(dcgs)).

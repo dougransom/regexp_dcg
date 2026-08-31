@@ -28,13 +28,11 @@ test("Public user interfaces are identical across all modules",
         ],
         % Read exports from active engine files
         module_exports('src/pure_regex.pl', PureRegexpExports),
-        module_exports('src/regexp.pl', RegexpExports),
         module_exports('src/core/regexp_compile_dfa.pl', DfaExports),
         module_exports('src/core/regexp_tree.pl', TreeExports),
 
-        % 1. All public interface predicates must be exported by pure_regex.pl and regexp.pl
+        % 1. All public interface predicates must be exported by pure_regex.pl
         maplist(member_of(PureRegexpExports), PublicInterface),
-        maplist(member_of(RegexpExports), PublicInterface),
         
         % 2. All public interface predicates must be exported by the DFA engine
         maplist(member_of(DfaExports), PublicInterface),
