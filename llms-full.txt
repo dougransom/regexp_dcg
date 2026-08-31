@@ -869,3 +869,13 @@ This repository provides structured semantic metadata conforming to standard sch
 
 - **CodeMeta 2.0 (Schema.org JSON-LD)**: [`codemeta.json`](codemeta.json) (Cross-platform software & research metadata standard)
 - **AI / LLM Discovery**: [`llms.txt`](llms.txt) & [`llms-full.txt`](llms-full.txt)
+
+---
+
+## Development & Methodology
+
+This library was developed collaboratively through **human-guided agentic AI workflows**:
+- **Prompt-Driven Implementation**: Code, Definite Clause Grammars (DCGs), tests, and comments were authored and iteratively modified by prompting AI coding agents under human direction.
+- **Declarative & Purity Standards**: Implementations strictly adhere to ISO Prolog and Scryer Prolog conventions (pure character lists as `chars`, `if_/3` from `library(reif)`, logical purity, and no impure state modifications).
+- **Test-Driven Verification**: Quality and correctness across all three engines (Rational Tree, DCG, DFA) are verified through automated test suites (`make test`).
+

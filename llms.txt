@@ -60,3 +60,7 @@ All engines maintain identical 1:1 API signatures:
 - [Machine-Readable Metadata (CodeMeta / JSON-LD)](codemeta.json): CodeMeta 2.0 / Schema.org structured metadata for `pure_regex`.
 - [README](README.md): Project overview and Bakage installation guide.
 - [Scryer Prolog Standards](.agents/skills/scryer-prolog-standards/SKILL.md): Repository coding rules and ISO Prolog standards.
+
+## Development & Methodology
+
+Developed collaboratively via human-guided agentic AI workflows, prompting agents to author and modify code, DCGs, tests, and comments under strict ISO Prolog purity guidelines and automated test suites.
