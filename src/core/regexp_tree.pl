@@ -187,17 +187,27 @@
 :- use_module(regexp_common).
 :- use_module(regexp_compile_tree, [compile_ast_tree/3, get_tree_automaton/3, regex_tree_run//3]).
 
-%% Standard Engine Aliases
-re_match(Pattern, Chars) :- re_tree_match(Pattern, Chars).
-re_match(Pattern, Chars, Rest) :- re_tree_match(Pattern, Chars, Rest).
-re_match(Pattern, Match, S0, S) :- re_tree_match_groups_impl(Pattern, S0, Match, _Groups, S).
-re_match_groups(Pattern, Chars, Match, Groups) :- re_tree_match_groups(Pattern, Chars, Match, Groups).
-re_match_groups(Pattern, Arg2, Arg3, Arg4, Arg5) :- re_tree_match_groups(Pattern, Arg2, Arg3, Arg4, Arg5).
-re_match_named(Pattern, Chars, Match, Named) :- re_tree_match_named(Pattern, Chars, Match, Named).
-re_match_named(Pattern, Arg2, Arg3, Arg4, Arg5) :- re_tree_match_named(Pattern, Arg2, Arg3, Arg4, Arg5).
-re_compile(Pattern, Compiled) :- re_tree_compile(Pattern, Compiled).
-re_clear_cache :- clear_pattern_cache(all).
-re_cache_info(Count, Keys) :- pattern_cache_info(all, Count, Keys).
+%% Standard Engine Aliases for shared test runner compatibility
+re_match(Pattern, Input) :-
+    re_tree_match(Pattern, Input).
+re_match(Pattern, Input, Rest) :-
+    re_tree_match(Pattern, Input, Rest).
+re_match(Pattern, Match, S0, S) :-
+    re_tree_match_groups_impl(Pattern, S0, Match, _Groups, S).
+re_match_groups(Pattern, Input, Match, Groups) :-
+    re_tree_match_groups(Pattern, Input, Match, Groups).
+re_match_groups(Pattern, InputOrMatch, MatchOrGroups, GroupsOrS0, RestOrS) :-
+    re_tree_match_groups(Pattern, InputOrMatch, MatchOrGroups, GroupsOrS0, RestOrS).
+re_match_named(Pattern, Input, Match, NamedGroups) :-
+    re_tree_match_named(Pattern, Input, Match, NamedGroups).
+re_match_named(Pattern, InputOrMatch, MatchOrNamed, NamedOrS0, RestOrS) :-
+    re_tree_match_named(Pattern, InputOrMatch, MatchOrNamed, NamedOrS0, RestOrS).
+re_compile(Pattern, CompiledTerm) :-
+    re_tree_compile(Pattern, CompiledTerm).
+re_clear_cache :-
+    clear_pattern_cache(all).
+re_cache_info(Count, Keys) :-
+    pattern_cache_info(all, Count, Keys).
 
 %% re_tree_clear_cache
 %
@@ -221,38 +231,49 @@ re_tree_group(NamedGroups, Name, Value) :-
 re_tree_compile(Pattern, compiled_tree(Automaton, GroupCount)) :-
     get_tree_automaton(Pattern, Automaton, GroupCount).
 
-%% re_tree_match(+Pattern, ?Chars)
-re_tree_match(Pattern, Chars) :-
-    re_tree_match(Pattern, Chars, []).
+%% re_tree_match(+Pattern, ?Input)
+% Direct 2-arg anchored matcher (Input must match Pattern completely).
+re_tree_match(Pattern, Input) :-
+    re_tree_match(Pattern, Input, []).
 
-%% re_tree_match(+Pattern, ?Chars, -Rest)
-re_tree_match(Pattern, Chars, Rest) :-
-    re_tree_match_groups_impl(Pattern, Chars, _Match, _Groups, Rest).
+%% re_tree_match(+Pattern, ?Input, -Rest)
+% Direct 3-arg unanchored matcher (matches Pattern against Input, returning unparsed Rest).
+re_tree_match(Pattern, Input, Rest) :-
+    re_tree_match_groups_impl(Pattern, Input, _Match, _Groups, Rest).
 
 %% re_tree_match(+Pattern, -Match)//
+% DCG non-terminal //1 (expanded to 4 args: Pattern, Match, S0, S).
 re_tree_match(Pattern, Match, S0, S) :-
     re_tree_match_groups_impl(Pattern, S0, Match, _Groups, S).
 
-%% re_tree_match_groups(+Pattern, ?Chars, -Match, -Groups)
-re_tree_match_groups(Pattern, Chars, Match, Groups) :-
-    re_tree_match_groups_impl(Pattern, Chars, Match, Groups, []).
+%% re_tree_match_groups(+Pattern, ?Input, -Match, -Groups)
+% Direct 4-arg anchored matcher returning matched substring and positional capture groups.
+re_tree_match_groups(Pattern, Input, Match, Groups) :-
+    re_tree_match_groups_impl(Pattern, Input, Match, Groups, []).
 
-%% re_tree_match_groups(+Pattern, ?Arg2, ?Arg3, ?Arg4, ?Arg5)
-re_tree_match_groups(Pattern, Arg2, Arg3, Arg4, Arg5) :-
-    if_(is_input_arg_t(Arg2),
-        re_tree_match_groups_impl(Pattern, Arg2, Arg3, Arg4, Arg5),
-        re_tree_match_groups_impl(Pattern, Arg4, Arg2, Arg3, Arg5)
+%% re_tree_match_groups(+Pattern, ?InputOrMatch, ?MatchOrGroups, ?GroupsOrS0, ?RestOrS)
+% Dual-purpose matcher:
+% 1. Direct 5-arg list call: (Pattern, Input, Match, Groups, Rest)
+% 2. DCG //3 expansion call: (Pattern, Match, Groups, S0, S)
+re_tree_match_groups(Pattern, InputOrMatch, MatchOrGroups, GroupsOrS0, RestOrS) :-
+    if_(is_input_arg_t(InputOrMatch),
+        re_tree_match_groups_impl(Pattern, InputOrMatch, MatchOrGroups, GroupsOrS0, RestOrS),
+        re_tree_match_groups_impl(Pattern, GroupsOrS0, InputOrMatch, MatchOrGroups, RestOrS)
     ).
 
-%% re_tree_match_named(+Pattern, ?Chars, -Match, -NamedGroups)
-re_tree_match_named(Pattern, Chars, Match, NamedGroups) :-
-    re_tree_match_named_impl(Pattern, Chars, Match, NamedGroups, []).
+%% re_tree_match_named(+Pattern, ?Input, -Match, -NamedGroups)
+% Direct 4-arg anchored matcher returning matched substring and named capture groups.
+re_tree_match_named(Pattern, Input, Match, NamedGroups) :-
+    re_tree_match_named_impl(Pattern, Input, Match, NamedGroups, []).
 
-%% re_tree_match_named(+Pattern, ?Arg2, ?Arg3, ?Arg4, ?Arg5)
-re_tree_match_named(Pattern, Arg2, Arg3, Arg4, Arg5) :-
-    if_(is_input_arg_t(Arg2),
-        re_tree_match_named_impl(Pattern, Arg2, Arg3, Arg4, Arg5),
-        re_tree_match_named_impl(Pattern, Arg4, Arg2, Arg3, Arg5)
+%% re_tree_match_named(+Pattern, ?InputOrMatch, ?MatchOrNamed, ?NamedOrS0, ?RestOrS)
+% Dual-purpose matcher:
+% 1. Direct 5-arg list call: (Pattern, Input, Match, NamedGroups, Rest)
+% 2. DCG //3 expansion call: (Pattern, Match, NamedGroups, S0, S)
+re_tree_match_named(Pattern, InputOrMatch, MatchOrNamed, NamedOrS0, RestOrS) :-
+    if_(is_input_arg_t(InputOrMatch),
+        re_tree_match_named_impl(Pattern, InputOrMatch, MatchOrNamed, NamedOrS0, RestOrS),
+        re_tree_match_named_impl(Pattern, NamedOrS0, InputOrMatch, MatchOrNamed, RestOrS)
     ).
 
 /* Internal Implementations */

@@ -167,13 +167,15 @@ re_match(Pattern, Match, S0, S) :-
 re_match_groups(Pattern, Chars, Match, Groups) :-
     re_match_groups(Pattern, Chars, Match, Groups, []).
 
-%% re_match_groups(+Pattern, ?Arg2, ?Arg3, ?Arg4, ?Arg5)
-% Direct 5-arg matcher and DCG //3 expanded matcher.
-re_match_groups(Pattern, Arg2, Arg3, Arg4, Arg5) :-
-    if_(is_input_arg_t(Arg2),
-        ( to_chars(Arg2, Input),
-          phrase(re_match_groups_dcg(Pattern, Arg3, Arg4), Input, Arg5) ),
-        phrase(re_match_groups_dcg(Pattern, Arg2, Arg3), Arg4, Arg5)
+%% re_match_groups(+Pattern, ?InputOrMatch, ?MatchOrGroups, ?GroupsOrS0, ?RestOrS)
+% Dual-purpose matcher:
+% 1. Direct 5-arg list call: (Pattern, Input, Match, Groups, Rest)
+% 2. DCG //3 expansion call: (Pattern, Match, Groups, S0, S)
+re_match_groups(Pattern, InputOrMatch, MatchOrGroups, GroupsOrS0, RestOrS) :-
+    if_(is_input_arg_t(InputOrMatch),
+        ( to_chars(InputOrMatch, Input),
+          phrase(re_match_groups_dcg(Pattern, MatchOrGroups, GroupsOrS0), Input, RestOrS) ),
+        phrase(re_match_groups_dcg(Pattern, InputOrMatch, MatchOrGroups), GroupsOrS0, RestOrS)
     ).
 
 re_match_groups_dcg(Pattern, Match, Groups, S0, S) :-
@@ -184,13 +186,15 @@ re_match_groups_dcg(Pattern, Match, Groups, S0, S) :-
 re_match_named(Pattern, Chars, Match, NamedGroups) :-
     re_match_named(Pattern, Chars, Match, NamedGroups, []).
 
-%% re_match_named(+Pattern, ?Arg2, ?Arg3, ?Arg4, ?Arg5)
-% Direct 5-arg matcher and DCG //3 expanded matcher.
-re_match_named(Pattern, Arg2, Arg3, Arg4, Arg5) :-
-    if_(is_input_arg_t(Arg2),
-        ( to_chars(Arg2, Input),
-          phrase(re_match_named_dcg(Pattern, Arg3, Arg4), Input, Arg5) ),
-        phrase(re_match_named_dcg(Pattern, Arg2, Arg3), Arg4, Arg5)
+%% re_match_named(+Pattern, ?InputOrMatch, ?MatchOrNamed, ?NamedOrS0, ?RestOrS)
+% Dual-purpose matcher:
+% 1. Direct 5-arg list call: (Pattern, Input, Match, NamedGroups, Rest)
+% 2. DCG //3 expansion call: (Pattern, Match, NamedGroups, S0, S)
+re_match_named(Pattern, InputOrMatch, MatchOrNamed, NamedOrS0, RestOrS) :-
+    if_(is_input_arg_t(InputOrMatch),
+        ( to_chars(InputOrMatch, Input),
+          phrase(re_match_named_dcg(Pattern, MatchOrNamed, NamedOrS0), Input, RestOrS) ),
+        phrase(re_match_named_dcg(Pattern, InputOrMatch, MatchOrNamed), NamedOrS0, RestOrS)
     ).
 
 re_match_named_dcg(Pattern, Match, NamedGroups, S0, S) :-
