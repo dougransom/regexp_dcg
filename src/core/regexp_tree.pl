@@ -185,7 +185,7 @@
 
 :- use_module(regexp_ast, [re_ast_chars//1, is_ast/1]).
 :- use_module(regexp_common).
-:- use_module(regexp_compile_tree, [compile_ast_tree/3, get_tree_automaton/3, regex_tree_run/5]).
+:- use_module(regexp_compile_tree, [compile_ast_tree/3, get_tree_automaton/3, regex_tree_run//3]).
 
 %% Standard Engine Aliases
 re_match(Pattern, Chars) :- re_tree_match(Pattern, Chars).

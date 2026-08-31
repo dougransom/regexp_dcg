@@ -60,7 +60,7 @@
 :- module(regexp_compile_tree, [
     compile_ast_tree/3,
     get_tree_automaton/3,
-    regex_tree_run/5,
+    regex_tree_run//3,
     match_cond/3,
     match_cond_empty/2
 ]).
