@@ -66,6 +66,7 @@
 ]).
 
 :- use_module(library(lists)).
+:- use_module(library(dcgs)).
 :- use_module(library(reif)).
 :- use_module(library(si)).
 :- use_module(library(dif)).
@@ -268,115 +269,152 @@ compile_lazy_optionals(N, Expr, C0, CF, Cont, Node) :-
     compile_lazy_optionals(N1, Expr, C0, C1, Cont, RestNode),
     compile_node(postfix(Expr, lazy(question)), C1, CF, RestNode, Node).
 
-%% regex_tree_run(+Chars, +Automaton, +State0, -StateF, -RestChars)
+%% regex_tree_run(+Automaton, +State0, -StateF)//
 %
-% Runs the automaton on `Chars` starting at state `Automaton`.
-regex_tree_run(Chars, end, State, State, Chars).
+% Runs the rational tree automaton `Automaton` on the input character stream.
+% Character difference-list threading (Chars -> Rest) is managed implicitly via DCGs.
+regex_tree_run(end, State, State) --> [].
 
-regex_tree_run(_Chars, stp, _, _, _) :- fail.
+regex_tree_run(stp, _, _) --> { fail }.
 
-regex_tree_run(Chars, alt(NodeA, NodeB), S0, SF, Rest) :-
-    (   regex_tree_run(Chars, NodeA, S0, SF, Rest)
-    ;   regex_tree_run(Chars, NodeB, S0, SF, Rest)
+regex_tree_run(alt(NodeA, NodeB), S0, SF) -->
+    (   regex_tree_run(NodeA, S0, SF)
+    ;   regex_tree_run(NodeB, S0, SF)
     ).
 
-regex_tree_run(Chars, star(SubNode, Cont), S0, SF, Rest) :-
-    (   regex_tree_run(Chars, SubNode, S0, S1, Rest1),
-        dif(Rest1, Chars),
-        regex_tree_run(Rest1, star(SubNode, Cont), S1, SF, Rest)
-    ;   regex_tree_run(Chars, Cont, S0, SF, Rest)
+regex_tree_run(star(SubNode, Cont), S0, SF) -->
+    (   regex_tree_run_star(SubNode, Cont, S0, SF)
+    ;   regex_tree_run(Cont, S0, SF)
     ).
 
-regex_tree_run(Chars, lazy_star(SubNode, Cont), S0, SF, Rest) :-
-    (   regex_tree_run(Chars, Cont, S0, SF, Rest)
-    ;   regex_tree_run(Chars, SubNode, S0, S1, Rest1),
-        dif(Rest1, Chars),
-        regex_tree_run(Rest1, lazy_star(SubNode, Cont), S1, SF, Rest)
+regex_tree_run(lazy_star(SubNode, Cont), S0, SF) -->
+    (   regex_tree_run(Cont, S0, SF)
+    ;   regex_tree_run_star(SubNode, Cont, S0, SF)
     ).
 
-regex_tree_run(Chars, opt(SubNode, Cont), S0, SF, Rest) :-
-    (   regex_tree_run(Chars, SubNode, S0, SF, Rest)
-    ;   regex_tree_run(Chars, Cont, S0, SF, Rest)
+regex_tree_run(opt(SubNode, Cont), S0, SF) -->
+    (   regex_tree_run(SubNode, S0, SF)
+    ;   regex_tree_run(Cont, S0, SF)
     ).
 
-regex_tree_run(Chars, lazy_opt(SubNode, Cont), S0, SF, Rest) :-
-    (   regex_tree_run(Chars, Cont, S0, SF, Rest)
-    ;   regex_tree_run(Chars, SubNode, S0, SF, Rest)
+regex_tree_run(lazy_opt(SubNode, Cont), S0, SF) -->
+    (   regex_tree_run(Cont, S0, SF)
+    ;   regex_tree_run(SubNode, S0, SF)
     ).
 
-regex_tree_run(Chars, cap_open(Idx, Next), S0, SF, Rest) :-
-    update_cap_open(S0, Idx, Chars, S1),
-    regex_tree_run(Chars, Next, S1, SF, Rest).
+regex_tree_run(cap_open(Idx, Next), S0, SF) -->
+    state_remaining(Chars),
+    { update_cap_open(S0, Idx, Chars, S1) },
+    regex_tree_run(Next, S1, SF).
 
-regex_tree_run(Chars, cap_close(Idx, Next), S0, SF, Rest) :-
-    update_cap_close(S0, Idx, Chars, S1),
-    regex_tree_run(Chars, Next, S1, SF, Rest).
+regex_tree_run(cap_close(Idx, Next), S0, SF) -->
+    state_remaining(Chars),
+    { update_cap_close(S0, Idx, Chars, S1) },
+    regex_tree_run(Next, S1, SF).
 
-regex_tree_run(Chars, named_open(Name, Idx, Next), S0, SF, Rest) :-
-    update_named_open(S0, Name, Idx, Chars, S1),
-    regex_tree_run(Chars, Next, S1, SF, Rest).
+regex_tree_run(named_open(Name, Idx, Next), S0, SF) -->
+    state_remaining(Chars),
+    { update_named_open(S0, Name, Idx, Chars, S1) },
+    regex_tree_run(Next, S1, SF).
 
-regex_tree_run(Chars, named_close(Name, Idx, Next), S0, SF, Rest) :-
-    update_named_close(S0, Name, Idx, Chars, S1),
-    regex_tree_run(Chars, Next, S1, SF, Rest).
+regex_tree_run(named_close(Name, Idx, Next), S0, SF) -->
+    state_remaining(Chars),
+    { update_named_close(S0, Name, Idx, Chars, S1) },
+    regex_tree_run(Next, S1, SF).
 
 % Note on ->: Soft-cut is used for lookahead assertions because SubNode execution
 % is a recursive goal search (not a reified boolean value for if_/3). Soft-cut commits
 % to the first successful match of the zero-width lookahead assertion.
-regex_tree_run(Chars, lookahead(SubNode, Next, Fail), S0, SF, Rest) :-
-    (   regex_tree_run(Chars, SubNode, S0, _, _) ->
-        regex_tree_run(Chars, Next, S0, SF, Rest)
-    ;   regex_tree_run(Chars, Fail, S0, SF, Rest)
+regex_tree_run(lookahead(SubNode, Next, Fail), S0, SF) -->
+    state_remaining(Chars),
+    { (   phrase(regex_tree_run(SubNode, S0, _), Chars, _) ->
+          NextNode = Next
+      ;   NextNode = Fail
+      )
+    },
+    regex_tree_run(NextNode, S0, SF).
+
+regex_tree_run(neg_lookahead(SubNode, Next, Fail), S0, SF) -->
+    state_remaining(Chars),
+    { (   phrase(regex_tree_run(SubNode, S0, _), Chars, _) ->
+          NextNode = Fail
+      ;   NextNode = Next
+      )
+    },
+    regex_tree_run(NextNode, S0, SF).
+
+regex_tree_run(set_flags(Flags, Next), S0, SF) -->
+    { S0 = state(Full, Groups, Named, OldFlags),
+      parse_flags(Flags, NewFlags),
+      append(NewFlags, OldFlags, CombinedFlags),
+      S1 = state(Full, Groups, Named, CombinedFlags)
+    },
+    regex_tree_run(Next, S1, SF).
+
+regex_tree_run(scoped_flags(Flags, SubNode, Next), S0, SF) -->
+    { S0 = state(Full, Groups, Named, OldFlags),
+      parse_flags(Flags, NewFlags),
+      append(NewFlags, OldFlags, CombinedFlags),
+      S1 = state(Full, Groups, Named, CombinedFlags)
+    },
+    state_remaining(Chars),
+    { phrase(regex_tree_run(SubNode, S1, S2), Chars, Rest1) },
+    set_remaining(Rest1),
+    { S2 = state(Full2, Groups2, Named2, _),
+      SFinal = state(Full2, Groups2, Named2, OldFlags)
+    },
+    regex_tree_run(Next, SFinal, SF).
+
+regex_tree_run(backref(Idx, Next), S0, SF) -->
+    { S0 = state(_, Groups, _, _) },
+    state_remaining(Chars),
+    { backref_matched_t(Idx, Groups, Chars, RestChars, Truth) },
+    (   { Truth == true } ->
+        set_remaining(RestChars),
+        regex_tree_run(Next, S0, SF)
+    ;   { fail }
     ).
 
-regex_tree_run(Chars, neg_lookahead(SubNode, Next, Fail), S0, SF, Rest) :-
-    (   regex_tree_run(Chars, SubNode, S0, _, _) ->
-        regex_tree_run(Chars, Fail, S0, SF, Rest)
-    ;   regex_tree_run(Chars, Next, S0, SF, Rest)
-    ).
-
-regex_tree_run(Chars, set_flags(Flags, Next), S0, SF, Rest) :-
-    S0 = state(Full, Groups, Named, OldFlags),
-    parse_flags(Flags, NewFlags),
-    append(NewFlags, OldFlags, CombinedFlags),
-    S1 = state(Full, Groups, Named, CombinedFlags),
-    regex_tree_run(Chars, Next, S1, SF, Rest).
-
-regex_tree_run(Chars, scoped_flags(Flags, SubNode, Next), S0, SF, Rest) :-
-    S0 = state(Full, Groups, Named, OldFlags),
-    parse_flags(Flags, NewFlags),
-    append(NewFlags, OldFlags, CombinedFlags),
-    S1 = state(Full, Groups, Named, CombinedFlags),
-    regex_tree_run(Chars, SubNode, S1, S2, Rest1),
-    S2 = state(Full2, Groups2, Named2, _),
-    SFinal = state(Full2, Groups2, Named2, OldFlags),
-    regex_tree_run(Rest1, Next, SFinal, SF, Rest).
-
-regex_tree_run(Chars, backref(Idx, Next), S0, SF, Rest) :-
-    S0 = state(_, Groups, _, _),
-    if_(backref_matched_t(Idx, Groups, Chars, RestChars),
-        regex_tree_run(RestChars, Next, S0, SF, Rest),
-        fail
-    ).
-
-regex_tree_run(Chars, sym(Cond, Succ, Fail), S0, SF, Rest) :-
-    is_zero_width_cond(Cond),
-    if_(match_cond_zero_t(Cond, S0, Chars),
-        regex_tree_run(Chars, Succ, S0, SF, Rest),
-        regex_tree_run(Chars, Fail, S0, SF, Rest)).
-
-% Empty input handling: check end-of-line anchor or fail fallback
-regex_tree_run([], sym(Cond, Succ, Fail), S0, SF, Rest) :-
-    if_(match_cond_empty(Cond),
-        regex_tree_run([], Succ, S0, SF, Rest),
-        regex_tree_run([], Fail, S0, SF, Rest)).
+regex_tree_run(sym(Cond, Succ, Fail), S0, SF) -->
+    { is_zero_width_cond(Cond) },
+    !,
+    state_remaining(Chars),
+    { if_(match_cond_zero_t(Cond, S0, Chars),
+          NextNode = Succ,
+          NextNode = Fail) },
+    regex_tree_run(NextNode, S0, SF).
 
 % Non-empty input matching using if_/3 reified condition
-regex_tree_run([H|T], sym(Cond, Succ, Fail), S0, SF, Rest) :-
-    S0 = state(_, _, _, Flags),
-    if_(match_cond_flags(Cond, H, Flags),
-        regex_tree_run(T, Succ, S0, SF, Rest),
-        regex_tree_run([H|T], Fail, S0, SF, Rest)).
+regex_tree_run(sym(Cond, Succ, Fail), S0, SF) -->
+    state_remaining(Chars),
+    { if_(Chars = [],
+          ( if_(match_cond_empty(Cond), NextNode = Succ, NextNode = Fail), RestChars = [] ),
+          ( Chars = [H|T],
+            S0 = state(_, _, _, Flags),
+            if_(match_cond_flags(Cond, H, Flags),
+                ( NextNode = Succ, RestChars = T ),
+                ( NextNode = Fail, RestChars = Chars )
+            )
+          )
+      )
+    },
+    set_remaining(RestChars),
+    regex_tree_run(NextNode, S0, SF).
+
+regex_tree_run_star(SubNode, Cont, S0, SF) -->
+    state_remaining(Chars),
+    regex_tree_run(SubNode, S0, S1),
+    state_remaining(Rest1),
+    { dif(Rest1, Chars) },
+    regex_tree_run(star(SubNode, Cont), S1, SF).
+
+%% state_remaining(-Chars)//
+% Accesses current DCG input character stream without consuming.
+state_remaining(Chars, Chars, Chars).
+
+%% set_remaining(+Rest)//
+% Updates DCG input character stream to Rest.
+set_remaining(Rest, _OldChars, Rest).
 
 backref_matched_t(Idx, Groups, Chars, RestChars, true) :-
     nth0(Idx, Groups, Captured),
@@ -575,6 +613,3 @@ is_word_char_t(C, Truth) :-
         Truth = false,
         match_builtin_t(word, C, Truth)
     ).
-
-var_t(X, true) :- var(X).
-var_t(X, false) :- nonvar(X).
