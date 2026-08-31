@@ -1,14 +1,15 @@
-# regexp: Regular Expression Engine for Scryer Prolog and ISO Prolog
+# pure_regex: Regular Expression Engine for Scryer Prolog and ISO Prolog
 
 > A pure, ISO-compliant regular expression library for Scryer Prolog providing dual DCG non-terminal and direct character list (`chars`) matching interfaces across multiple 1:1 API-compatible engines (Rational Tree Automata, DCG, DFA).
 
 ## Overview & Key Entry Points
 
-- **Primary Module**: `src/regexp.pl` (`regexp`) - Main entry point re-exporting Rational Tree Automaton by default.
+- **Primary Module**: `src/pure_regex.pl` (`pure_regex`) - Main entry point re-exporting Rational Tree Automaton by default.
+- **Legacy Alias Module**: `src/regexp.pl` (`regexp`) - Compatibility re-export facade.
 - **Tree Automaton Engine**: `src/core/regexp_tree.pl` - Pure, deterministic `if_/3`-driven cyclic term finite state automaton matching engine.
 - **DCG Engine**: `src/core/regexp_compile_dcg.pl` - Full-featured backtracking DCG engine with capturing groups, lookaheads, named groups, and inline flags.
 - **DFA Engine**: `src/core/regexp_compile_dfa.pl` - Deterministic finite automaton execution.
-- **Package Manifest**: `scryer-manifest.pl` - Bakage package definition (`pkg(regexp)`).
+- **Package Manifest**: `scryer-manifest.pl` - Bakage package definition (`pkg(pure_regex)`).
 
 ## Core Public API Interface
 
@@ -30,7 +31,7 @@ All engines maintain identical 1:1 API signatures:
 ## Usage Examples
 
 ```prolog
-:- use_module('src/regexp').
+:- use_module('src/pure_regex').
 
 % Direct character list matching (Rational Tree engine default)
 ?- re_match("[a-z]+", "hello").
@@ -49,7 +50,7 @@ All engines maintain identical 1:1 API signatures:
    Match = "user@domain.com", Groups = ["user", "domain", "com"].
 
 % Named capture groups
-?- re_match_named("(?<year>\\d{4})-(?<month>\\d{2})", "2026-08", Match, NamedMap).
+?- re_match_named("(?P<year>\\d{4})-(?P<month>\\d{2})", "2026-08", Match, NamedMap).
    Match = "2026-08", NamedMap = ["year"-"2026", "month"-"08"].
 ```
 
@@ -57,6 +58,6 @@ All engines maintain identical 1:1 API signatures:
 
 - [Full Consolidated Documentation](llms-full.txt): Complete user guide, pattern reference, and full documentation for LLMs.
 - [User Guide & Pattern Reference](docs/usage.md): Detailed regex syntax reference (character classes, quantifiers, lookarounds, flags).
-- [Machine-Readable Metadata (JSON-LD)](schema.jsonld): Schema.org structured metadata for `regexp`.
+- [Machine-Readable Metadata (JSON-LD)](schema.jsonld): Schema.org structured metadata for `pure_regex`.
 - [README](README.md): Project overview and Bakage installation guide.
 - [Scryer Prolog Standards](.agents/skills/scryer-prolog-standards/SKILL.md): Repository coding rules and ISO Prolog standards.

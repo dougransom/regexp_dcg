@@ -107,8 +107,8 @@ llms:
 
 html: docs
 	@echo "=== Generating HTML documentation ==="
-	pandoc -s --metadata title="Regexp DCG Usage Guide" --metadata description="Pure ISO Scryer Prolog regular expression engine user guide and pattern reference" --metadata keywords="prolog,scryer-prolog,regex,dcg,dfa,iso-prolog" -c "https://cdn.jsdelivr.net/npm/water.css@2/out/water.css" docs/usage.md -o docs/usage.html
-	pandoc -s --metadata title="Regexp DCG Library" --metadata description="Pure ISO Scryer Prolog regular expression engine providing DCG non-terminal and direct list matching" --metadata keywords="prolog,scryer-prolog,regex,dcg,dfa,iso-prolog,bakage" -c "https://cdn.jsdelivr.net/npm/water.css@2/out/water.css" README.md -o readme.html
+	pandoc -s --metadata title="pure_regex Usage Guide" --metadata description="Pure ISO Scryer Prolog regular expression engine user guide and pattern reference" --metadata keywords="prolog,scryer-prolog,regex,dcg,dfa,iso-prolog,pure-prolog" -c "https://cdn.jsdelivr.net/npm/water.css@2/out/water.css" docs/usage.md -o docs/usage.html
+	pandoc -s --metadata title="pure_regex Library" --metadata description="Pure ISO Scryer Prolog regular expression engine providing DCG non-terminal and direct list matching" --metadata keywords="prolog,scryer-prolog,regex,dcg,dfa,iso-prolog,bakage,pure-prolog" -c "https://cdn.jsdelivr.net/npm/water.css@2/out/water.css" README.md -o readme.html
 	@echo "HTML files successfully generated (docs/usage.html, readme.html)."
 	@echo ""
 

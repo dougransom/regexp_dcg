@@ -62,10 +62,10 @@ Bakage is **optional**. Because `pure_regex` is written in pure ISO Prolog, you 
    ```
 
 2. **Direct Import via `use_module/1`**:
-   Import `regexp.pl` using its relative path:
+   Import `pure_regex.pl` using its relative path:
 
    ```prolog
-   :- use_module('path/to/regexp_dcg/src/regexp').
+   :- use_module('path/to/regexp_dcg/src/pure_regex').
 
    % Direct Character Matching (Rational Tree Engine by default)
    ?- re_match("[a-z]+", "hello").
@@ -79,16 +79,16 @@ Bakage is **optional**. Because `pure_regex` is written in pure ISO Prolog, you 
 
 ---
 
-## Primary Interface (`regexp`)
+## Primary Interface (`pure_regex`)
 
-The main entry point for matching patterns is the [`regexp`](src/regexp.pl) module. By default, it uses the Rational Tree Automaton implementation (`regexp_tree`). You can switch the active engine globally by asserting `user:regexp_mode(dcg)` or `user:regexp_mode(dfa)` prior to or after importing, or per-call via mode options (`[mode(dcg)]`, `[mode(dfa)]`).
+The main entry point for matching patterns is the [`pure_regex`](src/pure_regex.pl) module (with [`regexp`](src/regexp.pl) provided as a backwards-compatible alias). By default, it uses the Rational Tree Automaton implementation (`regexp_tree`). You can switch the active engine globally by asserting `user:regexp_mode(dcg)` or `user:regexp_mode(dfa)` prior to or after importing, or per-call via mode options (`[mode(dcg)]`, `[mode(dfa)]`).
 
 ```prolog
-% Global mode selection before or after importing regexp:
+% Global mode selection before or after importing pure_regex:
 ?- assertz(user:regexp_mode(dcg)).
    true.
 
-?- use_module('src/regexp').
+?- use_module('src/pure_regex').
    true.
 ```
 
@@ -98,7 +98,7 @@ The main entry point for matching patterns is the [`regexp`](src/regexp.pl) modu
 Match character lists directly without needing DCG `phrase/2-3` wrappers:
 
 ```prolog
-?- use_module('src/regexp').
+?- use_module('src/pure_regex').
    true.
 
 % Direct full match (anchored, Rational Tree engine default)
@@ -147,7 +147,7 @@ For maximum efficiency when evaluating the same pattern against many inputs, pre
 ```prolog
 ?- re_compile("[0-9]+", Compiled),
    re_match(Compiled, "12345extra", Rest).
-   Compiled = compiled(call(regexp_dcg:dcg_concat([call(regexp_dcg:dcg_plus(call(regexp_dcg:dcg_class([range(48,57)]))))])), 0),
+   Compiled = compiled_tree(sym(class([range(48,57)]),star(sym(class([range(48,57)]),end,stp),end),stp), 0),
    Rest = "extra"
 ;  false.
 ```
@@ -158,16 +158,19 @@ For maximum efficiency when evaluating the same pattern against many inputs, pre
 
 The library is structured into modular layers:
 
-- **[`regexp_dcg.pl`](regexp_dcg.pl)** (DCG Backtracking Engine):
+- **[`src/pure_regex.pl`](src/pure_regex.pl)** (Main Facade):
+  The primary entry point module exporting the unified public regular expression API and delegating to the selected engine.
+
+- **[`src/core/regexp_tree.pl`](src/core/regexp_tree.pl)** (Rational Tree Automaton Engine):
+  Fast, pure `if_/3`-driven cyclic term finite state automaton matching (default engine).
+
+- **[`src/core/regexp_compile_dcg.pl`](src/core/regexp_compile_dcg.pl)** (DCG Backtracking Engine):
   Full-featured DCG backtracking regular expression engine with capturing groups, lookaheads, and inline flags.
 
-- **[`regexp_tree.pl`](regexp_tree.pl)** (Rational Tree Automaton Engine):
-  Fast, pure `if_/3`-driven cyclic term finite state automaton matching.
-
-- **[`src/regexp_ast.pl`](src/regexp_ast.pl)** (Parser & Tokenizer):
+- **[`src/core/regexp_ast.pl`](src/core/regexp_ast.pl)** (Parser & Tokenizer):
   Parses raw regular expression character lists into an Abstract Syntax Tree (AST) representation (`lit/1`, `class/1`, `group/1`, `star/1`, etc.). Implements tokenizers (`re_token//1`) and POSIX class parsing.
 
-- **[`src/regexp_compile_dfa.pl`](src/regexp_compile_dfa.pl)** (Experimental DFA Engine):
+- **[`src/core/regexp_compile_dfa.pl`](src/core/regexp_compile_dfa.pl)** (Experimental DFA Engine):
   An experimental NFA/DFA engine for benchmarking and comparing performance against the primary DCG and Tree engines.
 
 ---
@@ -218,18 +221,20 @@ The repository includes a complete **TOML Light Parser Example** under [`example
    cd examples/toml
    scryer-prolog parse_sample.pl -g main
    ```
-   (or: `nice scryer-safe parse_sample.pl -g main`)
 
 ## Documentation & Test Suite
 
 - **Detailed Documentation**: See [`docs/usage.md`](docs/usage.md) for full feature documentation and expected Scryer Prolog REPL outputs for all supported regular expression constructs.
 - **Unit Tests**:
-  - [`tests/test_regexp_dcg.pl`](tests/test_regexp_dcg.pl) — Core DCG engine matching tests.
-  - [`tests/test_regexp_tree.pl`](tests/test_regexp_tree.pl) — Rational Tree Automaton engine tests.
-  - [`tests/test_international.pl`](tests/test_international.pl) — Multilingual character tests (French, Greek, Chinese, Emoji, Klingon).
-  - [`tests/test_regexp_ast.pl`](tests/test_regexp_ast.pl) — Regex parser and AST construction tests.
-  - [`tests/test_re_token.pl`](tests/test_re_token.pl) — Regex tokenization (`re_token//1`), metacharacter, and character class tests.
-  - [`tests/test_exports_match.pl`](tests/test_exports_match.pl) — Module export interface consistency tests across all engine implementations.
+  - [`tests/scryer/test_regexp.pl`](tests/scryer/test_regexp.pl) — Core facade matching tests.
+  - [`tests/scryer/test_regexp_dcg.pl`](tests/scryer/test_regexp_dcg.pl) — DCG engine matching tests.
+  - [`tests/scryer/test_regexp_tree.pl`](tests/scryer/test_regexp_tree.pl) — Rational Tree Automaton engine tests.
+  - [`tests/scryer/test_regexp_compile_dfa.pl`](tests/scryer/test_regexp_compile_dfa.pl) — DFA engine matching tests.
+  - [`tests/scryer/test_international.pl`](tests/scryer/test_international.pl) — Multilingual character tests (French, Greek, Chinese, Emoji, Klingon).
+  - [`tests/scryer/test_regexp_ast.pl`](tests/scryer/test_regexp_ast.pl) — Regex parser and AST construction tests.
+  - [`tests/scryer/test_re_token.pl`](tests/scryer/test_re_token.pl) — Regex tokenization (`re_token//1`), metacharacter, and character class tests.
+  - [`tests/scryer/test_exports_match.pl`](tests/scryer/test_exports_match.pl) — Module export interface consistency tests across all engine implementations.
+  - [`tests/scryer/test_toml.pl`](tests/scryer/test_toml.pl) — TOML configuration parser integration tests.
 
 - **Testing Requirements**:
   - **Bug Fixes**: Always add a test case reproducing the issue (which failed before the fix) when fixing any bug.
@@ -274,9 +279,9 @@ The regular expression syntax and semantics supported by this library are inspir
 {
   "@context": "https://schema.org",
   "@type": "SoftwareSourceCode",
-  "name": "regexp_dcg",
-  "version": "0.1.2.dev1",
-  "description": "A pure, ISO-compliant Definite Clause Grammar (DCG) regular expression engine designed for Scryer Prolog and other ISO-compliant Prolog implementations.",
+  "name": "pure_regex",
+  "version": "0.1.0.dev4",
+  "description": "A pure, ISO-compliant Definite Clause Grammar (DCG) regular expression engine and tokenizing foundation designed for Scryer Prolog and other ISO-compliant Prolog implementations.",
   "programmingLanguage": {
     "@type": "ComputerLanguage",
     "name": "Prolog",
@@ -296,14 +301,17 @@ The regular expression syntax and semantics supported by this library are inspir
     "dcg",
     "regular-expressions",
     "regex",
-    "parser"
+    "parser",
+    "dfa",
+    "pure-prolog",
+    "lexer"
   ]
 }
 </script>
 
 <!-- Open Graph Metadata -->
-<meta property="og:title" content="regexp_dcg: ISO Scryer Prolog Regular Expression Engine">
+<meta property="og:title" content="pure_regex: ISO Scryer Prolog Regular Expression Engine">
 <meta property="og:description" content="A pure, ISO-compliant Definite Clause Grammar (DCG) regular expression engine for Scryer Prolog supporting backtracking, DFA execution, and cyclic tree automata.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://github.com/dougransom/regexp_dcg">
-<meta property="og:site_name" content="regexp_dcg">
+<meta property="og:site_name" content="pure_regex">

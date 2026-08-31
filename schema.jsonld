@@ -1,9 +1,9 @@
 {
   "@context": "https://schema.org",
   "@type": "SoftwareSourceCode",
-  "name": "regexp_dcg",
-  "version": "0.1.2.dev1",
-  "description": "A pure, ISO-compliant Definite Clause Grammar (DCG) regular expression engine designed for Scryer Prolog and other ISO-compliant Prolog implementations.",
+  "name": "pure_regex",
+  "version": "0.1.0.dev4",
+  "description": "A pure, ISO-compliant Definite Clause Grammar (DCG) regular expression engine and tokenizing foundation designed for Scryer Prolog and other ISO-compliant Prolog implementations.",
   "programmingLanguage": {
     "@type": "ComputerLanguage",
     "name": "Prolog",
@@ -24,11 +24,13 @@
     "regular-expressions",
     "regex",
     "parser",
-    "dfa"
+    "dfa",
+    "pure-prolog",
+    "lexer"
   ],
   "targetProduct": {
     "@type": "SoftwareApplication",
-    "name": "regexp_dcg",
+    "name": "pure_regex",
     "applicationCategory": "DeveloperApplication",
     "operatingSystem": "Linux, macOS, Windows"
   }
