@@ -1,5 +1,7 @@
 # Regular Expression Engine for Scryer Prolog and ISO Prolog Systems (`pure_regex`)
 
+[![llms.txt](https://img.shields.io/badge/llms.txt-available-blue.svg)](llms.txt)
+
 A pure, ISO-compliant regular expression engine providing both **Definite Clause Grammar (DCG) non-terminal** and **direct character list (`chars`) matching interfaces** for [Scryer Prolog](https://github.com/mthom/scryer-prolog) and other ISO-compliant Prolog implementations.
 
 ### Categories & Classifiers

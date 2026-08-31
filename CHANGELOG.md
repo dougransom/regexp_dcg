@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > [!NOTE]
 > Historical releases prior to August 31, 2026 have been re-indexed into the `0.1.0.devX` series (`v0.1.0.dev1` through `v0.1.0.dev4`) leading up to the official `0.1.0` stable release. Older commit snapshots may show superseded version strings in historical manifests.
 
+## [0.1.0.dev6] - 2026-08-31
+
+### Added
+- Added `llms.txt` discovery badge to `README.md`.
+- Added declarative DCG Tokenizer & Lexer recipe and Engine Selection guide to `llms.txt`.
+- Expanded `.agents/AGENTS.md` with complete architecture map, fast single-test execution commands, and ISO Prolog purity standards.
+
 ## [0.1.0.dev5] - 2026-08-31
 
 ### Changed

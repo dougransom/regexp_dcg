@@ -48,10 +48,42 @@ All engines maintain identical 1:1 API signatures:
 ?- re_match_groups("(\\w+)@(\\w+)\\.(\\w+)", "user@domain.com", Match, Groups).
    Match = "user@domain.com", Groups = ["user", "domain", "com"].
 
-% Named capture groups
+% Named capture groups (requires mode(dcg))
 ?- re_match_named("(?P<year>\\d{4})-(?P<month>\\d{2})", "2026-08", Match, NamedMap).
    Match = "2026-08", NamedMap = ["year"-"2026", "month"-"08"].
 ```
+
+## DCG Tokenizer & Lexer Recipe
+
+`pure_regex` provides DCG non-terminals (`re_match//1`, `re_match//2`) for building declarative lexers:
+
+```prolog
+:- use_module(library(dcgs)).
+:- use_module('src/pure_regex').
+
+% Tokenize character list into structured AST tokens
+tokenize(Input, Tokens) :-
+    phrase(tokens(Tokens), Input).
+
+tokens([]) --> ws.
+tokens([Tok|Rest]) -->
+    ws,
+    token(Tok),
+    !,
+    tokens(Rest).
+
+ws               --> re_match("\\s*", _).
+token(ident(Id)) --> re_match("[a-zA-Z_][a-zA-Z0-9_]*", Id).
+token(num(N))    --> re_match("-?[0-9]+", Chars), { number_chars(N, Chars) }.
+token(str(S))    --> re_match("\"[^\"]*\"", S).
+token(op(Op))    --> re_match("==|!=|<=|>=|[+\\-*/=<>]", Op).
+```
+
+## Engine Selection Guide
+
+- **`tree` (Rational Tree Automaton, Default)**: Pre-compiles cyclic terms into a deterministic finite-state automaton. Fastest performance with no choicepoint generation for linear matching.
+- **`dcg` (Backtracking DCG)**: Full-featured engine supporting capture groups (`re_match_groups/4`), named groups (`re_match_named/4`), lookaheads (`(?=...)`, `(?!...)`), and inline flags.
+- **`dfa` (DFA Engine)**: Classical subset-construction deterministic finite automaton.
 
 ## Documentation & Full Context
 
