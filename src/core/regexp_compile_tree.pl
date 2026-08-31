@@ -269,10 +269,24 @@ compile_lazy_optionals(N, Expr, C0, CF, Cont, Node) :-
     compile_lazy_optionals(N1, Expr, C0, C1, Cont, RestNode),
     compile_node(postfix(Expr, lazy(question)), C1, CF, RestNode, Node).
 
-%% regex_tree_run(+Automaton, +State0, -StateF)//
+%% regex_tree_run(+Automaton, +S0, -SF)//
 %
 % Runs the rational tree automaton `Automaton` on the input character stream.
 % Character difference-list threading (Chars -> Rest) is managed implicitly via DCGs.
+%
+% State Threading (S0 -> SF):
+%   S0 is the initial engine execution state before evaluating an automaton node,
+%   and SF is the final engine execution state after evaluating the node.
+%
+%   Both S0 and SF are compound terms structured as:
+%     state(Full, Groups, Named, Flags)
+%
+%   - Full: The full input character sequence passed at the start of matching.
+%           Serves as an immutable reference for computing capture slice lengths.
+%   - Groups: Positional capture groups list ([Group0, Group1, ...]), initialized
+%             as unbound variables [_, _, ...] of length GroupCount.
+%   - Named: Named capture groups key-value pair list ([name1-Substr1, ...]).
+%   - Flags: Active execution flags list (e.g. [case_insensitive]) set by inline flags.
 regex_tree_run(end, State, State) --> [].
 
 regex_tree_run(stp, _, _) --> { fail }.
