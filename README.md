@@ -280,7 +280,7 @@ The regular expression syntax and semantics supported by this library are inspir
   "@context": "https://schema.org",
   "@type": "SoftwareSourceCode",
   "name": "pure_regex",
-  "version": "0.1.0.dev4",
+  "version": "0.1.0.dev5",
   "description": "A pure, ISO-compliant Definite Clause Grammar (DCG) regular expression engine and tokenizing foundation designed for Scryer Prolog and other ISO-compliant Prolog implementations.",
   "programmingLanguage": {
     "@type": "ComputerLanguage",
