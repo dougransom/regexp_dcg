@@ -281,6 +281,5 @@ The regular expression syntax and semantics supported by this library are inspir
 
 This repository provides structured semantic metadata conforming to standard schemas:
 
-- **Schema.org (JSON-LD)**: [`schema.jsonld`](schema.jsonld) (`SoftwareSourceCode` & `SoftwareApplication`)
-- **CodeMeta 2.0**: [`codemeta.json`](codemeta.json) (Cross-platform software & research metadata standard)
+- **CodeMeta 2.0 (Schema.org JSON-LD)**: [`codemeta.json`](codemeta.json) (Cross-platform software & research metadata standard)
 - **AI / LLM Discovery**: [`llms.txt`](llms.txt) & [`llms-full.txt`](llms-full.txt)
