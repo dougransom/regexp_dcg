@@ -40,10 +40,14 @@ test("Public user interfaces are identical across all modules",
         % 3. All public interface predicates must be exported by the Tree engine
         maplist(member_of(TreeExports), PublicInterface),
 
-        % 4. The DFA engine must ONLY export the public user interface
-        length(DfaExports, L_Dfa),
-        length(PublicInterface, L_Pub),
-        L_Dfa == L_Pub
+        % 4. The DFA engine must export the public user interface (plus internal compiler hook)
+        select(compile_ast_dfa/3, DfaExports, DfaPubOnly) ->
+            ( length(DfaPubOnly, L_Dfa),
+              length(PublicInterface, L_Pub),
+              L_Dfa == L_Pub )
+        ;   ( length(DfaExports, L_Dfa),
+              length(PublicInterface, L_Pub),
+              L_Dfa == L_Pub )
     )).
 
 member_of(List, Element) :-

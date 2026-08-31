@@ -58,6 +58,6 @@ test("International: Latinized Klingon with glottal stops",
 
 % 6. DFA Engine Compatibility with International Characters
 test("International: DFA engine French and Emoji literal match",
-    (phrase(regexp_dfa:re_match("café🚀", Match), "café🚀123", Rest),
+    (phrase(regexp_compile_dfa:re_match("café🚀", Match), "café🚀123", Rest),
      Match == "café🚀",
      Rest == "123")).

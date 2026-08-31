@@ -6,7 +6,7 @@
 
 :- discontiguous(test/2).
 
-engine(regexp_dfa).
+engine(regexp_compile_dfa).
 
 :- use_module('../portable/test_regexp_compile_shared').
 

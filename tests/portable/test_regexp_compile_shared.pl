@@ -41,7 +41,7 @@ shared_test(Engine, "quantifier: range repetition",
 % Capturing groups are ordered by group-number order (left-to-right based on their opening parenthesis).
 % Definition: https://docs.oracle.com/javase/tutorial/essential/regex/groups.html
 shared_test(Engine, "capture: single group",
-    (   Engine == regexp_dfa ->
+    (   (Engine == regexp_dfa ; Engine == regexp_compile_dfa) ->
         catch(phrase(Engine:re_match_groups("(abc)", _, _), "abc"), Error, true),
         nonvar(Error),
         Error = error(domain_error(dfa_group_extraction, _), _)
@@ -52,7 +52,7 @@ shared_test(Engine, "capture: single group",
 
 % The outer group starts first, followed by the inner group.
 shared_test(Engine, "capture: nested groups",
-    (   Engine == regexp_dfa ->
+    (   (Engine == regexp_dfa ; Engine == regexp_compile_dfa) ->
         catch(phrase(Engine:re_match_groups("(a(b)c)", _, _), "abc"), Error, true),
         nonvar(Error),
         Error = error(domain_error(dfa_group_extraction, _), _)
@@ -117,7 +117,7 @@ shared_test(Engine, "compile pattern and match",
     (Engine:re_compile("a*b", Compiled),
      phrase(Engine:re_match(Compiled, Match1), "aaab"),
      Match1 == "aaab",
-     (   Engine == regexp_dfa ->
+     (   (Engine == regexp_dfa ; Engine == regexp_compile_dfa) ->
          catch(phrase(Engine:re_match_groups(Compiled, _, _), "aaab"), Error, true),
          nonvar(Error),
          Error = error(domain_error(dfa_group_extraction, _), _)
@@ -131,7 +131,7 @@ shared_test(Engine, "dcg phrase match helper",
      Match == "aaab")).
 
 shared_test(Engine, "dcg phrase match groups helper",
-    (   Engine == regexp_dfa ->
+    (   (Engine == regexp_dfa ; Engine == regexp_compile_dfa) ->
         catch(phrase(Engine:re_match_groups("(a*)b", _, _), "aaabc", _), Error, true),
         nonvar(Error),
         Error = error(domain_error(dfa_group_extraction, _), _)
@@ -146,7 +146,7 @@ shared_test(Engine, "dcg phrase match helper with compiled pattern",
      Match == "aaab")).
 
 shared_test(Engine, "dcg phrase match helper with compiled pattern and groups",
-    (   Engine == regexp_dfa ->
+    (   (Engine == regexp_dfa ; Engine == regexp_compile_dfa) ->
         Engine:re_compile("(a*)b", Compiled),
         catch(phrase(Engine:re_match_groups(Compiled, _, _), "aaabc", _), Error, true),
         nonvar(Error),
@@ -195,7 +195,7 @@ shared_test(Engine, "unanchored match using phrase/2 (no rest)",
 
 % 3 top-level capture structures, each nested 4 levels deep.
 shared_test(Engine, "captures nested 4 deep (3 top-level)",
-    (   Engine == regexp_dfa ->
+    (   (Engine == regexp_dfa ; Engine == regexp_compile_dfa) ->
         catch(phrase(Engine:re_match_groups("(a(b(c(d))))(e(f(g(h))))(i(j(k(l))))", _, _), "abcdefghijkl"), Error, true),
         nonvar(Error),
         Error = error(domain_error(dfa_group_extraction, _), _)
@@ -224,7 +224,7 @@ shared_test(Engine, "captures nested 4 deep (3 top-level) - match only",
      Match == "abcdefghijkl")).
 
 shared_test(Engine, "named capture: simple",
-    (   Engine == regexp_dfa ->
+    (   (Engine == regexp_dfa ; Engine == regexp_compile_dfa) ->
         catch(phrase(Engine:re_match_named("(?P<id>abc)", _, _), "abc"), Error, true),
         nonvar(Error),
         Error = error(domain_error(dfa_group_extraction, _), _)
@@ -236,7 +236,7 @@ shared_test(Engine, "named capture: simple",
     )).
 
 shared_test(Engine, "named capture: mixed named and unnamed",
-    (   Engine == regexp_dfa ->
+    (   (Engine == regexp_dfa ; Engine == regexp_compile_dfa) ->
         catch(phrase(Engine:re_match_named("(?P<first>[a-z]+) ([a-z]+) (?P<last>[a-z]+)", _, _), "john middle doe"), Error, true),
         nonvar(Error),
         Error = error(domain_error(dfa_group_extraction, _), _)

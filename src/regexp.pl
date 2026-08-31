@@ -74,21 +74,8 @@
     re_match_named/5,
     re_group/3,
     re_compile/2,
-    re_compile/3,
     re_clear_cache/0,
     re_cache_info/2
 ]).
 
-% regexp_mode/1 is a user-assertable hook to select the matching engine.
-% Declare as multifile so users can extend it from their own files:
-%   :- multifile(user:regexp_mode/1).
-%   user:regexp_mode(dcg).   % or dfa
-% The catch/3 wrappers handle the predicate being absent.
-:- multifile(user:regexp_mode/1).
-
-:- (   catch(user:regexp_mode(dcg), _, fail) ->
-       use_module('core/regexp_compile_dcg')
-   ;   catch(user:regexp_mode(dfa), _, fail) ->
-       use_module('core/regexp_compile_dfa')
-   ;   use_module('core/regexp_tree')
-   ).
+:- use_module('core/regexp_tree').

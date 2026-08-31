@@ -3,26 +3,16 @@
 :- use_module('../../src/core/regexp_compile_dcg').
 :- use_module(library(dcgs)).
 
+:- dynamic(user:regexp_mode/1).
+:- multifile(user:regexp_mode/1).
+
 :- discontiguous(test/2).
 
-cleanup_mode :-
-    ( catch(retractall(user:regexp_mode(_)), _, fail) -> true ; true ),
-    ( catch(retract(user:regexp_mode(_)), _, fail) -> true ; true ).
-
 test("default tree engine matching via regexp facade",
-    ( cleanup_mode,
-      regexp:re_compile("a*b", CompiledTree),
+    ( regexp:re_compile("a*b", CompiledTree),
       CompiledTree = compiled_tree(_, _),
       regexp:re_match("a*b", "aaabc", Rest),
       Rest == "c"
-    )).
-
-test("user:regexp_mode(dcg) engine switching",
-    ( cleanup_mode,
-      assertz(user:regexp_mode(dcg)),
-      regexp:re_compile("a*b", CompiledDCG),
-      CompiledDCG = compiled(_, _),
-      cleanup_mode
     )).
 
 test("direct substitute DCG engine matching",

@@ -16,7 +16,7 @@
   For the list of supported regular expression patterns, see the module documentation
   for `regexp_dcg` (in [regexp_dcg.pl](file:///home/doug/code/regexp/regexp_dcg.pl)).
 */
-:- module(regexp_dfa, [
+:- module(regexp_compile_dfa, [
     re_match//1,
     re_match//2,
     re_match_groups//3,
@@ -30,7 +30,8 @@
     re_group/3,
     re_compile/2,
     re_clear_cache/0,
-    re_cache_info/2
+    re_cache_info/2,
+    compile_ast_dfa/3
 ]).
 
 :- use_module(library(lists)).
@@ -101,8 +102,6 @@ re_match_groups_dcg(Pattern, _Match, _Groups), _S --> _S,
 re_match_groups_dcg(Pattern, _Match, _Groups), _S --> _S,
     { domain_error(dfa_group_extraction, Pattern) }.
 
-re_group(_NamedGroups, _Name, _Value) :-
-    domain_error(dfa_group_extraction, re_group).
 
 %% re_match_named(+Pattern, ?Chars, -Match, -NamedGroups)
 re_match_named(Pattern, Chars, Match, NamedGroups) :-
