@@ -1,4 +1,4 @@
-:- use_module('src/regexp').
+:- use_module('src/pure_regex').
 :- use_module(library(format)).
 :- use_module(library(si)).
 :- use_module(library(lists)).
@@ -47,10 +47,10 @@ run_query(Stream, Title, Desc, QueryStr, Goal, VarNames, VarValues) :-
 
 main :-
     open('docs/usage.md', write, Stream),
-    format(Stream, "# Using Regular Expression Patterns in Prolog~n~n", []),
-    format(Stream, "This document provides usage examples and pattern matching examples with expected Prolog toplevel outputs for the regular expression library.~n~n", []),
-    format(Stream, "To load the backtracking regular expression engine, run:~n", []),
-    format(Stream, "```prolog~n?- use_module(regexp_dcg).~n   true.~n```~n~n", []),
+    format(Stream, "# Using Regular Expression Patterns in Prolog (`pure_regex`)~n~n", []),
+    format(Stream, "This document provides usage examples and pattern matching examples with expected Prolog toplevel outputs for the `pure_regex` library.~n~n", []),
+    format(Stream, "To load the regular expression engine, run:~n", []),
+    format(Stream, "```prolog~n?- use_module(library(pure_regex)).~n   true.~n```~n~n", []),
 
     format(Stream, "## Usage Examples~n~n", []),
 
@@ -226,15 +226,15 @@ main :-
               (re_compile("(a*)b", Compiled30), phrase(re_match_groups(Compiled30, Match30, Groups30), "aaabc", "c")),
               ["Compiled", "Match", "Groups"], [Compiled30, Match30, Groups30]),
 
-    run_query(Stream, "31. Compilation Cache Matching", "Access and verify the internal compilation cache.",
-              "re_clear_cache, phrase(re_match(\"c*d\", Match), \"cccd\"), regexp_dcg:to_chars(\"c*d\", Key), regexp_dcg:pattern_cache(Key, Goal, GroupCount)",
-              (re_clear_cache, phrase(re_match("c*d", Match31), "cccd"), regexp_dcg:to_chars("c*d", Key31), regexp_dcg:pattern_cache(Key31, Goal31, GroupCount31)),
-              ["Match", "Key", "Goal", "GroupCount"], [Match31, Key31, Goal31, GroupCount31]),
+    run_query(Stream, "31. Compilation Cache Inspection", "Access and verify the internal compilation cache.",
+              "re_clear_cache, phrase(re_match(\"c*d\", Match), \"cccd\"), re_cache_info(Count, Keys)",
+              (re_clear_cache, phrase(re_match("c*d", Match31), "cccd"), re_cache_info(Count31, Keys31)),
+              ["Match", "Count", "Keys"], [Match31, Count31, Keys31]),
 
     run_query(Stream, "32. Compilation Cache Clearing", "Clear the cache database and verify no patterns remain.",
-              "re_clear_cache, phrase(re_match(\"c*d\", Match), \"cccd\"), re_clear_cache, \\+ regexp_dcg:pattern_cache(_, _, _)",
-              (re_clear_cache, phrase(re_match("c*d", _Match32), "cccd"), re_clear_cache),
-              [], []),
+              "re_clear_cache, phrase(re_match(\"c*d\", Match), \"cccd\"), re_clear_cache, re_cache_info(CountAfter, KeysAfter)",
+              (re_clear_cache, phrase(re_match("c*d", _Match32), "cccd"), re_clear_cache, re_cache_info(CountAfter32, KeysAfter32)),
+              ["CountAfter", "KeysAfter"], [CountAfter32, KeysAfter32]),
 
     run_query(Stream, "33. Unanchored Match (showing rest of input)", "Match pattern inside input using phrase/3.",
               "phrase((..., re_match(\"aa\", Match)), \"bbbbaaccccc\", Rest)",

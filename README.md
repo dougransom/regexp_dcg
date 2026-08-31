@@ -1,4 +1,4 @@
-# Regular Expression Engine for Scryer Prolog and ISO Prolog Systems (`regexp`)
+# Regular Expression Engine for Scryer Prolog and ISO Prolog Systems (`pure_regex`)
 
 A pure, ISO-compliant regular expression engine providing both **Definite Clause Grammar (DCG) non-terminal** and **direct character list (`chars`) matching interfaces** for [Scryer Prolog](https://github.com/mthom/scryer-prolog) and other ISO-compliant Prolog implementations.
 
@@ -13,12 +13,12 @@ A pure, ISO-compliant regular expression engine providing both **Definite Clause
 
 The primary goals of this project are:
 
-1. **ISO-Compliant & Pure**: Provide a portable, pure, ISO-compliant Regular Expression (`REGEXP`) matching library for Scryer Prolog and other ISO Prolog systems (such as Trealla Prolog, Tau Prolog, GNU Prolog, Ciao, etc.) without relying on system-dependent C primitives or foreign function interfaces.
+1. **ISO-Compliant & Pure**: Provide a portable, pure, ISO-compliant Regular Expression matching library for Scryer Prolog and other ISO Prolog systems (such as Trealla Prolog, Tau Prolog, GNU Prolog, Ciao, etc.) without relying on system-dependent C primitives or foreign function interfaces.
 2. **Dual Matching Interfaces**: Support both:
    - **DCG Non-Terminal Interface**: Pure DCG non-terminal grammars (`phrase(re_match(Pattern, Match), Input)`) for seamlessly embedding regular expression rules inside Prolog DCG parsing logic.
    - **Direct Character List Interface**: Standard 2/3/4/5-argument list matching predicates (`re_match(Pattern, Input)`, `re_match(Pattern, Input, Rest)`, `re_match_groups/4-5`, `re_match_named/4-5`) for direct string matching without needing `phrase/2-3` wrappers.
 3. **Engine Parity & Choice**: Provide multiple 1:1 API-compatible matching engines:
-   - **Rational Tree Automaton Engine** (`src/core/regexp_tree.pl`): Re-exported by default via `src/regexp.pl`; fast, pure `if_/3`-driven cyclic term finite state automaton matching.
+   - **Rational Tree Automaton Engine** (`src/core/regexp_tree.pl`): Re-exported by default via `src/pure_regex.pl`; fast, pure `if_/3`-driven cyclic term finite state automaton matching.
    - **DCG Backtracking Engine** (`src/core/regexp_compile_dcg.pl`): Direct substitute; full-featured regex parser with group extractions, lookaheads, and inline flags.
    - **DFA Engine** (`src/core/regexp_compile_dfa.pl`): Direct substitute; deterministic finite automaton execution.
 
@@ -26,14 +26,14 @@ The primary goals of this project are:
 
 ## Packaging & Installation
 
-Bakage is **optional**. Because `regexp` is written in pure ISO Prolog, you can use it either with Bakage or by directly importing the files into any Prolog project.
+Bakage is **optional**. Because `pure_regex` is written in pure ISO Prolog, you can use it either with Bakage or by directly importing the files into any Prolog project.
 
 ### Option 1: With Bakage Package Manager ([`bakage`](https://github.com/bakaq/bakage))
 
 1. **Add to `scryer-manifest.pl`**:
    ```prolog
    dependencies([
-       dependency("regexp", git("https://github.com/dougransom/regexp_dcg.git"))
+       dependency("pure_regex", git("https://github.com/dougransom/regexp_dcg.git"))
    ]).
    ```
 
@@ -45,7 +45,7 @@ Bakage is **optional**. Because `regexp` is written in pure ISO Prolog, you can 
 3. **Import in Prolog Code**:
    ```prolog
    :- use_module(bakage).
-   :- use_module(pkg(regexp)).
+   :- use_module(pkg(pure_regex)).
 
    % DCG Interface
    ?- phrase(re_match("[a-z]+", Match), "hello").

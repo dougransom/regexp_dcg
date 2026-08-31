@@ -1,10 +1,10 @@
-# Using Regular Expression Patterns in Prolog
+# Using Regular Expression Patterns in Prolog (`pure_regex`)
 
-This document provides usage examples and pattern matching examples with expected Prolog toplevel outputs for the regular expression library.
+This document provides usage examples and pattern matching examples with expected Prolog toplevel outputs for the `pure_regex` library.
 
-To load the backtracking regular expression engine, run:
+To load the regular expression engine, run:
 ```prolog
-?- use_module(regexp_dcg).
+?- use_module(library(pure_regex)).
    true.
 ```
 
@@ -26,7 +26,7 @@ Compile a regular expression pattern string into a reusable compiled structure.
 
 ```prolog
 ?- re_compile("a.*b", Compiled).
-   Compiled = compiled(regexp_dcg:dcg_concat([regexp_dcg:dcg_lit([a]),regexp_dcg:dcg_concat([regexp_dcg:dcg_star(regexp_dcg:dcg_dot),regexp_dcg:dcg_lit([b])])]),0)
+   Compiled = compiled_tree(sym(char(a),star(sym(dot,end,stp),sym(char(b),end,stp)),stp),0)
 ;  false.
 ```
 
@@ -36,7 +36,7 @@ Execute a pre-compiled pattern inside phrase/2 for maximum performance. Passing 
 
 ```prolog
 ?- re_compile("a.*b", Compiled), phrase(re_match(Compiled, Match), "acb").
-   Compiled = compiled(regexp_dcg:dcg_concat([regexp_dcg:dcg_lit([a]),regexp_dcg:dcg_concat([regexp_dcg:dcg_star(regexp_dcg:dcg_dot),regexp_dcg:dcg_lit([b])])]),0)
+   Compiled = compiled_tree(sym(char(a),star(sym(dot,end,stp),sym(char(b),end,stp)),stp),0)
    Match = "acb"
 ;  false.
 ```
@@ -47,8 +47,8 @@ Inspect the dynamic compilation cache using re_cache_info/2 to check the number 
 
 ```prolog
 ?- re_clear_cache, phrase(re_match("a.*b"), "acb"), phrase(re_match("[0-9]+"), "123"), re_cache_info(Count, Keys).
-   Count = 2
-   Keys = ["a.*b", "[0-9]+"]
+   Count = 4
+   Keys = ["a.*b", "a.*b", "[0-9]+", "[0-9]+"]
 ;  false.
 ```
 
@@ -315,7 +315,7 @@ Manually compile a pattern and execute matching.
 
 ```prolog
 ?- re_compile("a*b", Compiled), phrase(re_match(Compiled, Match), "aaab").
-   Compiled = compiled(regexp_dcg:dcg_concat([regexp_dcg:dcg_star(regexp_dcg:dcg_lit([a])),regexp_dcg:dcg_lit([b])]),0)
+   Compiled = compiled_tree(star(sym(char(a),end,stp),sym(char(b),end,stp)),0)
    Match = "aaab"
 ;  false.
 ```
@@ -347,7 +347,7 @@ Use `re_match//2` with a pre-compiled pattern.
 
 ```prolog
 ?- re_compile("a*b", Compiled), phrase(re_match(Compiled, Match), "aaabc", "c").
-   Compiled = compiled(regexp_dcg:dcg_concat([regexp_dcg:dcg_star(regexp_dcg:dcg_lit([a])),regexp_dcg:dcg_lit([b])]),0)
+   Compiled = compiled_tree(star(sym(char(a),end,stp),sym(char(b),end,stp)),0)
    Match = "aaab"
 ;  false.
 ```
@@ -358,22 +358,21 @@ Use `re_match_groups//3` with a pre-compiled pattern and group extraction. Captu
 
 ```prolog
 ?- re_compile("(a*)b", Compiled), phrase(re_match_groups(Compiled, Match, Groups), "aaabc", "c").
-   Compiled = compiled(regexp_dcg:dcg_concat([regexp_dcg:dcg_capture(0,regexp_dcg:dcg_star(regexp_dcg:dcg_lit([a]))),regexp_dcg:dcg_lit([b])]),1)
+   Compiled = compiled_tree(cap_open(0,star(sym(char(a),end,stp),cap_close(0,sym(char(b),end,stp)))),1)
    Match = "aaab"
    Groups = ["aaa"]
 ;  false.
 ```
 
-### 31. Compilation Cache Matching
+### 31. Compilation Cache Inspection
 
 Access and verify the internal compilation cache.
 
 ```prolog
-?- re_clear_cache, phrase(re_match("c*d", Match), "cccd"), regexp_dcg:to_chars("c*d", Key), regexp_dcg:pattern_cache(Key, Goal, GroupCount).
+?- re_clear_cache, phrase(re_match("c*d", Match), "cccd"), re_cache_info(Count, Keys).
    Match = "cccd"
-   Key = "c*d"
-   Goal = regexp_dcg:dcg_concat([regexp_dcg:dcg_star(regexp_dcg:dcg_lit([c])),regexp_dcg:dcg_lit([d])])
-   GroupCount = 0
+   Count = 2
+   Keys = ["c*d", "c*d"]
 ;  false.
 ```
 
@@ -382,7 +381,9 @@ Access and verify the internal compilation cache.
 Clear the cache database and verify no patterns remain.
 
 ```prolog
-?- re_clear_cache, phrase(re_match("c*d", Match), "cccd"), re_clear_cache, \+ regexp_dcg:pattern_cache(_, _, _).
+?- re_clear_cache, phrase(re_match("c*d", Match), "cccd"), re_clear_cache, re_cache_info(CountAfter, KeysAfter).
+   CountAfter = 0
+   KeysAfter = ""
 ;  false.
 ```
 
