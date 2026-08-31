@@ -30,7 +30,8 @@
     pattern_cache_put/4,
     clear_pattern_cache/1,
     pattern_cache_info/3,
-    get_or_compile_pattern/5
+    get_or_compile_pattern/5,
+    cond_t/4
 ]).
 
 :- use_module(library(lists)).
@@ -154,10 +155,8 @@ clear_pattern_cache(Kind) :-
 %
 % Retrieve count and list of cached keys for engine `Kind` or all engines (`Kind = all`).
 pattern_cache_info(Kind, Count, Keys) :-
-    if_(Kind = all,
-        findall(Key, pattern_cache(_, Key, _, _), Keys),
-        findall(Key, pattern_cache(Kind, Key, _, _), Keys)
-    ),
+    cond_t(Kind = all, _, Kind, SearchKind),
+    findall(Key, pattern_cache(SearchKind, Key, _, _), Keys),
     length(Keys, Count).
 
 %% get_or_compile_pattern(+EngineKind, +Pattern, +CompileAstGoal, -CompiledValue, -Extra)
@@ -310,10 +309,16 @@ char_range_t(Min, Max, Char, Truth) :-
     MinCode #=< Code #<==> B1,
     Code #=< MaxCode #<==> B2,
     B1 #/\ B2 #<==> B,
-    if_(B = 1, Truth = true, Truth = false).
+    =(B, 1, Truth).
 
 reif_not(true, false).
 reif_not(false, true).
+
+%% cond_t(+If_1, +TrueVal, +FalseVal, -Val)
+%
+% Pure reified conditional helper for non-boolean value selection.
+cond_t(If_1, TrueVal, FalseVal, Val) :-
+    if_(If_1, Val = TrueVal, Val = FalseVal).
 
 /* Flag Parsing */
 

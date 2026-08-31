@@ -88,7 +88,8 @@
     pattern_cache_put/4,
     clear_pattern_cache/1,
     pattern_cache_info/3,
-    get_or_compile_pattern/5
+    get_or_compile_pattern/5,
+    cond_t/4
 ]).
 
 /**
@@ -449,11 +450,11 @@ match_cond_zero_t(boundary, S0, Chars, Truth) :-
     is_boundary_t(S0, Chars, Truth).
 match_cond_zero_t(not_boundary, S0, Chars, Truth) :-
     is_boundary_t(S0, Chars, T0),
-    if_(T0 = true, Truth = false, Truth = true).
+    =(T0, false, Truth).
 
 %% match_cond_empty(+Cond, -Truth)
 match_cond_empty(Cond, Truth) :-
-    if_(Cond = eol, Truth = true, Truth = false).
+    =(Cond, eol, Truth).
 
 %% match_cond_flags(+Cond, +Char, +Flags, -Truth)
 match_cond_flags(Cond, H, Flags, Truth) :-
@@ -466,7 +467,8 @@ match_cond(char(C), H, Truth) :-
     =(C, H, Truth).
 
 match_cond(dot, H, Truth) :-
-    if_(H = '\n', Truth = false, Truth = true).
+    =(H, '\n', IsNL),
+    =(IsNL, false, Truth).
 
 match_cond(bol, _H, true).
 match_cond(eol, _H, false).
@@ -581,14 +583,14 @@ is_bol_t(state(Full, _, _, _), Chars, Truth) :-
           Skip #= LFull - LChars - 1,
           Skip #>= 0 #<==> B,
           if_(B = 1,
-              ( nth0(Skip, Full, NL), if_(NL = '\n', Truth = true, Truth = false) ),
+              ( nth0(Skip, Full, NL), =(NL, '\n', Truth) ),
               Truth = false)
         )).
 
 is_eol_t(Chars, Truth) :-
     if_(Chars = [],
         Truth = true,
-        if_(Chars = ['\n'|_], Truth = true, Truth = false)).
+        =(Chars, ['\n'|_], Truth)).
 
 is_boundary_t(state(Full, _, _, _), Chars, Truth) :-
     if_(Full = Chars,
@@ -610,7 +612,8 @@ is_boundary_t(state(Full, _, _, _), Chars, Truth) :-
                     Chars = [Curr|_],
                     is_word_char_t(Prev, T1),
                     is_word_char_t(Curr, T2),
-                    if_(T1 = T2, Truth = false, Truth = true)
+                    =(T1, T2, Same),
+                    =(Same, false, Truth)
                   ),
                   Truth = false)
             ))).

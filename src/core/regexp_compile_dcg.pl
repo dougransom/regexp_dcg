@@ -313,7 +313,7 @@ literal_match([C|Cs]) --> [C], literal_match(Cs).
 
 dcg_lit(Chars, S0, S0) -->
     { S0 = state(_, _, _, Flags) },
-    { if_(memberd_t(case_insensitive, Flags), Case = ci, Case = exact) },
+    { cond_t(memberd_t(case_insensitive, Flags), ci, exact, Case) },
     dcg_lit_case(Case, Chars).
 
 dcg_lit_case(ci, Chars) --> literal_match_case_insensitive(Chars).
@@ -355,7 +355,7 @@ dcg_question(GExpr, S0, SF) -->
   ; { S0 = SF }.
 
 dcg_quant(GExpr, M, N, S0, SF) -->
-    { if_(N = inf, Max = inf, Max = N) },
+    { cond_t(N = inf, inf, N, Max) },
     dcg_quant_loop(GExpr, 0, M, Max, S0, SF).
 
 dcg_quant_loop(GExpr, Count, Min, Max, S0, SF) -->
@@ -413,7 +413,7 @@ dcg_question_lazy(GExpr, S0, SF) -->
   ; call(GExpr, S0, SF).
 
 dcg_quant_lazy(GExpr, M, N, S0, SF) -->
-    { if_(N = inf, Max = inf, Max = N) },
+    { cond_t(N = inf, inf, N, Max) },
     dcg_quant_loop_lazy(GExpr, 0, M, Max, S0, SF).
 
 dcg_quant_loop_lazy(_GExpr, Count, Min, _Max, S, S) -->

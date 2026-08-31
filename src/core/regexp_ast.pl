@@ -114,15 +114,13 @@ re_alt(AST) -->
 % A single factor is returned as-is.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+cond_t(If_1, TrueVal, FalseVal, Val) :-
+    if_(If_1, Val = TrueVal, Val = FalseVal).
+
 re_concat(AST) -->
     re_factor(F),
     re_concat_more(F, AST0),
-    {
-        if_(AST0 = concat([Single]),
-            AST = Single,
-            AST = AST0
-        )
-    }.
+    { cond_t(AST0 = concat([Single]), Single, AST0, AST) }.
 
 re_concat_more(Acc, AST) -->
     re_factor(F),
