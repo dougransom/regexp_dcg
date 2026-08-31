@@ -4,6 +4,14 @@
   This module compiles regular expressions into rational tree (cyclic term graph) automata and matches
   them against character sequences using pure `if_/3` boolean reification.
 
+  ### Genesis & Attribution
+  The core concept and architectural inspiration for implementing regular expressions via rational
+  tree automata in this library was sparked by **Alex Grabowski** ([@hurufu](https://github.com/hurufu)) in **Scryer Prolog Discussion #2758**:
+  [Pure regex implementation using rational trees and if_/3](https://github.com/mthom/scryer-prolog/discussions/2758).
+  Special credit and acknowledgment go to Alex Grabowski and discussion contributors for pioneering the
+  insight of leveraging Prolog's native rational terms (cyclic compound terms) and reified dispatch as an
+  elegant, table-free, choicepoint-free alternative to traditional DFA matrix tables and backtracking NFAs.
+
   ---
 
   ### Conceptual Primer: Rational Trees & Rational Tree Automata for Prolog Programmers
@@ -153,7 +161,7 @@
 
   ### Academic & Literature References
 
-  - **Scryer Prolog Discussion #2758**: [Rational tree automaton regular expression matching in Scryer Prolog](https://github.com/mthom/scryer-prolog/discussions/2758) — Architecture & motivation for rational tree automata in Scryer Prolog.
+  - **Alex Grabowski (2025)**: [Pure regex implementation using rational trees and if_/3](https://github.com/mthom/scryer-prolog/discussions/2758) — Scryer Prolog Discussion #2758 outlining the architecture & motivation for rational tree automata in Scryer Prolog.
   - **Alain Colmerauer (1982)**: [Prolog and Infinite Trees](https://alain.colmerauer.perso.luminy.univ-amu.fr/Publis/InfiniteTrees/InfiniteTrees.pdf) — Foundational paper introducing rational terms and infinite trees in Prolog II.
   - **Bruno Courcelle (1983)**: [Fundamental properties of infinite trees](https://doi.org/10.1016/0304-3975(83)90059-2) — Mathematical theory of infinite and rational tree structures.
   - **Janusz A. Brzozowski (1964)**: [Derivatives of Regular Expressions](https://dl.acm.org/doi/10.1145/321239.321249) — Classical paper on regular expression differentiation.

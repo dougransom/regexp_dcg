@@ -5,7 +5,7 @@
   `sym(Condition, SuccState, FailState)`, `alt(NodeA, NodeB)`, `star(SubNode, Cont)`, `opt(SubNode, Cont)`,
   `end`, `stp`, and capture nodes.
 
-  Based on the Scryer Prolog rational tree automaton matching model:
+  Based on the rational tree automaton matching model proposed by Alex Grabowski (@hurufu):
   https://github.com/mthom/scryer-prolog/discussions/2758
 
   ### Matching Paradigms
