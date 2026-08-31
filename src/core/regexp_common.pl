@@ -44,6 +44,10 @@
 
 :- use_module(regexp_ast, [re_ast_chars//1, is_ast/1]).
 
+:- meta_predicate(get_or_compile_pattern(?, ?, 3, ?, ?)).
+:- meta_predicate(get_or_compile_pattern_miss(?, ?, 3, ?, ?)).
+:- meta_predicate(cond_t(1, ?, ?, ?)).
+
 %% to_chars(+Input, -Chars)
 %
 % Unify `Chars` with a list of character codes from string `Input` (character list or atom).
