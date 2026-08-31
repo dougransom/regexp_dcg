@@ -86,7 +86,7 @@ test_toml:
 
 docs: llms tree_doc_examples
 	@echo "=== Generating docs/usage.md ==="
-	$(SCRYER) -g main -g halt generate_intro_md.pl
+	$(SCRYER) -g main -g halt scripts/generate_intro_md.pl
 	@echo "Docs successfully updated."
 	@echo ""
 

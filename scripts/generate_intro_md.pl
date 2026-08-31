@@ -1,4 +1,4 @@
-:- use_module('src/pure_regex').
+:- use_module('../src/pure_regex').
 :- use_module(library(format)).
 :- use_module(library(si)).
 :- use_module(library(lists)).

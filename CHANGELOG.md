@@ -29,7 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - Renamed library package from `regexp` to `pure_regex` to avoid name collisions across Prolog ecosystems.
-- Updated package manifests (`scryer-manifest.pl`, `pack.pl`, `bakage.toml`).
+- Updated package manifests (`scryer-manifest.pl`, `pack.pl`).
 - Updated documentation and usage examples to reference `pure_regex`.
 
 ## [0.1.0.dev2] - 2026-08-29
