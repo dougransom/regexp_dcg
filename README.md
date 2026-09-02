@@ -13,6 +13,7 @@
 [![License: Unlicense](https://img.shields.io/badge/license-Unlicense-blue.svg)](UNLICENSE)
 [![Prolog: ISO-Compliant](https://img.shields.io/badge/prolog-ISO--Compliant-blue.svg)](https://www.iso.org/standard/21413.html)
 [![Scryer Prolog](https://img.shields.io/badge/Scryer%20Prolog-compatible-orange.svg)](https://github.com/mthom/scryer-prolog)
+[![Trealla Prolog](https://img.shields.io/badge/Trealla%20Prolog-compatible-brightgreen.svg)](https://github.com/trealla-prolog/trealla)
 
 A pure, ISO-compliant regular expression engine providing both **Definite Clause Grammar (DCG) non-terminal** and **direct character list (`chars`) matching interfaces** for [Scryer Prolog](https://github.com/mthom/scryer-prolog) and other ISO-compliant Prolog implementations.
 
@@ -339,6 +340,27 @@ Drawing inspiration from finite state machine compilers like **[Ragel](https://w
 4. **The Ragel Connection (State Machine Compilation & Embedded Actions)**:
    - Inspired by **[Ragel State Machine Compiler](https://www.colm.net/open-source/ragel/)**, regular expressions can be treated as formal state machine compilation targets rather than purely interpreted string matchers.
    - Embedding arbitrary Prolog goals, semantic guards, and accumulator updates directly onto state transition edges ($S_i \to S_j$ with action goals), transforming the regular expression engine into a high-performance, compiled lexer/parser generator.
+
+---
+
+## Running Tests
+
+All 15 test suites can be executed across supported ISO Prolog implementations using the parameterized `Makefile`:
+
+```bash
+# Run all test suites on Scryer Prolog (default)
+make test
+# Or explicitly:
+make test PROLOG_ENGINE=scryer
+
+# Run all test suites on Trealla Prolog
+make test PROLOG_ENGINE=trealla
+```
+
+Tests are organized cleanly by engine and portability:
+- `tests/portable/`: Engine-agnostic ISO test suites.
+- `tests/scryer/`: Scryer-specific integration suites running with `scryer-safe`.
+- `tests/trealla/`: Trealla-specific integration suites running with `trealla-safe`.
 
 ---
 

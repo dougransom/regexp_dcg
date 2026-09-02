@@ -245,39 +245,53 @@ user:goal_expansion(pure_regex:re_match_named(Pattern, Input, Match, Named, Rest
    Approach B: Term Expansion (DCG Rule Generation)
    ========================================================================= */
 
+% Preferred mechanism once Trealla (and other engines) support macro expansion to a fixed point:
+%   user:term_expansion(re_rule(HeadSpec//0, Pattern), (RuleHead --> Body)).
+% For portable cross-engine compatibility with engines lacking a recursive DCG expansion pass after
+% term_expansion, we expand directly into clause heads with explicit difference-list arguments (S0, S).
+
 % re_rule(HeadSpec//0, Pattern)
-user:term_expansion(re_rule(HeadSpec//0, Pattern), (RuleHead --> Body)) :-
+user:term_expansion(re_rule(HeadSpec//0, Pattern), (ClauseHead :- phrase(Body, S0, S))) :-
     is_literal_pattern(Pattern, Chars),
     current_static_engine(Engine),
     compile_literal_pattern(Engine, Chars, Compiled),
-    expand_rule_head(HeadSpec, Compiled, RuleHead, Body).
+    expand_rule_head(HeadSpec, Compiled, RuleHead, Body),
+    make_dcg_clause_head(RuleHead, S0, S, ClauseHead).
 
 % :- re_rule(HeadSpec//0, Pattern)
-user:term_expansion((:- re_rule(HeadSpec//0, Pattern)), (RuleHead --> Body)) :-
+user:term_expansion((:- re_rule(HeadSpec//0, Pattern)), (ClauseHead :- phrase(Body, S0, S))) :-
     is_literal_pattern(Pattern, Chars),
     current_static_engine(Engine),
     compile_literal_pattern(Engine, Chars, Compiled),
-    expand_rule_head(HeadSpec, Compiled, RuleHead, Body).
+    expand_rule_head(HeadSpec, Compiled, RuleHead, Body),
+    make_dcg_clause_head(RuleHead, S0, S, ClauseHead).
 
 % re_rule_named(HeadTerm//0, Pattern)
 user:term_expansion(re_rule_named(HeadTerm//0, Pattern),
-                    (RuleHead --> pure_regex:re_match_named(Compiled, Match, Named))) :-
+                    (ClauseHead :- phrase(pure_regex:re_match_named(Compiled, Match, Named), S0, S))) :-
     HeadTerm =.. [Name, _, _],
     atom_si(Name),
     is_literal_pattern(Pattern, Chars),
     current_static_engine(Engine),
     compile_literal_pattern(Engine, Chars, Compiled),
-    RuleHead =.. [Name, Match, Named].
+    RuleHead =.. [Name, Match, Named],
+    make_dcg_clause_head(RuleHead, S0, S, ClauseHead).
 
 % :- re_rule_named(HeadTerm//0, Pattern)
 user:term_expansion((:- re_rule_named(HeadTerm//0, Pattern)),
-                    (RuleHead --> pure_regex:re_match_named(Compiled, Match, Named))) :-
+                    (ClauseHead :- phrase(pure_regex:re_match_named(Compiled, Match, Named), S0, S))) :-
     HeadTerm =.. [Name, _, _],
     atom_si(Name),
     is_literal_pattern(Pattern, Chars),
     current_static_engine(Engine),
     compile_literal_pattern(Engine, Chars, Compiled),
-    RuleHead =.. [Name, Match, Named].
+    RuleHead =.. [Name, Match, Named],
+    make_dcg_clause_head(RuleHead, S0, S, ClauseHead).
+
+make_dcg_clause_head(RuleHead, S0, S, ClauseHead) :-
+    RuleHead =.. [Name|Args],
+    append(Args, [S0, S], FullArgs),
+    ClauseHead =.. [Name|FullArgs].
 
 expand_rule_head(Name, Compiled, RuleHead, pure_regex:re_match(Compiled)) :-
     atom_si(Name),

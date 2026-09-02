@@ -8,6 +8,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > [!NOTE]
 > Historical releases prior to August 31, 2026 have been re-indexed into the `0.1.0.devX` series (`v0.1.0.dev1` through `v0.1.0.dev4`) leading up to the official `0.1.0` stable release. Older commit snapshots may show superseded version strings in historical manifests.
 
+## [0.1.0.dev8] - 2026-09-02
+
+### Added
+- Trealla Prolog support alongside Scryer Prolog following ISO Prolog standards and Triska's "ISO Core + Engine Shim" architecture.
+- Dedicated Trealla test suites in `tests/trealla/` matching all Scryer test suites (15 test suites, 260+ tests passing with 0 failures).
+- Multi-engine Makefile test target supporting `make test PROLOG_ENGINE=trealla` (via `trealla-safe`) and `make test PROLOG_ENGINE=scryer` (via `scryer-safe`).
+- Triska-style loader shim in `tests/trealla/trealla_loader.pl` dynamically resolving Scryer file-relative module imports and rewriting `Name//Arity` indicators in import lists.
+- Trealla compatibility badge and runtimePlatform metadata in `README.md` and `codemeta.json`.
+
+### Changed
+- AST tokenizer macro expansion in `src/core/regexp_ast.pl` (`tk/2`, `ci/2`) generating difference list clause heads directly for cross-engine compatibility with systems lacking recursive DCG expansion passes; documented preferred `-->` macro syntax in comments.
+- Static DCG rule term expansion in `src/core/regexp_expansion.pl` (`re_rule//0`, `re_rule_named//0`) generating difference list clause heads directly with difference list arguments; documented preferred `-->` macro syntax in comments.
+- Refactored DFA group and named extraction in `src/core/regexp_compile_dfa.pl` (`re_match_groups_dcg/5`, `re_match_named_dcg/5`) from pushback DCG syntax to standard ISO difference list clause heads.
+- Guarded pattern cache manager `get_or_compile_pattern/5` in `src/core/regexp_common.pl` with `var_t` check to raise `instantiation_error` on unbound variables before querying dynamic cache.
+
 ## [0.1.0.dev7] - 2026-09-02
 
 ### Added

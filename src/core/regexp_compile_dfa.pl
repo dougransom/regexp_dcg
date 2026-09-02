@@ -96,12 +96,11 @@ re_match_groups(Pattern, InputOrMatch, MatchOrGroups, GroupsOrS0, RestOrS) :-
         phrase(re_match_groups_dcg(Pattern, InputOrMatch, MatchOrGroups), GroupsOrS0, RestOrS)
     ).
 
-re_match_groups_dcg(Pattern, _Match, _Groups), _S --> _S,
-    { nonvar(Pattern), Pattern = nfa(Start, Accept, States, Transitions) },
-    !,
-    { domain_error(dfa_group_extraction, nfa(Start, Accept, States, Transitions)) }.
-re_match_groups_dcg(Pattern, _Match, _Groups), _S --> _S,
-    { domain_error(dfa_group_extraction, Pattern) }.
+re_match_groups_dcg(Pattern, _Match, _Groups, _S0, _Rest) :-
+    (   nonvar(Pattern), Pattern = nfa(Start, Accept, States, Transitions) ->
+        domain_error(dfa_group_extraction, nfa(Start, Accept, States, Transitions))
+    ;   domain_error(dfa_group_extraction, Pattern)
+    ).
 
 
 %% re_match_named(+Pattern, ?Chars, -Match, -NamedGroups)
@@ -119,12 +118,11 @@ re_match_named(Pattern, InputOrMatch, MatchOrNamed, NamedOrS0, RestOrS) :-
         phrase(re_match_named_dcg(Pattern, InputOrMatch, MatchOrNamed), NamedOrS0, RestOrS)
     ).
 
-re_match_named_dcg(Pattern, _Match, _NamedGroups), _S --> _S,
-    { nonvar(Pattern), Pattern = nfa(Start, Accept, States, Transitions) },
-    !,
-    { domain_error(dfa_group_extraction, nfa(Start, Accept, States, Transitions)) }.
-re_match_named_dcg(Pattern, _Match, _NamedGroups), _S --> _S,
-    { domain_error(dfa_group_extraction, Pattern) }.
+re_match_named_dcg(Pattern, _Match, _NamedGroups, _S0, _Rest) :-
+    (   nonvar(Pattern), Pattern = nfa(Start, Accept, States, Transitions) ->
+        domain_error(dfa_group_extraction, nfa(Start, Accept, States, Transitions))
+    ;   domain_error(dfa_group_extraction, Pattern)
+    ).
 
 %% re_group(+NamedGroups, +Name, -Value)
 % Retrieves the captured string value for group `Name` from `NamedGroups` key-value pairs list.

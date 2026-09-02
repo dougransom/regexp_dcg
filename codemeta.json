@@ -3,7 +3,7 @@
   "@type": "SoftwareSourceCode",
   "identifier": "pure_regex",
   "name": "pure_regex",
-  "version": "0.1.0.dev7",
+  "version": "0.1.0.dev8",
   "description": "A pure, ISO-compliant Definite Clause Grammar (DCG) regular expression engine and tokenizing foundation designed for Scryer Prolog and other ISO-compliant Prolog implementations.",
   "applicationCategory": "DeveloperApplication",
   "operatingSystem": [
@@ -16,7 +16,8 @@
     "ISO Prolog"
   ],
   "runtimePlatform": [
-    "Scryer Prolog"
+    "Scryer Prolog",
+    "Trealla Prolog"
   ],
   "codeRepository": "https://github.com/dougransom/regexp_dcg",
   "issueTracker": "https://github.com/dougransom/regexp_dcg/issues",
@@ -31,6 +32,7 @@
   "keywords": [
     "prolog",
     "scryer-prolog",
+    "trealla-prolog",
     "iso-prolog",
     "dcg",
     "regular-expressions",

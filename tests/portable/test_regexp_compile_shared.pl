@@ -174,14 +174,14 @@ shared_test(Engine, "compilation cache clearing",
      (   (Engine == regexp_dcg ; Engine == regexp_compile_dcg) ->
          regexp_common:pattern_cache_get(dcg, "c*d", _, _),
          Engine:re_clear_cache,
-         \+ regexp_common:pattern_cache_get(dcg, "c*d", _, _)
+         (regexp_common:pattern_cache_get(dcg, "c*d", _, _) -> false ; true)
      ;   (Engine == regexp ; Engine == regexp_tree) ->
          regexp_common:pattern_cache_get(tree, "c*d", _, _),
          Engine:re_clear_cache,
-         \+ regexp_common:pattern_cache_get(tree, "c*d", _, _)
+         (regexp_common:pattern_cache_get(tree, "c*d", _, _) -> false ; true)
      ;   regexp_common:pattern_cache_get(dfa, "c*d", _, _),
          Engine:re_clear_cache,
-         \+ regexp_common:pattern_cache_get(dfa, "c*d", _, _)
+         (regexp_common:pattern_cache_get(dfa, "c*d", _, _) -> false ; true)
      ))).
 
 shared_test(Engine, "unanchored match using phrase/3 (shows rest)",
@@ -209,7 +209,7 @@ shared_test(Engine, "literal match via re_match",
      Match == "abc")).
 
 shared_test(Engine, "literal no match via re_match",
-    (\+ phrase(Engine:re_match("abc", _), "abd"))).
+    (phrase(Engine:re_match("abc", _), "abd") -> false ; true)).
 
 shared_test(Engine, "word boundary",
     (phrase(Engine:re_match("\\ba\\b", Match), "a"),
@@ -232,7 +232,7 @@ shared_test(Engine, "named capture: simple",
         Match == "abc",
         Named == [id-"abc"],
         Engine:re_group(Named, id, "abc"),
-        \+ Engine:re_group(Named, other, _)
+        (Engine:re_group(Named, other, _) -> false ; true)
     )).
 
 shared_test(Engine, "named capture: mixed named and unnamed",
@@ -245,7 +245,7 @@ shared_test(Engine, "named capture: mixed named and unnamed",
         Named == [last-"doe", first-"john"],
         Engine:re_group(Named, first, "john"),
         Engine:re_group(Named, last, "doe"),
-        \+ Engine:re_group(Named, middle, _)
+        (Engine:re_group(Named, middle, _) -> false ; true)
     )).
 
 shared_test(Engine, "error: unbound pattern raises instantiation_error",

@@ -201,9 +201,12 @@ pattern_cache_info(Kind, Count, Keys) :-
 % - Uses `if_/3` reification via `pattern_cache_t/5` and `is_input_arg_t/2` to eliminate cuts (`!`).
 % - Uses `call(CompileAstGoal, AST, CompiledValue, Extra)` to invoke the engine-specific compiler predicate dynamically.
 get_or_compile_pattern(EngineKind, Pattern, CompileAstGoal, CompiledValue, Extra) :-
-    if_(pattern_cache_t(EngineKind, Pattern, CompiledValue, Extra),
-        true,
-        get_or_compile_pattern_miss(EngineKind, Pattern, CompileAstGoal, CompiledValue, Extra)
+    if_(var_t(Pattern),
+        instantiation_error(get_or_compile_pattern/5),
+        if_(pattern_cache_t(EngineKind, Pattern, CompiledValue, Extra),
+            true,
+            get_or_compile_pattern_miss(EngineKind, Pattern, CompileAstGoal, CompiledValue, Extra)
+        )
     ).
 
 get_or_compile_pattern_miss(EngineKind, Pattern, CompileAstGoal, CompiledValue, Extra) :-

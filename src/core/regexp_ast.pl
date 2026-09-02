@@ -52,10 +52,20 @@ user:term_expansion(generate_char_predicate(Name, String), [PluralFact|Clauses])
     ), Clauses).
 
 % Macro for defining deterministic tokenizer rules: tk(Term, String) -> re_token(Term) --> String, !.
-user:term_expansion(tk(Term, String), (re_token(Term) --> String, !)).
+%
+% Preferred mechanism once Trealla (and other engines) support macro expansion to a fixed point:
+%   user:term_expansion(tk(Term, String), (re_token(Term) --> String, !)).
+% For portable cross-engine compatibility with engines lacking a recursive DCG expansion pass after
+% term_expansion, we expand directly into clause heads with explicit difference lists.
+user:term_expansion(tk(Term, String), (re_token(Term, PatternTail, Tail) :- !)) :-
+    append(String, Tail, PatternTail).
 
 % Macro for defining deterministic character class items: ci(Term, String) -> class_item(Term) --> String, !.
-user:term_expansion(ci(Term, String), (class_item(Term) --> String, !)).
+%
+% Preferred mechanism once Trealla supports macro expansion to a fixed point:
+%   user:term_expansion(ci(Term, String), (class_item(Term) --> String, !)).
+user:term_expansion(ci(Term, String), (class_item(Term, PatternTail, Tail) :- !)) :-
+    append(String, Tail, PatternTail).
 
 % Compile-time macros for AST node classification used by is_ast/1.
 % Translates declarative node definitions into indexed ast_children/2 facts:
