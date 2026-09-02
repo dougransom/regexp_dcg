@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > [!NOTE]
 > Historical releases prior to August 31, 2026 have been re-indexed into the `0.1.0.devX` series (`v0.1.0.dev1` through `v0.1.0.dev4`) leading up to the official `0.1.0` stable release. Older commit snapshots may show superseded version strings in historical manifests.
 
-## [Unreleased]
+## [0.1.0.dev7] - 2026-09-02
 
 ### Added
 - Bidirectional pattern generation: `re_match/2-3` can now generate valid character lists when the input is an unbound variable (e.g. `re_match("aa?b", X)` producing `"aab"` and `"ab"`, `re_match("a.b", X)` producing `[a, Y, b]`).

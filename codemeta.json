@@ -3,7 +3,7 @@
   "@type": "SoftwareSourceCode",
   "identifier": "pure_regex",
   "name": "pure_regex",
-  "version": "0.1.0.dev6",
+  "version": "0.1.0.dev7",
   "description": "A pure, ISO-compliant Definite Clause Grammar (DCG) regular expression engine and tokenizing foundation designed for Scryer Prolog and other ISO-compliant Prolog implementations.",
   "applicationCategory": "DeveloperApplication",
   "operatingSystem": [
