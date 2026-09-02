@@ -151,12 +151,14 @@ re_cache_info(Count, Keys) :-
 
 %% re_match(+Pattern, ?Chars)
 re_match(Pattern, Chars) :-
-    re_match(Pattern, Chars, []).
+    to_input_chars(Chars, Input),
+    re_match(Pattern, Input, []).
 
 %% re_match(+Pattern, ?Chars, -Rest)
 % Direct 3-arg matcher and DCG //1 matcher
 re_match(Pattern, Chars, Rest) :-
-    phrase(re_match_groups_dcg(Pattern, _Match, _Groups), Chars, Rest).
+    to_input_chars(Chars, Input),
+    phrase(re_match_groups_dcg(Pattern, _Match, _Groups), Input, Rest).
 
 %% re_match(+Pattern, -Match)//
 % DCG //2 matcher (expanded to 4 args)
@@ -216,8 +218,6 @@ re_match_dcg_state(Pattern, Match, S0, SF, L0, L) :-
     call(Goal, S0, SF, L0, L),
     append(Match, L, L0).
 
-var_t(X, true) :- var(X).
-var_t(X, false) :- nonvar(X).
 
 
 %% state_tree(+State, -Flags)

@@ -5,7 +5,7 @@
   If `user:regexp_mode(dcg)` or `user:regexp_mode(dfa)` is asserted prior to loading,
   re-exports that engine implementation instead.
 
-  ### Matching Paradigms
+  % Matching Paradigms
 
   1. **Direct List & Embedded DCG Matching (`re_match/2-3`, `re_match//1-2`)**:
      Use direct list matchers or embedded DCG non-terminals with `phrase/2` or `phrase/3`:
@@ -24,7 +24,7 @@
         re_match(Compiled, "aaabc", Rest).
      ```
 
-  ### Supported Regular Expression Syntax
+  % Supported Regular Expression Syntax
 
   | Feature Category | Syntax | Description |
   |---|---|---|
@@ -53,7 +53,7 @@
   | **Flags** | `(?flags)` | Inline flags setting: `i` (case-insensitive), `m` (multi-line), `s` (dot-all), `x` (verbose), etc. |
   | | `(?flags:...)` | Flags applied locally to a sub-expression group. |
 
-  ### Multilingual & International Character Support
+  % Multilingual & International Character Support
 
   In ISO Prolog systems treating `double_quotes` as character lists (`chars`), strings represent sequences of native character code points.
   Exact literal matching, wildcards (`.`), custom character classes (`[α-ω]`), capturing groups, Emojis, and non-Latin scripts (e.g. Greek, CJK, Klingon script PUA) work out of the box.

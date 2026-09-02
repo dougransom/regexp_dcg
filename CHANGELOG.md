@@ -8,6 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > [!NOTE]
 > Historical releases prior to August 31, 2026 have been re-indexed into the `0.1.0.devX` series (`v0.1.0.dev1` through `v0.1.0.dev4`) leading up to the official `0.1.0` stable release. Older commit snapshots may show superseded version strings in historical manifests.
 
+## [Unreleased]
+
+### Added
+- Bidirectional pattern generation: `re_match/2-3` can now generate valid character lists when the input is an unbound variable (e.g. `re_match("aa?b", X)` producing `"aab"` and `"ab"`, `re_match("a.b", X)` producing `[a, Y, b]`).
+- Incremental enumeration for Kleene star (`*`) and plus (`+`) during pattern generation to avoid infinite recursion.
+- Dedicated automated bidirectional unit test suite (`tests/scryer/test_bidirectional.pl`).
+- Bidirectional pattern generation documentation and examples in `README.md` and `llms.txt`.
+
+### Changed
+- Introduced `to_input_chars/2` in `src/core/regexp_common.pl` implementing the `can_be(chars, Input)` contract.
+- Cleaned up doc comment headings in `src/pure_regex.pl` to eliminate false positive reports from `prolog-safe`.
+
 ## [0.1.0.dev6] - 2026-08-31
 
 ### Added

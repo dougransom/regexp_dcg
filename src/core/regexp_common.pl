@@ -4,6 +4,8 @@
 */
 :- module(regexp_common, [
     to_chars/2,
+    to_input_chars/2,
+    var_t/2,
     pattern_ast/2,
     re_group/3,
     extract_match/3,
@@ -67,6 +69,23 @@ to_chars(Input, Chars) :-
     atom_chars(Input, Chars).
 to_chars(Input, _) :-
     domain_error(chars, Input).
+
+%% var_t(@Term, -Truth)
+%
+% Reified truth test for unbound variables.
+var_t(X, true) :- var(X).
+var_t(X, false) :- nonvar(X).
+
+%% to_input_chars(?Input, -Chars)
+%
+% Converts `Input` to a character list `Chars` under the `can_be(chars, Input)` contract.
+% - If `Input` is an unbound variable, unifies `Chars = Input` for bidirectional generation.
+% - If `Input` is an instantiated character list or atom, converts via `to_chars/2`.
+% - If `Input` is an invalid type (e.g. integer), `to_chars/2` raises `domain_error(chars, Input)`.
+to_input_chars(Input, Chars) :-
+    if_(var_t(Input),
+        Input = Chars,
+        to_chars(Input, Chars)).
 
 %% pattern_ast(+Pattern, -AST)
 %

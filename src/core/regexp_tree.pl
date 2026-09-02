@@ -363,7 +363,7 @@ re_tree_match_named(Pattern, InputOrMatch, MatchOrNamed, NamedOrS0, RestOrS) :-
 /* Internal Implementations */
 
 re_tree_match_groups_impl(Pattern, Input, Match, Groups, Rest) :-
-    to_chars(Input, Chars),
+    to_input_chars(Input, Chars),
     get_tree_automaton(Pattern, Automaton, GroupCount),
     length(PosGroups, GroupCount),
     S0 = state(Chars, PosGroups, [], []),
@@ -372,7 +372,7 @@ re_tree_match_groups_impl(Pattern, Input, Match, Groups, Rest) :-
     extract_match(Chars, Rest, Match).
 
 re_tree_match_named_impl(Pattern, Input, Match, NamedGroups, Rest) :-
-    to_chars(Input, Chars),
+    to_input_chars(Input, Chars),
     get_tree_automaton(Pattern, Automaton, GroupCount),
     length(PosGroups, GroupCount),
     S0 = state(Chars, PosGroups, [], []),

@@ -80,6 +80,8 @@
     char_equal_ci/2,
     char_equal_ci_t/3,
     to_chars/2,
+    to_input_chars/2,
+    var_t/2,
     match_class_t/3,
     match_class_ci_t/3,
     pattern_ast/2,
@@ -120,15 +122,6 @@ compiled_tree_t(compiled_tree(_, _), true).
 compiled_tree_t(Pattern, false) :-
     Pattern \= compiled_tree(_, _).
 
-%% var_t(+Term, -Truth)
-%
-% Reified test for term instantiation (`var` vs `nonvar`).
-%
-% Reification Explanation:
-% Designed specifically for `library(reif)`'s `if_/3` conditional. Binds `Truth` to `true` if `Term` is unbound,
-% or `false` if `Term` is instantiated.
-var_t(X, true) :- var(X).
-var_t(X, false) :- nonvar(X).
 
 get_string_tree_automaton(Pattern, Automaton, GroupCount) :-
     get_or_compile_pattern(tree, Pattern, regexp_compile_tree:compile_ast_tree, Automaton, GroupCount).
@@ -298,8 +291,15 @@ regex_tree_run(alt(NodeA, NodeB), S0, SF) -->
     ).
 
 regex_tree_run(star(SubNode, Cont), S0, SF) -->
-    (   regex_tree_run_star(SubNode, Cont, S0, SF)
-    ;   regex_tree_run(Cont, S0, SF)
+    state_remaining(Chars),
+    { if_(var_t(Chars), IsVar = true, IsVar = false) },
+    (   { IsVar == true } ->
+        (   regex_tree_run(Cont, S0, SF)
+        ;   regex_tree_run_star(SubNode, Cont, S0, SF)
+        )
+    ;   (   regex_tree_run_star(SubNode, Cont, S0, SF)
+        ;   regex_tree_run(Cont, S0, SF)
+        )
     ).
 
 regex_tree_run(lazy_star(SubNode, Cont), S0, SF) -->

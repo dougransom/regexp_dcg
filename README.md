@@ -143,7 +143,40 @@ Extract numbered or named capturing groups via direct predicates or DCG non-term
 ;  false.
 ```
 
-#### 4. Pre-Compiling Reusable Patterns (`re_compile/2`)
+#### 4. Bidirectional Pattern Generation (`re_match/2` with Unbound Variable)
+`pure_regex` is logically pure and works in both directions: when the input argument is an unbound variable, `re_match/2` generates valid character lists satisfying the regular expression:
+
+```prolog
+% Generate matching strings from pattern
+?- re_match("aa?b", X).
+   X = "aab"
+;  X = "ab".
+
+% Wildcard dot (.) leaves character variable uninstantiated
+?- re_match("a.b", X).
+   X = [a, Y, b].  % dif(Y, '\n')
+
+% Alternation produces each alternative on backtracking
+?- re_match("cat|dog|fish", X).
+   X = "cat"
+;  X = "dog"
+;  X = "fish".
+
+% Kleene star (*) incrementally enumerates solutions from shortest to longer
+?- re_match("a*b", X).
+   X = "b"
+;  X = "ab"
+;  X = "aab"
+;  X = "aaab"
+;  ... .
+
+% Pre-compiled automata generate solutions directly
+?- re_compile("true|false", Compiled), re_match(Compiled, X).
+   Compiled = compiled_tree(...), X = "true"
+;  Compiled = compiled_tree(...), X = "false".
+```
+
+#### 5. Pre-Compiling Reusable Patterns (`re_compile/2`)
 For maximum efficiency when evaluating the same pattern against many inputs, pre-compile the pattern into a reusable structure:
 
 ```prolog

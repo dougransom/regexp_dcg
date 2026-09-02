@@ -51,6 +51,19 @@ All engines maintain identical 1:1 API signatures:
 % Named capture groups (requires mode(dcg))
 ?- re_match_named("(?P<year>\\d{4})-(?P<month>\\d{2})", "2026-08", Match, NamedMap).
    Match = "2026-08", NamedMap = ["year"-"2026", "month"-"08"].
+
+% Bidirectional generation (unbound Input variable)
+?- re_match("aa?b", X).
+   X = "aab"
+;  X = "ab".
+
+?- re_match("a.b", X).
+   X = [a, Y, b].  % dif(Y, '\n')
+
+?- re_match("a*b", X).
+   X = "b"
+;  X = "ab"
+;  X = "aab".
 ```
 
 ## DCG Tokenizer & Lexer Recipe
