@@ -2,92 +2,93 @@ NAME = pure_regex
 VERSION = 0.1.0.dev7
 
 export PROLOG_ENGINE ?= scryer
-SCRYER ?= scryer-safe
+PROLOG ?= $(PROLOG_ENGINE)-safe
+SCRYER ?= $(PROLOG)
 PROLOG_AGENT ?= prolog-agent
 
-.PHONY: all test test_regexp test_curr_pred test_exports_match test_format test_regexp_ast test_regexp_dcg test_regexp_compile_dfa test_regexp_tree test_si test_time test_re_token test_international test_toml test_bidirectional test_expansion docs html llms tree_doc_examples packages package_bakage package_swi clean
+.PHONY: all test test_regexp test_curr_pred test_exports_match test_format test_regexp_ast test_regexp_dcg test_regexp_compile_dfa test_regexp_tree test_si test_time test_re_token test_international test_toml test_bidirectional test_expansion docs html llms tree_doc_examples packages package_engine package_bakage package_swi clean
 
 all: test docs
 
 # ==============================================================================
-# Testing Targets (Executed via scryer-safe safety runner)
+# Testing Targets (Executed via generic $(PROLOG) safety runner)
 # ==============================================================================
 
 test: test_regexp test_curr_pred test_exports_match test_format test_regexp_ast test_regexp_dcg test_regexp_compile_dfa test_regexp_tree test_si test_time test_re_token test_international test_toml test_bidirectional test_expansion
 
 test_curr_pred:
 	@echo "=== Running test_curr_pred.pl ==="
-	$(SCRYER) -g test_mod:main tests/scryer/test_curr_pred.pl
+	$(PROLOG) -g test_mod:main tests/$(PROLOG_ENGINE)/test_curr_pred.pl
 	@echo ""
 
 test_exports_match:
 	@echo "=== Running test_exports_match.pl ==="
-	$(SCRYER) -g run_tests -g halt tests/scryer/test_exports_match.pl
+	$(PROLOG) -g run_tests -g halt tests/$(PROLOG_ENGINE)/test_exports_match.pl
 	@echo ""
 
 test_format:
 	@echo "=== Running test_format.pl ==="
-	$(SCRYER) -g main tests/portable/test_format.pl
+	$(PROLOG) -g main tests/portable/test_format.pl
 	@echo ""
 
 test_regexp_ast:
 	@echo "=== Running test_regexp_ast.pl ==="
-	$(SCRYER) -g run_tests -g halt tests/scryer/test_regexp_ast.pl
+	$(PROLOG) -g run_tests -g halt tests/$(PROLOG_ENGINE)/test_regexp_ast.pl
 	@echo ""
 
 test_regexp:
 	@echo "=== Running test_regexp.pl ==="
-	$(SCRYER) -g run_tests -g halt tests/scryer/test_regexp.pl
+	$(PROLOG) -g run_tests -g halt tests/$(PROLOG_ENGINE)/test_regexp.pl
 	@echo ""
 
 test_regexp_dcg:
 	@echo "=== Running test_regexp_dcg.pl ==="
-	$(SCRYER) -g run_tests -g halt tests/scryer/test_regexp_dcg.pl
+	$(PROLOG) -g run_tests -g halt tests/$(PROLOG_ENGINE)/test_regexp_dcg.pl
 	@echo ""
 
 test_regexp_compile_dfa:
 	@echo "=== Running test_regexp_compile_dfa.pl ==="
-	$(SCRYER) -g run_tests -g halt tests/scryer/test_regexp_compile_dfa.pl
+	$(PROLOG) -g run_tests -g halt tests/$(PROLOG_ENGINE)/test_regexp_compile_dfa.pl
 	@echo ""
 
 test_regexp_tree:
 	@echo "=== Running test_regexp_tree.pl ==="
-	$(SCRYER) -g main -g halt tests/scryer/test_regexp_tree.pl
+	$(PROLOG) -g main -g halt tests/$(PROLOG_ENGINE)/test_regexp_tree.pl
 	@echo ""
 
 test_si:
 	@echo "=== Running test_si.pl ==="
-	$(SCRYER) -g main tests/portable/test_si.pl
+	$(PROLOG) -g main tests/portable/test_si.pl
 	@echo ""
 
 test_time:
 	@echo "=== Running test_time.pl ==="
-	$(SCRYER) -g main tests/scryer/test_time.pl
+	$(PROLOG) -g main tests/$(PROLOG_ENGINE)/test_time.pl
 	@echo ""
 
 test_re_token:
 	@echo "=== Running test_re_token.pl ==="
-	$(SCRYER) -g run_tests -g halt tests/scryer/test_re_token.pl
+	$(PROLOG) -g run_tests -g halt tests/$(PROLOG_ENGINE)/test_re_token.pl
 	@echo ""
 
 test_international:
 	@echo "=== Running test_international.pl ==="
-	$(SCRYER) -g run_tests -g halt tests/scryer/test_international.pl
+	$(PROLOG) -g run_tests -g halt tests/$(PROLOG_ENGINE)/test_international.pl
 	@echo ""
 
 test_toml:
 	@echo "=== Running test_toml.pl ==="
-	$(SCRYER) -g run_tests -g halt tests/scryer/test_toml.pl
+	$(PROLOG) -g run_tests -g halt tests/$(PROLOG_ENGINE)/test_toml.pl
 	@echo ""
 
 test_bidirectional:
 	@echo "=== Running test_bidirectional.pl ==="
-	$(SCRYER) -g run_tests -g halt tests/scryer/test_bidirectional.pl
+	$(PROLOG) -g run_tests -g halt tests/$(PROLOG_ENGINE)/test_bidirectional.pl
 	@echo ""
 
 test_expansion:
 	@echo "=== Running test_expansion.pl ==="
-	$(SCRYER) -g run_tests -g halt tests/scryer/test_expansion.pl
+	$(PROLOG) -g run_tests -g halt tests/$(PROLOG_ENGINE)/test_expansion.pl
 	@echo ""
 
 # ==============================================================================
@@ -96,13 +97,13 @@ test_expansion:
 
 docs: llms tree_doc_examples
 	@echo "=== Generating docs/usage.md ==="
-	$(SCRYER) -g main -g halt scripts/generate_intro_md.pl
+	$(PROLOG) -g main -g halt scripts/generate_intro_md.pl
 	@echo "Docs successfully updated."
 	@echo ""
 
 tree_doc_examples:
 	@echo "=== Generating Rational Tree Automata Doc Examples ==="
-	$(SCRYER) -g main -g halt scripts/generate_tree_doc_examples.pl
+	$(PROLOG) -g main -g halt scripts/generate_tree_doc_examples.pl
 	@echo ""
 
 llms:
@@ -126,11 +127,13 @@ html: docs
 # Packaging Targets (Prolog Agent Toolkit Standards)
 # ==============================================================================
 
-packages: test docs package_bakage package_swi
+packages: test docs package_engine package_swi
 
-package_bakage:
-	@echo "=== Building Scryer bakage package ==="
-	$(PROLOG_AGENT) pack --engine scryer
+package_engine:
+	@echo "=== Building $(PROLOG_ENGINE) package ==="
+	$(PROLOG_AGENT) pack --engine $(PROLOG_ENGINE)
+
+package_bakage: package_engine
 
 package_swi:
 	@echo "=== Building SWI pack_install package ==="
