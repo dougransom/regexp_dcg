@@ -61,6 +61,31 @@
   > [!NOTE]
   > **Case-Insensitivity Limitation (`(?i)`)**: Inline flag `(?i)` case folding is currently scoped to ASCII characters (`'A'-'Z'` $\leftrightarrow$ `'a'-'z'`). Non-ASCII international uppercase/lowercase foldings (e.g. `'É'` $\leftrightarrow$ `'é'`) are not automatically folded by `(?i)`.
 */
+%% re_match(+Pattern, ?Input)
+% Direct 2-arg anchored matcher (Input must match Pattern completely).
+%% re_match(+Pattern, ?Input, -Rest)
+%% re_match(+Pattern)//
+% Direct 3-arg unanchored matcher or DCG non-terminal //0 (expanded to 3 args).
+%% re_match(+Pattern, -Match)//
+% DCG non-terminal //1 (expanded to 4 args: Pattern, Match, S0, S).
+%% re_match_groups(+Pattern, ?Input, -Match, -Groups)
+% Direct 4-arg anchored matcher returning matched substring and positional capture groups.
+%% re_match_groups(+Pattern, ?InputOrMatch, ?MatchOrGroups, ?GroupsOrS0, ?RestOrS)
+% Dual-purpose matcher (Direct 5-arg list call or DCG //3 expansion call).
+%% re_match_named(+Pattern, ?Input, -Match, -NamedGroups)
+% Direct 4-arg anchored matcher returning matched substring and named capture groups.
+%% re_match_named(+Pattern, ?InputOrMatch, ?MatchOrNamed, ?NamedOrS0, ?RestOrS)
+% Dual-purpose matcher (Direct 5-arg list call or DCG //3 expansion call).
+%% re_group(+NamedGroups, +Name, -Value)
+% Retrieves the captured string value for group `Name` from `NamedGroups` key-value pairs list.
+%% re_compile(+Pattern, -CompiledTerm)
+% Pre-compiles `Pattern` into a reusable compiled automaton structure.
+%% re_clear_cache
+% Clears dynamic pattern cache entries across all engines. Intended for the rare
+% circumstance that an excessive number of patterns have been compiled, resulting
+% in excessive memory use by the Prolog system.
+%% re_cache_info(-Count, -Keys)
+% Retrieves count and pattern keys currently cached.
 :- module(pure_regex, [
     re_match//1,
     re_match//2,

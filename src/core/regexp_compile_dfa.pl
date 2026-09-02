@@ -56,7 +56,8 @@ re_match(Pattern, Chars) :-
     re_match(Pattern, Chars, []).
 
 %% re_match(+Pattern, ?Chars, -Rest)
-% Direct 3-arg matcher and DCG //1 matcher
+%% re_match(+Pattern)//
+% Direct 3-arg unanchored matcher or DCG non-terminal //0 (expanded to 3 args).
 re_match(Pattern, Chars, Rest) :-
     phrase(re_match(Pattern, _Match), Chars, Rest).
 
@@ -125,6 +126,11 @@ re_match_named_dcg(Pattern, _Match, _NamedGroups), _S --> _S,
 re_match_named_dcg(Pattern, _Match, _NamedGroups), _S --> _S,
     { domain_error(dfa_group_extraction, Pattern) }.
 
+%% re_group(+NamedGroups, +Name, -Value)
+% Retrieves the captured string value for group `Name` from `NamedGroups` key-value pairs list.
+re_group(NamedGroups, Name, Value) :-
+    regexp_common:re_group(NamedGroups, Name, Value).
+
 %% re_compile(+Pattern, -Compiled)
 %
 % Compile the regular expression `Pattern` into a reusable NFA structure.
@@ -135,6 +141,8 @@ re_compile(Pattern, NFA) :-
 %% re_clear_cache
 %
 % Clear all compiled DFA patterns from the shared pattern cache.
+% Intended for the rare circumstance that an excessive number of patterns have been compiled,
+% resulting in excessive memory use by the Prolog system.
 re_clear_cache :-
     clear_pattern_cache(dfa).
 

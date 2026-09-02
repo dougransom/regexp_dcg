@@ -74,7 +74,7 @@ main :-
               (re_clear_cache, phrase(re_match("a.*b"), "acb"), phrase(re_match("[0-9]+"), "123"), re_cache_info(U_Count4, U_Keys4)),
               ["Count", "Keys"], [U_Count4, U_Keys4]),
 
-    run_query(Stream, "5. Clear Compiled Pattern Cache", "Clear all compiled pattern goals from the dynamic compilation database using re_clear_cache/0.",
+    run_query(Stream, "5. Clear Compiled Pattern Cache", "Clear all compiled pattern goals from the dynamic compilation database using re_clear_cache/0. Note that re_clear_cache/0 is intended for the rare circumstance that an excessive number of distinct patterns have been compiled, resulting in excessive memory use by the Prolog system. In normal operation, compiled pattern caching provides substantial performance benefits without requiring manual invalidation.",
               "re_clear_cache, re_cache_info(Count, Keys)",
               (re_clear_cache, re_cache_info(U_Count5, U_Keys5)),
               ["Count", "Keys"], [U_Count5, U_Keys5]),
@@ -231,7 +231,7 @@ main :-
               (re_clear_cache, phrase(re_match("c*d", Match31), "cccd"), re_cache_info(Count31, Keys31)),
               ["Match", "Count", "Keys"], [Match31, Count31, Keys31]),
 
-    run_query(Stream, "32. Compilation Cache Clearing", "Clear the cache database and verify no patterns remain.",
+    run_query(Stream, "32. Compilation Cache Clearing", "Clear the cache database and verify no patterns remain. Intended for rare situations where excessive compiled patterns cause high memory use.",
               "re_clear_cache, phrase(re_match(\"c*d\", Match), \"cccd\"), re_clear_cache, re_cache_info(CountAfter, KeysAfter)",
               (re_clear_cache, phrase(re_match("c*d", _Match32), "cccd"), re_clear_cache, re_cache_info(CountAfter32, KeysAfter32)),
               ["CountAfter", "KeysAfter"], [CountAfter32, KeysAfter32]),

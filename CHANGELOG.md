@@ -15,10 +15,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Incremental enumeration for Kleene star (`*`) and plus (`+`) during pattern generation to avoid infinite recursion.
 - Dedicated automated bidirectional unit test suite (`tests/scryer/test_bidirectional.pl`).
 - Bidirectional pattern generation documentation and examples in `README.md` and `llms.txt`.
+- Automated interface docstring parity tests in `tests/scryer/test_exports_match.pl` verifying 1:1 docstrings across all engine modules.
+- Interface documentation consistency policy in `.agents/AGENTS.md`.
 
 ### Changed
 - Introduced `to_input_chars/2` in `src/core/regexp_common.pl` implementing the `can_be(chars, Input)` contract.
 - Cleaned up doc comment headings in `src/pure_regex.pl` to eliminate false positive reports from `prolog-safe`.
+- Synchronized canonical predicate-level docstrings across `src/pure_regex.pl`, `src/core/regexp_tree.pl`, `src/core/regexp_compile_dcg.pl`, and `src/core/regexp_compile_dfa.pl`.
+- Documented `re_clear_cache/0` across usage guides and docstrings as intended for rare circumstances where an excessive number of compiled patterns cause high memory usage.
 
 ## [0.1.0.dev6] - 2026-08-31
 

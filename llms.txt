@@ -27,6 +27,11 @@ All engines maintain identical 1:1 API signatures:
 - `re_match_groups(Pattern, Input, Match, Groups)` - Direct match returning `Match` and `Groups` list.
 - `re_match_named(Pattern, Input, Match, NamedMap)` - Direct match returning `Match` and named group list `[Name-Value, ...]`.
 
+### Compilation & Cache Management
+- `re_compile(Pattern, CompiledTerm)` - Pre-compiles `Pattern` into a reusable automaton structure.
+- `re_cache_info(Count, Keys)` - Inspects count and keys of dynamically compiled pattern cache.
+- `re_clear_cache/0` - Clears dynamic pattern cache entries across all engines (intended for the rare circumstance where an excessive number of distinct patterns have been compiled, resulting in excessive memory use by the Prolog system).
+
 ## Usage Examples
 
 ```prolog

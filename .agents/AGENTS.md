@@ -31,3 +31,8 @@ Always test changes using `scryer-safe` (or `nice scryer_safe`) to avoid OS reso
 - **Type Tests**: Use `library(si)` (e.g. `atom_si/1`, `list_si/1`).
 - **Prohibited SWI Constructs**: Never use SWI-specific `dicts`, `string` type, or `is_list/1`.
 - **Structured Context**: Refer to `llms.txt`, `llms-full.txt`, and `codemeta.json` for machine-readable interface specifications.
+
+## Interface Documentation Consistency
+- **Canonical Interface Specifications**: `src/pure_regex.pl` defines the authoritative public interface and predicate docstrings.
+- **Engine Parity**: Every engine module (`src/core/regexp_tree.pl`, `src/core/regexp_compile_dcg.pl`, `src/core/regexp_compile_dfa.pl`) must maintain 1:1 identical export lists and matching predicate-level docstrings (`%% Name(+Arg1, ...)`).
+- **Automated Verification**: Run `scryer-safe -g run_tests -g halt tests/scryer/test_exports_match.pl` (included in `make test`) to ensure export lists and docstrings remain synchronized across all engine implementations.

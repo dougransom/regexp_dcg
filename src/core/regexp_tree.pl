@@ -268,28 +268,68 @@
 :- use_module(library(reif)).
 
 :- use_module(regexp_ast, [re_ast_chars//1, is_ast/1]).
-:- use_module(regexp_common).
+:- use_module(regexp_common, [to_chars/2, to_input_chars/2, var_t/2, pattern_ast/2, extract_match/3, is_input_arg_t/2, state_groups/2, state_named/2, pattern_cache/4, pattern_cache_t/5, clear_pattern_cache/1, pattern_cache_info/3]).
 :- use_module(regexp_compile_tree, [compile_ast_tree/3, get_tree_automaton/3, regex_tree_run//3]).
 
-%% Standard Engine Aliases for shared test runner compatibility
+%% re_match(+Pattern, ?Input)
+% Direct 2-arg anchored matcher (Input must match Pattern completely).
 re_match(Pattern, Input) :-
     re_tree_match(Pattern, Input).
+
+%% re_match(+Pattern, ?Input, -Rest)
+%% re_match(+Pattern)//
+% Direct 3-arg unanchored matcher or DCG non-terminal //0 (expanded to 3 args).
 re_match(Pattern, Input, Rest) :-
     re_tree_match(Pattern, Input, Rest).
+
+%% re_match(+Pattern, -Match)//
+% DCG non-terminal //1 (expanded to 4 args: Pattern, Match, S0, S).
 re_match(Pattern, Match, S0, S) :-
     re_tree_match_groups_impl(Pattern, S0, Match, _Groups, S).
+
+%% re_match_groups(+Pattern, ?Input, -Match, -Groups)
+% Direct 4-arg anchored matcher returning matched substring and positional capture groups.
 re_match_groups(Pattern, Input, Match, Groups) :-
     re_tree_match_groups(Pattern, Input, Match, Groups).
+
+%% re_match_groups(+Pattern, ?InputOrMatch, ?MatchOrGroups, ?GroupsOrS0, ?RestOrS)
+% Dual-purpose matcher:
+% 1. Direct 5-arg list call: (Pattern, Input, Match, Groups, Rest)
+% 2. DCG //3 expansion call: (Pattern, Match, Groups, S0, S)
 re_match_groups(Pattern, InputOrMatch, MatchOrGroups, GroupsOrS0, RestOrS) :-
     re_tree_match_groups(Pattern, InputOrMatch, MatchOrGroups, GroupsOrS0, RestOrS).
+
+%% re_match_named(+Pattern, ?Input, -Match, -NamedGroups)
+% Direct 4-arg anchored matcher returning matched substring and named capture groups.
 re_match_named(Pattern, Input, Match, NamedGroups) :-
     re_tree_match_named(Pattern, Input, Match, NamedGroups).
+
+%% re_match_named(+Pattern, ?InputOrMatch, ?MatchOrNamed, ?NamedOrS0, ?RestOrS)
+% Dual-purpose matcher:
+% 1. Direct 5-arg list call: (Pattern, Input, Match, NamedGroups, Rest)
+% 2. DCG //3 expansion call: (Pattern, Match, NamedGroups, S0, S)
 re_match_named(Pattern, InputOrMatch, MatchOrNamed, NamedOrS0, RestOrS) :-
     re_tree_match_named(Pattern, InputOrMatch, MatchOrNamed, NamedOrS0, RestOrS).
+
+%% re_group(+NamedGroups, +Name, -Value)
+% Retrieves the captured string value for group `Name` from `NamedGroups` key-value pairs list.
+re_group(NamedGroups, Name, Value) :-
+    member(Name-Value, NamedGroups).
+
+%% re_compile(+Pattern, -CompiledTerm)
+% Pre-compiles `Pattern` into a reusable compiled automaton structure.
 re_compile(Pattern, CompiledTerm) :-
     re_tree_compile(Pattern, CompiledTerm).
+
+%% re_clear_cache
+% Clears dynamic pattern cache entries across all engines. Intended for the rare
+% circumstance that an excessive number of patterns have been compiled, resulting
+% in excessive memory use by the Prolog system.
 re_clear_cache :-
     clear_pattern_cache(all).
+
+%% re_cache_info(-Count, -Keys)
+% Retrieves count and pattern keys currently cached.
 re_cache_info(Count, Keys) :-
     pattern_cache_info(all, Count, Keys).
 
@@ -307,7 +347,7 @@ re_tree_cache_info(Count, Keys) :-
 
 %% re_tree_group(+NamedGroups, +Name, -Value)
 re_tree_group(NamedGroups, Name, Value) :-
-    re_group(NamedGroups, Name, Value).
+    member(Name-Value, NamedGroups).
 
 %% re_tree_compile(+Pattern, -CompiledTerm)
 %

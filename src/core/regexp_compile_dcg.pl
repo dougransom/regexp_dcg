@@ -138,6 +138,8 @@ pattern_compiled_cache(Pattern, Goal, GroupCount) :-
 %% re_clear_cache
 %
 % Clear all compiled patterns currently stored in the dynamic DCG engine cache.
+% Intended for the rare circumstance that an excessive number of patterns have been compiled,
+% resulting in excessive memory use by the Prolog system.
 re_clear_cache :-
     clear_pattern_cache(dcg).
 
@@ -155,13 +157,14 @@ re_match(Pattern, Chars) :-
     re_match(Pattern, Input, []).
 
 %% re_match(+Pattern, ?Chars, -Rest)
-% Direct 3-arg matcher and DCG //1 matcher
+%% re_match(+Pattern)//
+% Direct 3-arg unanchored matcher or DCG non-terminal //0 (expanded to 3 args).
 re_match(Pattern, Chars, Rest) :-
     to_input_chars(Chars, Input),
     phrase(re_match_groups_dcg(Pattern, _Match, _Groups), Input, Rest).
 
 %% re_match(+Pattern, -Match)//
-% DCG //2 matcher (expanded to 4 args)
+% DCG non-terminal //1 (expanded to 4 args: Pattern, Match, S0, S).
 re_match(Pattern, Match, S0, S) :-
     phrase(re_match_groups_dcg(Pattern, Match, _Groups), S0, S).
 
@@ -202,6 +205,11 @@ re_match_named(Pattern, InputOrMatch, MatchOrNamed, NamedOrS0, RestOrS) :-
 re_match_named_dcg(Pattern, Match, NamedGroups, S0, S) :-
     re_match_dcg_state(Pattern, Match, _State0, SF, S0, S),
     state_named(SF, NamedGroups).
+
+%% re_group(+NamedGroups, +Name, -Value)
+% Retrieves the captured string value for group `Name` from `NamedGroups` key-value pairs list.
+re_group(NamedGroups, Name, Value) :-
+    regexp_common:re_group(NamedGroups, Name, Value).
 
 %% re_match_dcg_state(+Pattern, -Match, ?S0, -SF)//
 %

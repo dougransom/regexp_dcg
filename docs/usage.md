@@ -54,7 +54,7 @@ Inspect the dynamic compilation cache using re_cache_info/2 to check the number 
 
 ### 5. Clear Compiled Pattern Cache
 
-Clear all compiled pattern goals from the dynamic compilation database using re_clear_cache/0.
+Clear all compiled pattern goals from the dynamic compilation database using re_clear_cache/0. Note that re_clear_cache/0 is intended for the rare circumstance that an excessive number of distinct patterns have been compiled, resulting in excessive memory use by the Prolog system. In normal operation, compiled pattern caching provides substantial performance benefits without requiring manual invalidation.
 
 ```prolog
 ?- re_clear_cache, re_cache_info(Count, Keys).
@@ -378,7 +378,7 @@ Access and verify the internal compilation cache.
 
 ### 32. Compilation Cache Clearing
 
-Clear the cache database and verify no patterns remain.
+Clear the cache database and verify no patterns remain. Intended for rare situations where excessive compiled patterns cause high memory use.
 
 ```prolog
 ?- re_clear_cache, phrase(re_match("c*d", Match), "cccd"), re_clear_cache, re_cache_info(CountAfter, KeysAfter).
