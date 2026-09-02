@@ -1,6 +1,18 @@
 # Regular Expression Engine for Scryer Prolog and ISO Prolog Systems (`pure_regex`)
 
+<!-- Machine-Readable Metadata Discovery -->
+<link rel="describedby" type="application/ld+json" href="codemeta.json" />
+<link rel="license" href="UNLICENSE" />
+<link rel="alternate" type="text/plain" href="llms.txt" title="LLM Context Summary" />
+<link rel="alternate" type="text/plain" href="llms-full.txt" title="Full LLM Context" />
+<link rel="help" type="text/markdown" href="docs/usage.md" title="Usage Guide" />
+
+[![CodeMeta](https://img.shields.io/badge/CodeMeta-2.0-blue.svg)](codemeta.json)
 [![llms.txt](https://img.shields.io/badge/llms.txt-available-blue.svg)](llms.txt)
+[![llms-full.txt](https://img.shields.io/badge/llms--full.txt-expanded-blue.svg)](llms-full.txt)
+[![License: Unlicense](https://img.shields.io/badge/license-Unlicense-blue.svg)](UNLICENSE)
+[![Prolog: ISO-Compliant](https://img.shields.io/badge/prolog-ISO--Compliant-blue.svg)](https://www.iso.org/standard/21413.html)
+[![Scryer Prolog](https://img.shields.io/badge/Scryer%20Prolog-compatible-orange.svg)](https://github.com/mthom/scryer-prolog)
 
 A pure, ISO-compliant regular expression engine providing both **Definite Clause Grammar (DCG) non-terminal** and **direct character list (`chars`) matching interfaces** for [Scryer Prolog](https://github.com/mthom/scryer-prolog) and other ISO-compliant Prolog implementations.
 
