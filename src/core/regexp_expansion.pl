@@ -56,14 +56,13 @@
 %   - dcg, backtracking      -> dcg
 %   - dfa                    -> dfa
 normalize_engine(Raw, Normalized) :-
-    (   (Raw == tree ; Raw == rt ; Raw == rational_tree) ->
-        Normalized = tree
-    ;   (Raw == dcg ; Raw == backtracking) ->
-        Normalized = dcg
-    ;   Raw == dfa ->
-        Normalized = dfa
-    ;   domain_error(regexp_engine, Raw)
-    ).
+    if_((Raw = tree ; Raw = rt ; Raw = rational_tree),
+        Normalized = tree,
+        if_((Raw = dcg ; Raw = backtracking),
+            Normalized = dcg,
+            if_(Raw = dfa,
+                Normalized = dfa,
+                domain_error(regexp_engine, Raw)))).
 
 %% current_global_engine(-Engine)
 %

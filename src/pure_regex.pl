@@ -104,6 +104,7 @@
 ]).
 
 :- use_module(library(error)).
+:- use_module(library(reif)).
 
 :- use_module('core/regexp_tree', [
     re_tree_match/2,
@@ -133,10 +134,15 @@
 :- use_module('core/regexp_expansion').
 
 resolve_engine(Pattern, Engine) :-
-    (   nonvar(Pattern), Pattern = compiled_tree(_, _) ->
-        Engine = tree
-    ;   nonvar(Pattern), Pattern = compiled(_, _) ->
-        Engine = dcg
+    (   compound(Pattern) ->
+        functor(Pattern, Functor, _),
+        if_(Functor = compiled_tree,
+            Engine = tree,
+            if_(Functor = compiled,
+                Engine = dcg,
+                if_(Functor = nfa,
+                    Engine = dfa,
+                    regexp_expansion:current_dynamic_engine(Engine))))
     ;   regexp_expansion:current_dynamic_engine(Engine)
     ).
 
@@ -144,38 +150,42 @@ resolve_engine(Pattern, Engine) :-
 % Direct 2-arg anchored matcher (Input must match Pattern completely).
 re_match(Pattern, Input) :-
     resolve_engine(Pattern, Engine),
-    (   Engine == tree -> re_tree_match(Pattern, Input)
-    ;   Engine == dcg  -> re_dcg_match(Pattern, Input)
-    ;   domain_error(regexp_engine, Engine)
-    ).
+    if_(Engine = tree,
+        re_tree_match(Pattern, Input),
+        if_(Engine = dcg,
+            re_dcg_match(Pattern, Input),
+            domain_error(regexp_engine, Engine))).
 
 %% re_match(+Pattern, ?Input, -Rest)
 %% re_match(+Pattern)//
 % Direct 3-arg unanchored matcher or DCG non-terminal //0 (expanded to 3 args).
 re_match(Pattern, Input, Rest) :-
     resolve_engine(Pattern, Engine),
-    (   Engine == tree -> re_tree_match(Pattern, Input, Rest)
-    ;   Engine == dcg  -> re_dcg_match(Pattern, Input, Rest)
-    ;   domain_error(regexp_engine, Engine)
-    ).
+    if_(Engine = tree,
+        re_tree_match(Pattern, Input, Rest),
+        if_(Engine = dcg,
+            re_dcg_match(Pattern, Input, Rest),
+            domain_error(regexp_engine, Engine))).
 
 %% re_match(+Pattern, -Match)//
 % DCG non-terminal //1 (expanded to 4 args: Pattern, Match, S0, S).
 re_match(Pattern, Match, S0, S) :-
     resolve_engine(Pattern, Engine),
-    (   Engine == tree -> re_tree_match(Pattern, Match, S0, S)
-    ;   Engine == dcg  -> re_dcg_match(Pattern, Match, S0, S)
-    ;   domain_error(regexp_engine, Engine)
-    ).
+    if_(Engine = tree,
+        re_tree_match(Pattern, Match, S0, S),
+        if_(Engine = dcg,
+            re_dcg_match(Pattern, Match, S0, S),
+            domain_error(regexp_engine, Engine))).
 
 %% re_match_groups(+Pattern, ?Input, -Match, -Groups)
 % Direct 4-arg anchored matcher returning matched substring and positional capture groups.
 re_match_groups(Pattern, Input, Match, Groups) :-
     resolve_engine(Pattern, Engine),
-    (   Engine == tree -> re_tree_match_groups(Pattern, Input, Match, Groups)
-    ;   Engine == dcg  -> re_dcg_match_groups(Pattern, Input, Match, Groups)
-    ;   domain_error(regexp_engine, Engine)
-    ).
+    if_(Engine = tree,
+        re_tree_match_groups(Pattern, Input, Match, Groups),
+        if_(Engine = dcg,
+            re_dcg_match_groups(Pattern, Input, Match, Groups),
+            domain_error(regexp_engine, Engine))).
 
 %% re_match_groups(+Pattern, ?InputOrMatch, ?MatchOrGroups, ?GroupsOrS0, ?RestOrS)
 % Dual-purpose matcher:
@@ -183,19 +193,21 @@ re_match_groups(Pattern, Input, Match, Groups) :-
 % 2. DCG //3 expansion call: (Pattern, Match, Groups, S0, S)
 re_match_groups(Pattern, InputOrMatch, MatchOrGroups, GroupsOrS0, RestOrS) :-
     resolve_engine(Pattern, Engine),
-    (   Engine == tree -> re_tree_match_groups(Pattern, InputOrMatch, MatchOrGroups, GroupsOrS0, RestOrS)
-    ;   Engine == dcg  -> re_dcg_match_groups(Pattern, InputOrMatch, MatchOrGroups, GroupsOrS0, RestOrS)
-    ;   domain_error(regexp_engine, Engine)
-    ).
+    if_(Engine = tree,
+        re_tree_match_groups(Pattern, InputOrMatch, MatchOrGroups, GroupsOrS0, RestOrS),
+        if_(Engine = dcg,
+            re_dcg_match_groups(Pattern, InputOrMatch, MatchOrGroups, GroupsOrS0, RestOrS),
+            domain_error(regexp_engine, Engine))).
 
 %% re_match_named(+Pattern, ?Input, -Match, -Named)
 % Direct 4-arg anchored matcher returning matched substring and named capture groups.
 re_match_named(Pattern, Input, Match, Named) :-
     resolve_engine(Pattern, Engine),
-    (   Engine == tree -> re_tree_match_named(Pattern, Input, Match, Named)
-    ;   Engine == dcg  -> re_dcg_match_named(Pattern, Input, Match, Named)
-    ;   domain_error(regexp_engine, Engine)
-    ).
+    if_(Engine = tree,
+        re_tree_match_named(Pattern, Input, Match, Named),
+        if_(Engine = dcg,
+            re_dcg_match_named(Pattern, Input, Match, Named),
+            domain_error(regexp_engine, Engine))).
 
 %% re_match_named(+Pattern, ?InputOrMatch, ?MatchOrNamed, ?NamedOrS0, ?RestOrS)
 % Dual-purpose matcher:
@@ -203,19 +215,21 @@ re_match_named(Pattern, Input, Match, Named) :-
 % 2. DCG //3 expansion call: (Pattern, Match, Named, S0, S)
 re_match_named(Pattern, InputOrMatch, MatchOrNamed, NamedOrS0, RestOrS) :-
     resolve_engine(Pattern, Engine),
-    (   Engine == tree -> re_tree_match_named(Pattern, InputOrMatch, MatchOrNamed, NamedOrS0, RestOrS)
-    ;   Engine == dcg  -> re_dcg_match_named(Pattern, InputOrMatch, MatchOrNamed, NamedOrS0, RestOrS)
-    ;   domain_error(regexp_engine, Engine)
-    ).
+    if_(Engine = tree,
+        re_tree_match_named(Pattern, InputOrMatch, MatchOrNamed, NamedOrS0, RestOrS),
+        if_(Engine = dcg,
+            re_dcg_match_named(Pattern, InputOrMatch, MatchOrNamed, NamedOrS0, RestOrS),
+            domain_error(regexp_engine, Engine))).
 
 %% re_compile(+Pattern, -Compiled)
 % Pre-compiles Pattern into a reusable compiled structure using the active dynamic engine.
 re_compile(Pattern, Compiled) :-
     resolve_engine(Pattern, Engine),
-    (   Engine == tree -> re_tree_compile(Pattern, Compiled)
-    ;   Engine == dcg  -> re_dcg_compile(Pattern, Compiled)
-    ;   domain_error(regexp_engine, Engine)
-    ).
+    if_(Engine = tree,
+        re_tree_compile(Pattern, Compiled),
+        if_(Engine = dcg,
+            re_dcg_compile(Pattern, Compiled),
+            domain_error(regexp_engine, Engine))).
 
 %% re_clear_cache
 % Clears dynamic pattern cache entries across all engines.
