@@ -5,7 +5,7 @@ export PROLOG_ENGINE ?= scryer
 SCRYER ?= scryer-safe
 PROLOG_AGENT ?= prolog-agent
 
-.PHONY: all test test_regexp test_curr_pred test_exports_match test_format test_regexp_ast test_regexp_dcg test_regexp_compile_dfa test_regexp_tree test_si test_time test_re_token test_international test_toml test_bidirectional docs html llms tree_doc_examples packages package_bakage package_swi clean
+.PHONY: all test test_regexp test_curr_pred test_exports_match test_format test_regexp_ast test_regexp_dcg test_regexp_compile_dfa test_regexp_tree test_si test_time test_re_token test_international test_toml test_bidirectional test_expansion docs html llms tree_doc_examples packages package_bakage package_swi clean
 
 all: test docs
 
@@ -13,7 +13,7 @@ all: test docs
 # Testing Targets (Executed via scryer-safe safety runner)
 # ==============================================================================
 
-test: test_regexp test_curr_pred test_exports_match test_format test_regexp_ast test_regexp_dcg test_regexp_compile_dfa test_regexp_tree test_si test_time test_re_token test_international test_toml test_bidirectional
+test: test_regexp test_curr_pred test_exports_match test_format test_regexp_ast test_regexp_dcg test_regexp_compile_dfa test_regexp_tree test_si test_time test_re_token test_international test_toml test_bidirectional test_expansion
 
 test_curr_pred:
 	@echo "=== Running test_curr_pred.pl ==="
@@ -83,6 +83,11 @@ test_toml:
 test_bidirectional:
 	@echo "=== Running test_bidirectional.pl ==="
 	$(SCRYER) -g run_tests -g halt tests/scryer/test_bidirectional.pl
+	@echo ""
+
+test_expansion:
+	@echo "=== Running test_expansion.pl ==="
+	$(SCRYER) -g run_tests -g halt tests/scryer/test_expansion.pl
 	@echo ""
 
 # ==============================================================================

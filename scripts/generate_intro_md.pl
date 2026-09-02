@@ -54,7 +54,7 @@ main :-
 
     format(Stream, "## Usage Examples~n~n", []),
 
-    run_query(Stream, "1. Direct Pattern Match with phrase/2", "Match a string directly against a regular expression pattern using phrase/2. Patterns passed directly to re_match//1-2 are automatically compiled into DCG goals and cached using the pattern string as the key. This avoids pattern parsing overhead when matching the same pattern repeatedly, but creates a compiled DCG goal in the cache database for each unique pattern that remains in memory. This could be an issue for programs using many different patterns (perhaps thousands).",
+    run_query(Stream, "1. Direct Pattern Match with phrase/2", "Match a string directly against a regular expression pattern using phrase/2. When a pattern is written as a literal character list (\"...\") or atom ('...'), pure_regex compiles it ahead of time via goal_expansion/2 and inlines the compiled automaton term directly into the clause. **Patterns compiled from literals bypass the dynamic compilation cache entirely**, saving heap memory and avoiding cache lookup overhead. When a pattern is supplied dynamically at runtime via a variable, it is compiled on first use and cached in the dynamic pattern database.",
               "phrase(re_match(\"a.*b\", Match), \"acb\")",
               phrase(re_match("a.*b", U_Match1), "acb"),
               ["Match"], [U_Match1]),
@@ -69,15 +69,27 @@ main :-
               (re_compile("a.*b", U_Compiled3), phrase(re_match(U_Compiled3, U_Match3), "acb")),
               ["Compiled", "Match"], [U_Compiled3, U_Match3]),
 
-    run_query(Stream, "4. Inspect Compiled Pattern Cache", "Inspect the dynamic compilation cache using re_cache_info/2 to check the number of cached patterns and their pattern keys.",
-              "re_clear_cache, phrase(re_match(\"a.*b\"), \"acb\"), phrase(re_match(\"[0-9]+\"), \"123\"), re_cache_info(Count, Keys)",
-              (re_clear_cache, phrase(re_match("a.*b"), "acb"), phrase(re_match("[0-9]+"), "123"), re_cache_info(U_Count4, U_Keys4)),
+    run_query(Stream, "4. Inspect Compiled Pattern Cache (Runtime Dynamic Patterns)", "Inspect the dynamic compilation cache using re_cache_info/2 to check the number of cached patterns and their pattern keys. Statically compiled literal patterns bypass this cache (Count = 0). When patterns are passed dynamically via variables at runtime, they enter the dynamic cache:",
+              "re_clear_cache, P1 = \"a.*b\", phrase(re_match(P1), \"acb\"), P2 = \"[0-9]+\", phrase(re_match(P2), \"123\"), re_cache_info(Count, Keys)",
+              (re_clear_cache, P1 = "a.*b", phrase(re_match(P1), "acb"), P2 = "[0-9]+", phrase(re_match(P2), "123"), re_cache_info(U_Count4, U_Keys4)),
               ["Count", "Keys"], [U_Count4, U_Keys4]),
 
     run_query(Stream, "5. Clear Compiled Pattern Cache", "Clear all compiled pattern goals from the dynamic compilation database using re_clear_cache/0. Note that re_clear_cache/0 is intended for the rare circumstance that an excessive number of distinct patterns have been compiled, resulting in excessive memory use by the Prolog system. In normal operation, compiled pattern caching provides substantial performance benefits without requiring manual invalidation.",
               "re_clear_cache, re_cache_info(Count, Keys)",
               (re_clear_cache, re_cache_info(U_Count5, U_Keys5)),
               ["Count", "Keys"], [U_Count5, U_Keys5]),
+
+    format(Stream, "## Compile-Time Static Compilation & Expansion Modes~n~n", []),
+    format(Stream, "`pure_regex` provides compile-time macro expansion to eliminate pattern compilation latency at runtime:~n~n", []),
+    format(Stream, "- **Approach A (Default, Goal Expansion):** When a literal character list (`\"...\"`) or atom (`'...'`) is passed to `re_match/2-3`, `re_match_groups/4-5`, or `re_match_named/4-5`, `goal_expansion/2` compiles the pattern during file loading. The resulting automaton is embedded directly as a constant term in the compiled clause. **Patterns compiled from literals bypass the dynamic pattern cache entirely.**~n", []),
+    format(Stream, "- **Approach B (DCG Rule Generation via `re_rule//0`):** Define dedicated, named DCG grammar rules directly from regular expressions at compile time:~n", []),
+    format(Stream, "  ```prolog~n  re_rule(ident//0, \"^[a-zA-Z_][a-zA-Z0-9_]*$\").~n  re_rule(ident_match(Match)//0, \"^[a-zA-Z_][a-zA-Z0-9_]*$\").~n  re_rule(ident_groups(Match, Groups)//0, \"^([a-z]+)-([0-9]+)$\").~n  ```~n", []),
+    format(Stream, "- **Default Engine Selection:** Set the default regex engine globally via `user:regexp_engine(Engine)` (`rt` [default] or `dcg`).~n", []),
+    format(Stream, "- **Static Compilation Toggle:** Enable or disable compile-time macro expansion via `user:regexp_static_compilation(true | false)`. When `false`, literal patterns pass through to runtime dynamic matching.~n", []),
+    format(Stream, "- **Independent Static / Dynamic Overrides:** Override matching engines separately:~n", []),
+    format(Stream, "  - `user:regexp_static_engine(Engine)`: overrides the engine used for compile-time static compilation (`rt` or `dcg`).~n", []),
+    format(Stream, "  - `user:regexp_dynamic_engine(Engine)`: overrides the engine used for runtime dynamic pattern matching (`rt` or `dcg`).~n", []),
+    format(Stream, "- **Expansion Strategy Mode:** Select the expansion strategy via `user:regexp_expansion(Mode)` (`term` [default, Approach A] or `rules` [Approach B]).~n~n", []),
 
     format(Stream, "## Pattern Examples~n~n", []),
 

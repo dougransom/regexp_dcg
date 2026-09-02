@@ -83,7 +83,15 @@
     ast_dcg_goal/4,
     pattern_compiled/3,
     pattern_ast/2,
-    to_chars/2
+    to_chars/2,
+    re_dcg_match/2,
+    re_dcg_match/3,
+    re_dcg_match/4,
+    re_dcg_match_groups/4,
+    re_dcg_match_groups/5,
+    re_dcg_match_named/4,
+    re_dcg_match_named/5,
+    re_dcg_compile/2
 ]).
 
 :- use_module(regexp_ast).
@@ -449,8 +457,6 @@ dcg_named_capture(Name, Index, GInner, S0, SF) -->
 
 /* ---------- Case-insensitive support helpers ---------- */
 
-
-
 literal_match_case_insensitive([]) --> [].
 literal_match_case_insensitive([C|Cs]) -->
     [X],
@@ -501,4 +507,30 @@ dcg_flags_group(Flags, GSub, S0, SF) -->
       predicates.
 */
 
- 
+/* =========================================================================
+   DCG Engine Aliases (used by pure_regex facade)
+   ========================================================================= */
+
+re_dcg_match(Pattern, Chars) :-
+    re_match(Pattern, Chars).
+
+re_dcg_match(Pattern, Chars, Rest) :-
+    re_match(Pattern, Chars, Rest).
+
+re_dcg_match(Pattern, Match, S0, S) :-
+    re_match(Pattern, Match, S0, S).
+
+re_dcg_match_groups(Pattern, Chars, Match, Groups) :-
+    re_match_groups(Pattern, Chars, Match, Groups).
+
+re_dcg_match_groups(Pattern, InputOrMatch, MatchOrGroups, GroupsOrS0, RestOrS) :-
+    re_match_groups(Pattern, InputOrMatch, MatchOrGroups, GroupsOrS0, RestOrS).
+
+re_dcg_match_named(Pattern, Chars, Match, NamedGroups) :-
+    re_match_named(Pattern, Chars, Match, NamedGroups).
+
+re_dcg_match_named(Pattern, InputOrMatch, MatchOrNamed, NamedOrS0, RestOrS) :-
+    re_match_named(Pattern, InputOrMatch, MatchOrNamed, NamedOrS0, RestOrS).
+
+re_dcg_compile(Pattern, Compiled) :-
+    re_compile(Pattern, Compiled).

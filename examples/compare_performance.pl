@@ -82,13 +82,13 @@ match_all_dcg_cached([token(Input, Pattern)|Ts]) :-
 % Match all 20 tokens using DFA (no cache)
 dfa_nocache :-
     c_tokens(Tokens),
-    regexp_dfa:re_clear_cache,
+    regexp_compile_dfa:re_clear_cache,
     match_all_dfa_nocache(Tokens).
 
 match_all_dfa_nocache([]).
 match_all_dfa_nocache([token(Input, Pattern)|Ts]) :-
-    regexp_dfa:re_compile(Pattern, NFA),
-    regexp_dfa:re_match(NFA, Input, _),
+    regexp_compile_dfa:re_compile(Pattern, NFA),
+    regexp_compile_dfa:re_match(NFA, Input, _),
     match_all_dfa_nocache(Ts).
 
 % Match all 20 tokens using DFA (with cache)
@@ -98,7 +98,7 @@ dfa_cached :-
 
 match_all_dfa_cached([]).
 match_all_dfa_cached([token(Input, Pattern)|Ts]) :-
-    regexp_dfa:re_match(Pattern, Input, _),
+    regexp_compile_dfa:re_match(Pattern, Input, _),
     match_all_dfa_cached(Ts).
 
 % Match all 20 tokens using Rational Tree Automata (no cache)
@@ -139,7 +139,7 @@ precompiled_dfa(Precompiled) :-
 
 match_precompiled_dfa([], []).
 match_precompiled_dfa([token(Input, _)|Ts], [NFA|Ns]) :-
-    regexp_dfa:re_match(NFA, Input, _),
+    regexp_compile_dfa:re_match(NFA, Input, _),
     match_precompiled_dfa(Ts, Ns).
 
 precompiled_tree(Precompiled) :-
@@ -154,12 +154,12 @@ match_precompiled_tree([token(Input, _)|Ts], [Compiled|Cs]) :-
 % Compile C patterns to structures once
 compile_all_dcg([], []).
 compile_all_dcg([token(_, Pattern)|Ts], [Goal|Gs]) :-
-    regexp_dcg:re_compile(Pattern, Goal),
+    regexp_compile_dcg:re_compile(Pattern, Goal),
     compile_all_dcg(Ts, Gs).
 
 compile_all_dfa([], []).
 compile_all_dfa([token(_, Pattern)|Ts], [NFA|Ns]) :-
-    regexp_dfa:re_compile(Pattern, NFA),
+    regexp_compile_dfa:re_compile(Pattern, NFA),
     compile_all_dfa(Ts, Ns).
 
 compile_all_tree([], []).

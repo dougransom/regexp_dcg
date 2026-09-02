@@ -11,6 +11,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.1.0.dev7] - 2026-09-02
 
 ### Added
+- Compile-time static regex compilation in `src/core/regexp_expansion.pl`:
+  - **Approach A (`goal_expansion/2`)**: Compiles literal patterns (`"..."` or `'...'`) at load time and inlines the compiled automaton structure directly as constant terms into clause bytecode, completely bypassing the dynamic pattern cache.
+  - **Approach B (`term_expansion/2`)**: Translates `re_rule//0` and `re_rule_named//0` declarations into dedicated, named Prolog DCG grammar rules.
+- Declarative configuration modes and overrides:
+  - `user:regexp_engine/1` (and `user:regexp_mode/1`): Sets default matching engine (`rt` / `tree` vs `dcg`).
+  - `user:regexp_static_compilation/1` (and `user:regexp_expansion/1`): Toggles compile-time static compilation (`true` / `false` or `on` / `off`).
+  - `user:regexp_static_engine/1`: Overrides matching engine specifically for compile-time static compilation.
+  - `user:regexp_dynamic_engine/1`: Overrides matching engine specifically for runtime dynamic pattern matching.
+- Dedicated unit test suite for macro expansion and modes (`tests/scryer/test_expansion.pl`).
 - Bidirectional pattern generation: `re_match/2-3` can now generate valid character lists when the input is an unbound variable (e.g. `re_match("aa?b", X)` producing `"aab"` and `"ab"`, `re_match("a.b", X)` producing `[a, Y, b]`).
 - Incremental enumeration for Kleene star (`*`) and plus (`+`) during pattern generation to avoid infinite recursion.
 - Dedicated automated bidirectional unit test suite (`tests/scryer/test_bidirectional.pl`).
@@ -19,6 +28,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Interface documentation consistency policy in `.agents/AGENTS.md`.
 
 ### Changed
+- Dynamic engine routing in `src/pure_regex.pl` cleanly dispatching to `re_tree_*` or `re_dcg_*` without module namespace collisions.
+- Fixed module references in `examples/compare_performance.pl` (`regexp_compile_dcg` and `regexp_compile_dfa`).
 - Introduced `to_input_chars/2` in `src/core/regexp_common.pl` implementing the `can_be(chars, Input)` contract.
 - Cleaned up doc comment headings in `src/pure_regex.pl` to eliminate false positive reports from `prolog-safe`.
 - Synchronized canonical predicate-level docstrings across `src/pure_regex.pl`, `src/core/regexp_tree.pl`, `src/core/regexp_compile_dcg.pl`, and `src/core/regexp_compile_dfa.pl`.

@@ -83,16 +83,44 @@ Bakage is **optional**. Because `pure_regex` is written in pure ISO Prolog, you 
 
 ## Primary Interface (`pure_regex`)
 
-The main entry point for matching patterns is the [`pure_regex`](src/pure_regex.pl) module. By default, it uses the Rational Tree Automaton implementation (`regexp_tree`). You can switch the active engine globally by asserting `user:regexp_mode(dcg)` or `user:regexp_mode(dfa)` prior to or after importing, or per-call via mode options (`[mode(dcg)]`, `[mode(dfa)]`).
+The main entry point for matching patterns is the [`pure_regex`](src/pure_regex.pl) module. By default, it uses the Rational Tree Automaton implementation (`regexp_tree`). You can switch the active engine globally by defining `user:regexp_engine(Engine)` or `user:regexp_mode(Engine)` (`tree`, `dcg`, or `dfa`).
 
 ```prolog
-% Global mode selection before or after importing pure_regex:
-?- assertz(user:regexp_mode(dcg)).
+% Global engine mode selection (RT vs DCG):
+?- assertz(user:regexp_engine(dcg)).   % or rt / tree
    true.
 
 ?- use_module('src/pure_regex').
    true.
 ```
+
+### Compile-Time Static Compilation & Mode Configuration
+
+`pure_regex` provides macro expansion at compile-time to eliminate runtime compilation latency:
+
+- **Approach A (Default, Goal Expansion):** When literal patterns (`"a*b"` or `'a*b'`) appear in `re_match/2-3`, `re_match_groups/4-5`, or `re_match_named/4-5`, `goal_expansion/2` compiles the pattern during file load time and embeds the automaton structure directly as a constant term in the clause bytecode.
+  > [!IMPORTANT]
+  > **Dynamic Cache Bypass:** Patterns compiled from literals bypass the dynamic pattern cache (`pattern_cache/4`) completely, saving heap memory and incurring zero cache lookup overhead. The dynamic cache is strictly reserved for patterns generated dynamically via variables at runtime.
+
+- **Approach B (DCG Rule Generation via `term_expansion/2`):** Declare standalone, named DCG grammar rules directly from regex patterns at compile time:
+  ```prolog
+  re_rule(ident//0, "^[a-zA-Z_][a-zA-Z0-9_]*$").
+  re_rule(ident_match(_Match)//0, "^[a-zA-Z_][a-zA-Z0-9_]*$").
+  re_rule(header(_Match, _Groups)//0, "^([A-Z][a-z]+): (.*)$").
+  re_rule_named(header_named(_Match, _Named)//0, "^(?P<key>[A-Z][a-z]+): (?P<val>.*)$").
+  ```
+
+#### Configuration Modes & Overrides
+
+`pure_regex` provides fine-grained, declarative mode directives to configure engines and macro compilation:
+
+| Directive | Supported Values | Default | Purpose |
+| :--- | :--- | :---: | :--- |
+| **`user:regexp_engine(Engine)`**<br>*(or `user:regexp_mode/1`)* | `rt` (or `tree`), `dcg` (or `backtracking`), `dfa` | `rt` (`tree`) | **Global Default Engine**: Sets the default matcher used across both compile-time and runtime. |
+| **`user:regexp_static_compilation(Bool)`**<br>*(or `user:regexp_expansion(on\|off)`)* | `true` (`on`), `false` (`off`) | `true` (`on`) | **Compile-Time Compilation Toggle**: When `false` or `off`, disables `goal_expansion`, allowing literal patterns to pass through as dynamic patterns. |
+| **`user:regexp_static_engine(Engine)`** | `rt`, `dcg`, `dfa` | Global Default | **Static Engine Override**: Overrides the engine specifically used for compile-time static compilation without affecting runtime dynamic matching. |
+| **`user:regexp_dynamic_engine(Engine)`** | `rt`, `dcg`, `dfa` | Global Default | **Dynamic Engine Override**: Overrides the engine specifically used for runtime dynamic matching without affecting compile-time static compilation. |
+| **`user:regexp_expansion(Strategy)`** | `term` (Approach A), `rules` (Approach B), `off` | `term` | **Macro Expansion Strategy**: Selects inlining precompiled terms vs generating named DCG rules. |
 
 ### Quick Usage Examples
 
