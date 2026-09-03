@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > [!NOTE]
 > Historical releases prior to August 31, 2026 have been re-indexed into the `0.1.0.devX` series (`v0.1.0.dev1` through `v0.1.0.dev4`) leading up to the official `0.1.0` stable release. Older commit snapshots may show superseded version strings in historical manifests.
 
-## [0.1.0.dev8] - 2026-09-02
+## [0.1.0] - 2026-09-03
 
 ### Added
 - Trealla Prolog support alongside Scryer Prolog following ISO Prolog standards and Triska's "ISO Core + Engine Shim" architecture.
