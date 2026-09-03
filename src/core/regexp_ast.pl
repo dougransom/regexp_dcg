@@ -1,0 +1,607 @@
+/**
+  Provides the tokenizer, AST parser, and schema validator for regular expressions.
+
+  This module parses regular expression character streams into an Abstract Syntax Tree (AST)
+  representation following standard Python 3.14 / PCRE regular expression syntax and operator precedence.
+
+  ### Two-Phase Parsing Architecture
+
+  1. **Tokenization (`re_tokens//1`)**:
+     Converts input character sequences into deterministic token streams (`re_token//1`),
+     handling escaped metacharacters, character classes (`[...]`), POSIX classes (`[:digit:]`),
+     quantifiers, anchors, and word boundaries.
+
+  2. **AST Parsing (`re_ast//1` / `re_ast_chars//1`)**:
+     Parses token streams into structured AST terms, respecting operator precedence:
+     `Alternation (|) < Concatenation < Postfix Quantifiers (*, +, ?, {n,m}) < Atoms & Groups`.
+
+  ### AST Term Validation (`is_ast/1`)
+
+  Exports `is_ast/1` to perform deep recursive schema validation of AST terms in $O(N)$ time
+  without token allocation or difference-list overhead.
+*/
+:- module(regexp_ast, [
+ 
+    re_token//1,
+    re_tokens//1,
+    re_ast//1,
+    re_ast_chars//1,
+    re_literal_run//1,
+    re_literal_run_recognize//1,
+    metachar/1,
+    metachars/1,
+    re_expr_tokens//1,
+    posix_name//1,
+    class_item//1,
+    is_ast/1
+]).
+
+:- use_module(library(dcgs)).
+:- use_module(library(lists)).
+:- use_module(library(dif)).
+:- use_module(library(si)).
+:- use_module(library(reif)).
+
+% Reusable expansion to turn a string into O(1) facts for a predicate.
+user:term_expansion(generate_char_predicate(Name, String), [PluralFact|Clauses]) :-
+    atom_concat(Name, s, PluralName),
+    PluralFact =.. [PluralName, String],
+    findall(Head, (
+        member(Char, String),
+        Head =.. [Name, Char]
+    ), Clauses).
+
+% Macro for defining deterministic tokenizer rules: tk(Term, String) -> re_token(Term) --> String, !.
+%
+% Preferred mechanism once Trealla (and other engines) support macro expansion to a fixed point:
+%   user:term_expansion(tk(Term, String), (re_token(Term) --> String, !)).
+% For portable cross-engine compatibility with engines lacking a recursive DCG expansion pass after
+% term_expansion, we expand directly into clause heads with explicit difference lists.
+user:term_expansion(tk(Term, String), (re_token(Term, PatternTail, Tail) :- !)) :-
+    append(String, Tail, PatternTail).
+
+% Macro for defining deterministic character class items: ci(Term, String) -> class_item(Term) --> String, !.
+%
+% Preferred mechanism once Trealla supports macro expansion to a fixed point:
+%   user:term_expansion(ci(Term, String), (class_item(Term) --> String, !)).
+user:term_expansion(ci(Term, String), (class_item(Term, PatternTail, Tail) :- !)) :-
+    append(String, Tail, PatternTail).
+
+% Compile-time macros for AST node classification used by is_ast/1.
+% Translates declarative node definitions into indexed ast_children/2 facts:
+% - ast_unary(Pattern, Child): 1-child (unary) node term containing child `Child`.
+% - ast_binary(Pattern, ChildA, ChildB): 2-child (binary) node term containing children `ChildA` and `ChildB`.
+% - ast_leaf(Pattern): 0-child (leaf) node term containing no sub-ASTs.
+user:term_expansion(ast_unary(Pattern, A),     ast_children(Pattern, [A])).
+user:term_expansion(ast_binary(Pattern, A, B),  ast_children(Pattern, [A, B])).
+user:term_expansion(ast_leaf(Pattern),         ast_children(Pattern, [])).
+
+
+%:- dynamic metachars/1.
+
+%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% 1. TOP-LEVEL: tokenize → token-level DCG parser
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%  AST PARSER (Phase 1D)
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% Entry point
+re_ast(AST) -->
+    re_alt(AST).
+
+% Convenience interface: tokenize chars and build AST in one step
+re_ast_chars(AST) -->
+    re_tokens(Tokens),
+    { phrase(re_expr_tokens(AST), Tokens) }.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Alternation: A | B | C
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+re_alt(AST) -->
+    re_concat(L0),
+    (   [pipe],
+        re_alt(R0),
+        { AST1 = alt(L0, R0) }
+    ;   { AST1 = L0 }
+    ),
+    { normalize_concat(AST1, AST) }.
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Concatenation: implicit adjacency
+%
+% Important: we ONLY build concat/1 when there are 2+ factors.
+% A single factor is returned as-is.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% Note: cond_t/4 is also defined and exported by regexp_common. However,
+% regexp_common imports regexp_ast (for re_ast_chars//1 and is_ast/1), creating
+% a circular dependency if regexp_ast were to import regexp_common. To avoid the
+% circular dependency, cond_t/4 is re-defined locally here. If a shared utility
+% module is introduced in the future, this duplication should be removed.
+cond_t(If_1, TrueVal, FalseVal, Val) :-
+    if_(If_1, Val = TrueVal, Val = FalseVal).
+
+re_concat(AST) -->
+    re_factor(F),
+    re_concat_more(F, AST0),
+    { cond_t(AST0 = concat([Single]), Single, AST0, AST) }.
+
+re_concat_more(Acc, AST) -->
+    re_factor(F),
+    !,
+    {
+        if_(Acc = concat(List0),
+            append(List0, [F], List),
+            List = [Acc, F]
+        ),
+        Acc1 = concat(List)
+    },
+    re_concat_more(Acc1, AST).
+
+re_concat_more(Acc, Acc) -->
+    [].
+
+normalize_concat(concat([X]), X).
+normalize_concat(X, X) :-
+    dif(X, concat([_])).
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Postfix operators: *, +, ?
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+re_factor(Node) -->
+    re_atom(A),
+    (   [star],  { Node = star(A) }
+    ;   [plus],  { Node = plus(A) }
+    ;   [qmark], { Node = maybe(A) }
+    ;   { Node = A }
+    ).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Atoms: groups, classes, anchors, boundaries, literals
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+re_atom(group(A)) -->
+    [lparen],
+    re_alt(A),
+    [rparen].
+
+re_atom(class(Items)) -->
+    [class(Items)].
+
+re_atom(anchor(bol)) -->
+    [caret].
+
+re_atom(anchor(eol)) -->
+    [dollar].
+
+re_atom(boundary(word)) -->
+    [boundary(word)].
+
+re_atom(boundary(not_word)) -->
+    [boundary(not_word)].
+
+re_atom(lit(S)) -->
+    [lit(S)].
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% 2. re_tokenIZER (DCG, deterministic, greedy)
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% Cut (correctness): commits to the first re_token//1 match so re_tokens//1
+% does not re-try alternative token parses on backtracking. Tokenization is
+% deterministic by design; if_/3 cannot achieve this greedy commit semantics.
+re_tokens([T|Ts]) --> re_token(T), !, re_tokens(Ts).
+re_tokens([])     --> [].
+
+%% re_token(-Tok)
+%% re_token(-Tok) / re_token(+Tok)
+
+% escaped should be first
+
+tk(boundary(word),     "\\b").
+tk(boundary(not_word), "\\B").
+
+tk(builtin(digit),      "\\d").
+tk(builtin(not_digit),  "\\D").
+tk(builtin(word),       "\\w").
+tk(builtin(not_word),   "\\W").
+tk(builtin(space),      "\\s").
+tk(builtin(not_space),  "\\S").
+
+
+% character class (must come before lbrack/rbrack)
+% Cut (correctness): commits to the class(Items) token once "[" is consumed,
+% preventing backtracking into lbrack/lit alternatives. Pure lookahead with
+% dif/2 cannot consume and un-consume the "[" character across DCG alternatives.
+re_token(class(Items)) -->
+    "[",
+    class_items(Items),
+    "]",
+    !.
+
+% Cut (correctness): both lit clauses commit once their mode check (var/nonvar)
+% succeeds and the literal run matches. Without the cut, Prolog would attempt
+% the next re_token clause (escaped) on backtracking, incorrectly re-parsing
+% already-consumed characters. if_/3 cannot gate a DCG alternative after
+% characters have been consumed from the stream.
+re_token(lit(Cs)) -->
+    { var(Cs) },                 % tokenizing mode
+    re_literal_run_recognize(Cs), !.
+
+re_token(lit(Cs)) -->
+    { nonvar(Cs) },              % generating mode
+    re_literal_run(Cs), !.
+
+% Cut (correctness): commits to escaped(C) once "\" is consumed. Without the
+% cut, the next clause (dot/tk rules) could re-attempt matching after backtrack,
+% incorrectly treating the escape character as a literal.
+re_token(escaped(C)) -->
+    "\\", [C], !.
+
+tk(dot,      ".").
+tk(caret,    "^").
+tk(dollar,   "$").
+tk(lparen,   "(").
+tk(rparen,   ")").
+tk(lbrack,   "[").
+tk(rbrack,   "]").
+tk(pipe,     "|").
+tk(star,     "*").
+tk(plus,     "+").
+tk(question, "?").
+tk(lbrace,   "{").
+tk(rbrace,   "}").
+tk(colon,    ":").
+tk(comma,    ",").
+tk(equals,   "=").
+tk(excl,     "!").
+tk(less_than,    "<").
+tk(greater_than, ">").
+
+
+look_ahead(T), [T] --> [T].
+
+
+% Cut (correctness): commits to negated class once "^" is consumed; prevents
+% re-parse as a non-negated class containing "^". dif/2 cannot prevent
+% re-entry after the character has been consumed from the DCG stream.
+class_items(Items) -->
+    "^", !,
+    class_items_rest(Rest),
+    { Items = neg(Rest) }.
+
+class_items(Items) -->
+    class_items_rest(Items).
+
+class_items_rest([Item|Items]) -->
+    class_item(Item),
+    class_items_rest(Items).
+
+class_items_rest([]) --> [].
+
+%order matters for class item
+ci(builtin(digit),      "\\d").
+ci(builtin(not_digit),  "\\D").
+
+ci(builtin(word),       "\\w").
+ci(builtin(not_word),   "\\W").
+
+ci(builtin(space),      "\\s").
+ci(builtin(not_space),  "\\S").
+
+class_item(posix(Name)) -->
+    "[:",
+    posix_name(Name),
+    ":]".
+
+% Cut (correctness): commits to range(A,B) once A, "-", B are consumed.
+% Without the cut, backtracking would re-try class_item(char(A)) after
+% consuming A and "-", causing double-parse. dif/2 cannot undo consumed input.
+class_item(range(A,B)) -->
+    class_char(A),
+    "-",
+    class_char(B), !.
+
+class_item(char(C)) -->
+    class_char(C).
+
+posix_name(Name) -->
+    posix_name_chars(Cs),
+    { atom_chars(Name, Cs) }.
+
+posix_name_chars([C|Cs]) -->
+    [C],
+    { dif(C, ':') }, 
+    posix_name_chars(Cs).
+
+posix_name_chars([]) -->
+    [].
+
+
+
+
+
+
+% Cut (correctness): commits to escaped char interpretation once "\" is consumed.
+class_char(C) -->
+    "\\", [C], !.     % escaped char
+
+class_char(C) -->
+    [C],
+    { dif(C, ']') }.      % don't allow ']' inside
+
+
+re_literal_run(Cs) -->
+    { Cs = [_|_] }, % nonempty
+    sequence(Cs).
+
+sequence([C|Cs]) --> [C], sequence(Cs).
+sequence([]) --> [].
+
+%% re_literal_run_recognize(-Chars)
+%% The literal run is from the first literal character to the character
+%% not preceded by a postfix operator.
+
+% Cut (correctness): commits to a multi-char literal run when the first character
+% is a non-metachar NOT followed by a postfix operator. Without the cut,
+% backtracking would re-try the single-char clause, causing the same character
+% to be consumed twice. if_/3 cannot prevent re-entry after DCG stream consumption.
+re_literal_run_recognize([C|Cs]) -->
+    [C],
+    { metachar_t(C, false) },
+    not_postfix_next_char,
+    !,
+    re_literal_run_more(Cs).
+
+re_literal_run_recognize([C]) -->
+    [C],
+    { metachar_t(C, false) },
+    postfix_next_char.
+
+% Cut (correctness): same greedy-commit rationale as re_literal_run_recognize//1.
+re_literal_run_more([C|Cs]) -->
+    [C],
+    { metachar_t(C, false) },
+    not_postfix_next_char,
+    !,
+    re_literal_run_more(Cs).
+
+re_literal_run_more([]) --> [].
+
+eos([], []).  % for detecting end of input
+
+not_postfix_next_char --> call(eos)
+    | (look_ahead(D), { postfixchar_t(D, false) }).
+
+postfix_next_char --> look_ahead(D), { postfixchar(D) }.
+
+%% Define metacharacters and postfix characters using the expansion mechanism.
+generate_char_predicate(metachar, ".^$*+?()[]|\\{}:,=!<>").
+generate_char_predicate(postfixchar, "*+?").
+
+member_char_t(_C, [], false).
+member_char_t(C, [H|T], Truth) :-
+    if_(C = H,
+        Truth = true,
+        member_char_t(C, T, Truth)).
+
+metachar_t(C, Truth) :-
+    metachars(Chars),
+    member_char_t(C, Chars, Truth).
+
+postfixchar_t(C, Truth) :-
+    postfixchars(Chars),
+    member_char_t(C, Chars, Truth).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% 3. TOKEN-LEVEL PARSER (DCG over tokens)
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+re_expr_tokens(AST) -->
+    re_alt_tokens(AST).
+re_expr_tokens(lit([])) -->
+    [].
+
+re_alt_tokens(AST) -->
+    re_concat_tokens(A),
+    (   [pipe],
+        re_alt_tokens(B),
+        { AST = or(A, B) }
+    ;   { AST = A }
+    ).
+
+re_concat_tokens(AST) -->
+    re_postfix_tokens(A),
+    (   re_concat_tokens(B),
+        { AST = concat(A, B) }
+    ;   { AST = A }
+    ).
+
+
+%% Group rule
+re_atom_tokens(AST) -->
+    [lparen],
+    group_prefix(P),
+    re_expr_tokens(Sub),
+    [rparen],
+    { build_group_ast(P, Sub, AST) }.
+
+re_atom_tokens(lit(Cs)) -->
+    [lit(Cs)].
+re_atom_tokens(lit([=])) -->
+    [equals].
+re_atom_tokens(lit([!])) -->
+    [excl].
+re_atom_tokens(lit([<])) -->
+    [less_than].
+re_atom_tokens(lit([>])) -->
+    [greater_than].
+
+re_atom_tokens(escaped(C)) -->
+    [escaped(C)].
+
+re_atom_tokens(dot) -->
+    [dot].
+
+%% Classes
+re_atom_tokens(class(Items)) -->
+    [class(Items)].
+
+re_atom_tokens(builtin(Class)) -->
+    [builtin(Class)].
+
+re_atom_tokens(anchor(bol)) -->
+    [caret].
+
+re_atom_tokens(anchor(eol)) -->
+    [dollar].
+
+re_atom_tokens(boundary(word)) -->
+    [boundary(word)].
+
+re_atom_tokens(boundary(not_word)) -->
+    [boundary(not_word)].
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% 4. GROUP PREFIXES
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+group_prefix(capture) -->
+    [].
+
+group_prefix(noncapture) -->
+    [question, colon].
+
+group_prefix(lookahead) -->
+    [question, equals].
+
+group_prefix(neg_lookahead) -->
+    [question, excl].
+
+group_prefix(named_capture(Name)) -->
+    [question, lit(['P']), less_than, lit(NameChars), greater_than],
+    { atom_chars(Name, NameChars) }.
+
+group_prefix(flags(Flags)) -->
+    [question, lit(FlagChars)],
+    { all_flag_chars(FlagChars),
+      atom_chars(Flags, FlagChars) }.
+
+group_prefix(flags_group(Flags)) -->
+    [question, lit(FlagChars), colon],
+    { all_flag_chars(FlagChars),
+      atom_chars(Flags, FlagChars) }.
+
+all_flag_chars([]).
+all_flag_chars([C|Cs]) :-
+    member(C, ['i', 'm', 's', 'x', 'a', 'L', 'u']),
+    all_flag_chars(Cs).
+
+build_group_ast(capture, Sub, capture(Sub)).
+build_group_ast(noncapture, Sub, group(Sub)).
+build_group_ast(lookahead, Sub, lookahead(Sub)).
+build_group_ast(neg_lookahead, Sub, neg_lookahead(Sub)).
+build_group_ast(named_capture(Name), Sub, named_capture(Name, Sub)).
+build_group_ast(flags(Flags), lit([]), flags(Flags)).
+build_group_ast(flags_group(Flags), Sub, flags(Flags, Sub)).
+
+
+
+%%% Quantifiers
+quantifier(mn(M,N)) -->
+    [lbrace],
+    integer_token(M),
+    (   [comma], integer_token(N)
+    ;   [comma], { N = inf }
+    ;   { N = M }
+    ),
+    [rbrace].
+
+integer_token(N) -->
+    [lit(Cs)],
+    { number_chars(N, Cs) }.
+
+%%% Postfix Operators
+
+postfix_op(star)     --> [star].
+postfix_op(plus)     --> [plus].
+postfix_op(question) --> [question].
+
+re_postfix_tokens(AST) -->
+    re_atom_tokens(A),
+    (   postfix_op(Op),
+        (   [question], { AST = postfix(A, lazy(Op)) }
+        ;   { AST = postfix(A, Op) }
+        )
+    ;   quantifier(Q),
+        (   [question], { AST = quant(A, lazy(Q)) }
+        ;   { AST = quant(A, Q) }
+        )
+    ;   { AST = A }
+    ).
+
+%% is_ast(+AST)
+%
+% Recursively validates that `AST` is a structurally sound Abstract Syntax Tree (AST) term.
+%
+% Implementation & Design Rationale:
+% 1. Why not `re_ast//1` (the token DCG grammar)?
+%    `re_ast//1` is a cut-heavy parser designed to translate concrete token sequences into ASTs.
+%    Using it for validation in reverse requires generating and allocating token streams in memory,
+%    and its deterministic cuts interfere with bidirectional AST generation.
+%
+% 2. Why recursive predicates instead of a term DCG (`ast_node//1`)?
+%    DCGs thread implicit difference lists (`L0, L`). When inspecting an AST term tree in memory,
+%    no sequence elements are consumed, so a DCG would unnecessarily pass dummy difference lists `[]`
+%    through every recursive call.
+%
+% 3. Standard Recursive Predicate (`valid_ast_node/1` + `maplist/2`):
+%    Directly traverses the term tree structure in O(N) time with zero token allocations
+%    and zero difference list overhead.
+is_ast(AST) :-
+    nonvar(AST),
+    valid_ast_node(AST).
+
+valid_ast_node(Node) :-
+    ast_children(Node, Children),
+    maplist(is_ast, Children).
+
+% 1-child (unary) wrapper nodes
+ast_unary(group(A), A).
+ast_unary(capture(A), A).
+ast_unary(named_capture(_, A), A).
+ast_unary(lookahead(A), A).
+ast_unary(neg_lookahead(A), A).
+ast_unary(postfix(A, _), A).
+ast_unary(quant(A, _), A).
+ast_unary(star(A), A).
+ast_unary(plus(A), A).
+ast_unary(maybe(A), A).
+ast_unary(flags(_, A), A).
+
+% 2-child (binary) nodes
+ast_binary(or(A, B), A, B).
+ast_binary(concat(A, B), A, B).
+
+% List-child node
+ast_children(concat(List), List) :- list_si(List).
+
+% 0-child (leaf) nodes
+ast_leaf(lit(_)).
+ast_leaf(dot).
+ast_leaf(anchor(_)).
+ast_leaf(boundary(_)).
+ast_leaf(escaped(_)).
+ast_leaf(class(_)).
+ast_leaf(builtin(_)).  % builtin(Class) is produced by \d, \w, \s etc.
+ast_leaf(flags(_)).

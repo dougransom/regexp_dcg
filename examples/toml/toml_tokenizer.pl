@@ -5,11 +5,11 @@
 :- use_module(library(dcgs)).
 :- use_module(library(lists)).
 :- use_module(library(charsio)).
-:- use_module('../../regexp_dcg').
+:- use_module('../../src/core/regexp_tree').
 
 %% tokenize_toml(+Chars, -Tokens)
 %
-% Tokenizes a TOML input string into a list of TOML tokens using regexp_dcg.
+% Tokenizes a TOML input string into a list of TOML tokens using regexp.
 tokenize_toml(Input, Tokens) :-
     phrase(tokens(Tokens), Input).
 

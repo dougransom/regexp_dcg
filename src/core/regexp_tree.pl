@@ -1,0 +1,425 @@
+/**
+  Provides a Rational Tree Automaton regular expression matching engine for ISO Prolog systems.
+
+  This module compiles regular expressions into rational tree (cyclic term graph) automata and matches
+  them against character sequences using pure `if_/3` boolean reification.
+
+  ### Genesis & Attribution
+  The core concept and architectural inspiration for implementing regular expressions via rational
+  tree automata in this library was sparked by **Alex Grabowski** ([@hurufu](https://github.com/hurufu)) in **Scryer Prolog Discussion #2758**:
+  [Pure regex implementation using rational trees and if_/3](https://github.com/mthom/scryer-prolog/discussions/2758).
+  Special credit and acknowledgment go to Alex Grabowski and discussion contributors for pioneering the
+  insight of leveraging Prolog's native rational terms (cyclic compound terms) and reified dispatch as an
+  elegant, table-free, choicepoint-free alternative to traditional DFA matrix tables and backtracking NFAs.
+
+  ---
+
+  ### Conceptual Primer: Rational Trees & Rational Tree Automata for Prolog Programmers
+
+  #### 1. What is a Rational Tree?
+  In standard Prolog, data terms are finite trees (e.g. `father(john, bob)`). A **rational tree** (or infinite tree with a finite set of distinct subtrees) is a tree term containing cycles or back-pointers (e.g. `X = f(X)`). Modern ISO Prolog systems (such as Scryer Prolog) natively support rational trees, unification of cyclic terms, and infinite tree traversal without stack overflow.
+
+  #### 2. What is a Rational Tree Automaton?
+  In conventional imperative languages (C/Java/Python), a Finite State Automaton (NFA or DFA) is implemented as a two-dimensional state transition table matrix (`DFA[state][char] -> next_state`).
+
+  In Prolog, a finite state automaton can be represented directly as a **compound term graph** (a tree structure), where:
+  - Each automaton state is a compound term node, such as `sym(Condition, SuccessorState, FailState)`, `alt(NodeA, NodeB)`, or `star(SubNode, Continuation)`.
+  - State transitions are term arguments pointing directly to successor state nodes!
+  - Loop transitions (such as Kleene star `a*`) form cycles in the state graph. In Prolog, these cycles are represented either via continuation structure or via cyclic terms (rational trees) where a node's successor argument refers back to a parent or ancestor term ($X = \text{node}(\dots, X)$).
+
+  #### 3. How Rational Trees Match Patterns
+  Matching a list of characters (`[C1, C2, ...]`) against a rational tree automaton is performed by `regex_tree_run/5`:
+  - At each `sym(Condition, Succ, Fail)` node, character `C1` is tested against `Condition` using pure `if_/3`.
+  - If `Condition` holds (`true`), execution moves to `Succ` consuming character `C1`.
+  - If `Condition` fails (`false`), execution falls back to `Fail` without consuming `C1`.
+  - Matching terminates successfully when reaching `end`, or fails when reaching `stp` (stop).
+
+  ---
+
+  ### Comparative Analysis: Why Rational Tree Automata are Unique & Novel
+
+  | Approach | How State Transitions Are Represented | Strengths & Weaknesses vs. Rational Tree Automata |
+  |---|---|---|
+  | **DFA Matrix Tables** (*Thompson / Hopcroft*) | 2D matrix arrays indexed by state integer and input character code. | **Weakness**: Large memory footprint for Unicode code points ($O(\text{States} \times \text{AlphabetSize})$); slow exponential worst-case pre-compilation (subset construction).<br>**Rational Tree Advantage**: Direct term graph assembly with zero matrix allocation; instant compilation latency. |
+  | **Prolog Backtracking NFAs** (*Pure DCGs*) | Prolog choice-points and clause backtracking (`( A, B ; C )`). | **Weakness**: Pushes choice-point frames onto the Prolog stack; vulnerable to exponential catastrophic backtracking on quantifiers.<br>**Rational Tree Advantage**: Evaluates state transitions deterministically via pure `if_/3` reification, eliminating unnecessary choice-points. |
+  | **Brzozowski Derivatives** | Symbolic term differentiation ($d/da(R) \to R'$) for each input symbol. | **Weakness**: Generates new AST compound terms dynamically for every character processed in the input stream.<br>**Rational Tree Advantage**: Pre-allocates static term-graph continuations; zero term allocation during matching runtime. |
+
+  ---
+
+  ### Architectural Advantages of Rational Tree Automata in Prolog
+
+  1. **$O(1)$ Loop Representation**: Loops (`*`, `+`) are represented directly via continuation structures or cyclic term unification, consuming zero additional heap allocations during iteration.
+  2. **Pure Reified Logic (`if_/3` & `dif/2`)**: Eliminates non-logical cuts (`!`), maintaining logical purity and enabling sound bidirectional matching and static analysis.
+  3. **Native Garbage Collection**: Automata are standard Prolog terms managed automatically by Prolog's native garbage collector without requiring foreign memory pointers or manual deallocation.
+  4. **Seamless Composite Node Integration**: Capturing groups (`cap_open`, `cap_close`), lookahead assertions (`lookahead`, `neg_lookahead`), and non-greedy quantifiers (`lazy_star`) wrap directly into node continuations without altering character condition dispatch.
+  5. **Clause Indexing & Direct Caching**: Pre-compiled rational tree terms can be indexed natively by Prolog's clause indexer or cached directly by pattern string key (`re_tree_compile/2`).
+
+  ---
+
+  ### Compiled Pattern Example: `"a.*b"`
+
+  Below is the compiled rational tree representation generated by `re_tree_compile("a.*b", Tree)` (built via `make tree_doc_examples`):
+
+  ```prolog
+  % Rational Tree Automaton Node Graph for "a.*b"
+  % Note: In star(SubNode, Cont), SubNode is compiled with continuation 'end'.
+  % When SubNode matches a character (e.g. 'dot'), its 'end' continuation
+  % links execution recursively back to the star(...) parent state, forming
+  % the automaton state transition loop without stack accumulation.
+  compiled_tree(
+    sym(char(a),
+      star(
+        sym(dot, end, stp),    % Loop body: 'dot' links back to star(...) via 'end'
+        sym(char(b), end, stp) % Loop exit: matches 'b' and moves to terminal 'end'
+      ),
+      stp                      % Failure state for 'a'
+    ),
+    0                          % GroupCount (0 capture groups)
+  )
+  ```
+
+  #### Step-by-Step Execution Trace for Pattern `"a.*b"` on Input `"aXYZb"`:
+  1. **Initial State**: Input = `['a', 'X', 'Y', 'Z', 'b']`. Node = `sym(char(a), Succ1, stp)`.
+  2. **Match `'a'`**: Head `'a'` satisfies `char(a)`. Move to `Succ1 = star(SubNode, Cont)` with remaining input `['X', 'Y', 'Z', 'b']`.
+  3. **Greedy Star Iteration**:
+     - **Iteration 1**: `SubNode = sym(dot, end, stp)` matches `'X'`. `end` links back to `star(...)`. Remaining input = `['Y', 'Z', 'b']`.
+     - **Iteration 2**: `SubNode = sym(dot, end, stp)` matches `'Y'`. `end` links back to `star(...)`. Remaining input = `['Z', 'b']`.
+     - **Iteration 3**: `SubNode = sym(dot, end, stp)` matches `'Z'`. `end` links back to `star(...)`. Remaining input = `['b']`.
+     - **Exit Loop**: `Cont = sym(char(b), end, stp)` matches `'b'`. Moves to terminal `end` with remaining input = `[]`.
+  4. **Terminal Node**: Reaches `end` with `Rest = []`. Match succeeds!
+
+  ---
+
+  ### Technical Reference: Rational Tree Automaton Node Types & Term Linkage
+
+  #### 1. Are Continuations Actually Linked to Other Nodes in Prolog?
+  **Yes.** In Prolog, terms are directed graph structures residing on the heap.
+  When `compile_node/5` constructs an automaton node, the `Cont` (continuation) argument is **not a symbolic name or lookup key** (such as `state_42`). It is the **actual Prolog compound term** representing the next automaton state:
+  ```prolog
+  % A node's SuccState argument directly embeds the next node's compound term:
+  sym(char('a'), sym(char('b'), end, stp), stp)
+  %              ^-----------------------^ Successor continuation is directly linked!
+  ```
+
+  For loops (such as Kleene star `a*`), continuations link execution back to ancestor nodes:
+  - **Continuation Structures**: A `star(SubNode, Cont)` node passes `end` into `SubNode`. When `SubNode` completes an iteration, its `end` continuation triggers recursion back to `star(SubNode, Cont)`.
+  - **Cyclic Terms (Rational Trees)**: In cyclic automaton nodes, Prolog's native cyclic term unification forms back-pointers where a term argument references its own parent ($X = \text{sym}(\text{char}(a), X, \text{stp})$).
+
+  Because state transitions are term arguments pointing directly to successor state compound terms, **state transitions require zero matrix lookups and zero heap allocations** during pattern matching execution.
+
+  #### 2. Terminal Nodes: `end` vs. `stp`
+  - **`end` (Accept / Success Terminal)**: Reached when a path through the pattern successfully matches the input. `regex_tree_run(end, State, State) --> [].` terminates matching successfully and returns the remaining unparsed input list (`Rest`).
+  - **`stp` (Stop / Trap Failure Terminal)**: Reached when a character fails a condition test or a path hits a dead end. `regex_tree_run(stp, _, _) --> { fail }.` immediately forces Prolog backtracking (`fail`) to try alternative branches.
+
+  #### 3. Complete Node Taxonomy
+  - **`sym(Cond, Succ, Fail)`**: Tests character against `Cond` using pure `if_/3`. Moves to `Succ` on match (consuming $H$), or `Fail` on mismatch (without consuming). Conditions include `char(C)`, `dot`, `builtin(Class)`, `class(Items)`, `neg_class(Items)`, `bol`, `eol`, `boundary`, `not_boundary`.
+  - **`alt(NodeA, NodeB)`**: Alternation `A|B`. Tries `NodeA`, backtracks to `NodeB`.
+  - **`star(SubNode, Cont)` / `lazy_star(SubNode, Cont)`**: Greedy/Lazy Kleene star `R*` / `R*?`.
+  - **`opt(SubNode, Cont)` / `lazy_opt(SubNode, Cont)`**: Greedy/Lazy Optional `R?` / `R??`.
+  - **`cap_open(Idx, Next)` / `cap_close(Idx, Next)`**: Positional capture group indexing.
+  - **`named_open(Name, Idx, Next)` / `named_close(Name, Idx, Next)`**: Named capture group indexing (`Name-Substr`).
+  - **`lookahead(Sub, Next, Fail)` / `neg_lookahead(Sub, Next, Fail)`**: Zero-width lookahead assertions `(?=Sub)` / `(?!Sub)`.
+  - **`backref(Idx, Next)`**: Backreference to previously captured group `Idx`.
+  - **`set_flags(Flags, Next)` / `scoped_flags(Flags, Sub, Next)`**: Flag configuration.
+
+  #### 4. Rich Pattern Example: `^(?P<id>\d+)-[a-z]+|(?=test)`
+  ```prolog
+  compiled_tree(
+    alt(
+      % Branch A: ^(?P<id>\d+)-[a-z]+
+      sym(bol,                                             % Start-of-line anchor ^
+        named_open(id, 0,                                 % Open named capture 'id'
+          compile_exact_n(1, \d,                          % First required \d
+            star(sym(builtin(digit), end, stp),           % Remaining \d* loop
+              named_close(id, 0,                          % Close named capture 'id'
+                sym(char('-'),                            % Match literal '-'
+                  compile_exact_n(1, [a-z],              % First required [a-z]
+                    star(sym(class([char_range(a,z)]), end, stp), % Remaining [a-z]* loop
+                      end                                 % Terminal Accept State
+                    ),
+                    stp
+                  ),
+                  stp
+                )
+              )
+            )
+          )
+        ),
+        stp
+      ),
+      % Branch B: (?=test)
+      lookahead(                                          % Positive Lookahead Assertion
+        sym(char(t), sym(char(e), sym(char(s), sym(char(t), end, stp), stp), stp), stp),
+        end, stp
+      )
+    ),
+    1                                                     % GroupCount = 1
+  )
+  ```
+
+  ---
+
+  ### Academic & Literature References
+
+  - **Alex Grabowski (2025)**: [Pure regex implementation using rational trees and if_/3](https://github.com/mthom/scryer-prolog/discussions/2758) — Scryer Prolog Discussion #2758 outlining the architecture & motivation for rational tree automata in Scryer Prolog.
+  - **Alain Colmerauer (1982)**: [Prolog and Infinite Trees](https://alain.colmerauer.perso.luminy.univ-amu.fr/Publis/InfiniteTrees/InfiniteTrees.pdf) — Foundational paper introducing rational terms and infinite trees in Prolog II.
+  - **Bruno Courcelle (1983)**: [Fundamental properties of infinite trees](https://doi.org/10.1016/0304-3975(83)90059-2) — Mathematical theory of infinite and rational tree structures.
+  - **Janusz A. Brzozowski (1964)**: [Derivatives of Regular Expressions](https://dl.acm.org/doi/10.1145/321239.321249) — Classical paper on regular expression differentiation.
+  - **Wikipedia — Rational Tree**: [Rational tree](https://en.wikipedia.org/wiki/Rational_tree) — Overview of rational tree terms and cyclic graphs.
+  - **Wikipedia — Tree Automaton**: [Tree automaton](https://en.wikipedia.org/wiki/Tree_automaton) — Theoretical overview of tree automata.
+  - **Wikipedia — Regular Expression**: [Regular expression](https://en.wikipedia.org/wiki/Regular_expression) — Automata theory and matching models.
+
+  ---
+
+  ### Matching Paradigms
+
+  1. **Direct List & Embedded DCG Matching (`re_tree_match/2-3`, `re_tree_match//1-2`)**:
+     Use direct list matchers or embedded DCG non-terminals with `phrase/2` or `phrase/3`:
+     ```prolog
+     ?- re_tree_match("a*b", "aaabc", Rest).
+     % Rest = "c"
+
+     ?- phrase(re_tree_match("a*b", Match), "aaabc", Rest).
+     % Match = "aaab", Rest = "c"
+     ```
+     Patterns passed directly to match predicates are automatically compiled into rational tree automata and cached using the pattern string as the key. This avoids pattern parsing overhead when matching the same pattern repeatedly, but creates a compiled automaton entry in the cache database for each unique pattern that remains in memory. Use `re_tree_clear_cache/0` to clear cached patterns or pre-compile patterns with `re_tree_compile/2`.
+
+  2. **Pre-Compiling Patterns (`re_tree_compile/2`)**:
+     Compile a regular expression pattern string into a reusable rational tree automaton:
+     ```prolog
+     ?- re_tree_compile("a*b", Tree),
+        re_tree_match(Tree, "aaabc", Rest).
+     ```
+     This avoids both pattern parsing overhead and cache lookup overhead on subsequent matches.
+
+  ### Supported Regular Expression Syntax
+
+  | Feature Category | Syntax | Description |
+  |---|---|---|
+  | **Literals** | `abc` | Match literal characters exactly. Escaped metacharacters (e.g. `\*`) match the metacharacter itself. |
+  | **Wildcard** | `.` | Match any single character (except newline unless inline flag `s` is set). |
+  | **Alternation** | `A\|B` | Match either sub-expression `A` or `B`. |
+  | **Anchors** | `^` / `$` | Match the beginning or end of the input string. |
+  | **Word Boundaries**| `\b` / `\B` | Match a word boundary or a non-word boundary. |
+  | **Builtin Classes**| `\d` / `\D` | Match a digit `[0-9]` or not a digit `[^0-9]`. |
+  | | `\w` / `\W` | Match a word character `[a-zA-Z0-9_]` or not a word character. |
+  | | `\s` / `\S` | Match a whitespace character (space, tab, newline, carriage return, form feed, vertical tab) or not a whitespace. |
+  | **Custom Classes** | `[abc]` / `[^abc]` | Match any character in the class (or not in the class if negated with `^`). |
+  | | `[a-z]` / `[^a-z]` | Range matching inside character classes. |
+  | | `[:digit:]` / `[:alpha:]` | POSIX character classes inside brackets (e.g. `[:alnum:]`, `[:space:]`). |
+  | **Quantifiers** | `*` / `*?` | Greedy or lazy Kleene star (0 or more repetitions). |
+  | | `+` / `+?` | Greedy or lazy Kleene plus (1 or more repetitions). |
+  | | `?` / `??` | Greedy or lazy optional (0 or 1 repetition). |
+  | | `{n}` / `{n}?` | Repetition exactly `n` times. |
+  | | `{n,}` / `{n,}?` | Open-ended repetition: at least `n` times. |
+  | | `{n,m}` / `{n,m}?`| Bounded repetition: between `n` and `m` times. |
+  | **Groups & Captures**| `(...)` | Capturing group (extracts substring into numbered capture list). |
+  | | `(?:...)` | Non-capturing group. |
+  | | `(?P<name>...)` | Named capturing group. |
+  | **Assertions** | `(?=...)` | Positive lookahead assertion. |
+  | | `(?!...)` | Negative lookahead assertion. |
+  | **Flags** | `(?flags)` | Inline flags setting: `i` (case-insensitive), `m` (multi-line), `s` (dot-all), `x` (verbose), etc. |
+  | | `(?flags:...)` | Flags applied locally to a sub-expression group. |
+
+  ### Multilingual & International Character Support
+
+  In ISO Prolog systems treating `double_quotes` as character lists (`chars`), strings represent sequences of native character code points.
+  Exact literal matching, wildcards (`.`), custom character classes (`[α-ω]`), capturing groups, Emojis, and non-Latin scripts (e.g. Greek, CJK, Klingon script PUA) work out of the box.
+
+  > [!NOTE]
+  > **Case-Insensitivity Limitation (`(?i)`)**: Inline flag `(?i)` case folding is currently scoped to ASCII characters (`'A'-'Z'` $\leftrightarrow$ `'a'-'z'`). Non-ASCII international uppercase/lowercase foldings (e.g. `'É'` $\leftrightarrow$ `'é'`) are not automatically folded by `(?i)`.
+*/
+:- module(regexp_tree, [
+    re_tree_match//1,
+    re_tree_match//2,
+    re_tree_match_groups//3,
+    re_tree_match_named//3,
+    re_tree_group/3,
+    re_tree_compile/2,
+    re_tree_clear_cache/0,
+    re_tree_cache_info/2,
+    re_tree_match/2,
+    re_tree_match/3,
+    re_tree_match_groups/4,
+    re_tree_match_groups/5,
+    re_tree_match_named/4,
+    re_tree_match_named/5,
+    % Standard Engine Aliases for shared test runner compatibility
+    re_match//1,
+    re_match//2,
+    re_match_groups//3,
+    re_match_named//3,
+    re_match/2,
+    re_match/3,
+    re_match_groups/4,
+    re_match_groups/5,
+    re_match_named/4,
+    re_match_named/5,
+    re_group/3,
+    re_compile/2,
+    re_clear_cache/0,
+    re_cache_info/2
+]).
+
+:- use_module(library(lists)).
+:- use_module(library(dcgs)).
+:- use_module(library(si)).
+:- use_module(library(error)).
+:- use_module(library(reif)).
+
+:- use_module(regexp_ast, [re_ast_chars//1, is_ast/1]).
+:- use_module(regexp_common, [to_chars/2, to_input_chars/2, var_t/2, pattern_ast/2, extract_match/3, is_input_arg_t/2, state_groups/2, state_named/2, pattern_cache/4, pattern_cache_t/5, clear_pattern_cache/1, pattern_cache_info/3]).
+:- use_module(regexp_compile_tree, [compile_ast_tree/3, get_tree_automaton/3, regex_tree_run//3]).
+
+%% re_match(+Pattern, ?Input)
+% Direct 2-arg anchored matcher (Input must match Pattern completely).
+re_match(Pattern, Input) :-
+    re_tree_match(Pattern, Input).
+
+%% re_match(+Pattern, ?Input, -Rest)
+%% re_match(+Pattern)//
+% Direct 3-arg unanchored matcher or DCG non-terminal //0 (expanded to 3 args).
+re_match(Pattern, Input, Rest) :-
+    re_tree_match(Pattern, Input, Rest).
+
+%% re_match(+Pattern, -Match)//
+% DCG non-terminal //1 (expanded to 4 args: Pattern, Match, S0, S).
+re_match(Pattern, Match, S0, S) :-
+    re_tree_match_groups_impl(Pattern, S0, Match, _Groups, S).
+
+%% re_match_groups(+Pattern, ?Input, -Match, -Groups)
+% Direct 4-arg anchored matcher returning matched substring and positional capture groups.
+re_match_groups(Pattern, Input, Match, Groups) :-
+    re_tree_match_groups(Pattern, Input, Match, Groups).
+
+%% re_match_groups(+Pattern, ?InputOrMatch, ?MatchOrGroups, ?GroupsOrS0, ?RestOrS)
+% Dual-purpose matcher:
+% 1. Direct 5-arg list call: (Pattern, Input, Match, Groups, Rest)
+% 2. DCG //3 expansion call: (Pattern, Match, Groups, S0, S)
+re_match_groups(Pattern, InputOrMatch, MatchOrGroups, GroupsOrS0, RestOrS) :-
+    re_tree_match_groups(Pattern, InputOrMatch, MatchOrGroups, GroupsOrS0, RestOrS).
+
+%% re_match_named(+Pattern, ?Input, -Match, -NamedGroups)
+% Direct 4-arg anchored matcher returning matched substring and named capture groups.
+re_match_named(Pattern, Input, Match, NamedGroups) :-
+    re_tree_match_named(Pattern, Input, Match, NamedGroups).
+
+%% re_match_named(+Pattern, ?InputOrMatch, ?MatchOrNamed, ?NamedOrS0, ?RestOrS)
+% Dual-purpose matcher:
+% 1. Direct 5-arg list call: (Pattern, Input, Match, NamedGroups, Rest)
+% 2. DCG //3 expansion call: (Pattern, Match, NamedGroups, S0, S)
+re_match_named(Pattern, InputOrMatch, MatchOrNamed, NamedOrS0, RestOrS) :-
+    re_tree_match_named(Pattern, InputOrMatch, MatchOrNamed, NamedOrS0, RestOrS).
+
+%% re_group(+NamedGroups, +Name, -Value)
+% Retrieves the captured string value for group `Name` from `NamedGroups` key-value pairs list.
+re_group(NamedGroups, Name, Value) :-
+    member(Name-Value, NamedGroups).
+
+%% re_compile(+Pattern, -CompiledTerm)
+% Pre-compiles `Pattern` into a reusable compiled automaton structure.
+re_compile(Pattern, CompiledTerm) :-
+    re_tree_compile(Pattern, CompiledTerm).
+
+%% re_clear_cache
+% Clears dynamic pattern cache entries across all engines. Intended for the rare
+% circumstance that an excessive number of patterns have been compiled, resulting
+% in excessive memory use by the Prolog system.
+re_clear_cache :-
+    clear_pattern_cache(all).
+
+%% re_cache_info(-Count, -Keys)
+% Retrieves count and pattern keys currently cached.
+re_cache_info(Count, Keys) :-
+    pattern_cache_info(all, Count, Keys).
+
+%% re_tree_clear_cache
+%
+% Clears dynamic pattern cache entries for the Rational Tree Automaton engine.
+re_tree_clear_cache :-
+    clear_pattern_cache(tree).
+
+%% re_tree_cache_info(-Count, -Keys)
+%
+% Retrieves count and list of pattern keys currently cached for the Rational Tree Automaton engine.
+re_tree_cache_info(Count, Keys) :-
+    pattern_cache_info(tree, Count, Keys).
+
+%% re_tree_group(+NamedGroups, +Name, -Value)
+re_tree_group(NamedGroups, Name, Value) :-
+    member(Name-Value, NamedGroups).
+
+%% re_tree_compile(+Pattern, -CompiledTerm)
+%
+% Pre-compiles `Pattern` into a reusable `compiled_tree(Automaton, GroupCount)` term structure.
+re_tree_compile(Pattern, compiled_tree(Automaton, GroupCount)) :-
+    get_tree_automaton(Pattern, Automaton, GroupCount).
+
+%% re_tree_match(+Pattern, ?Input)
+% Direct 2-arg anchored matcher (Input must match Pattern completely).
+re_tree_match(Pattern, Input) :-
+    re_tree_match(Pattern, Input, []).
+
+%% re_tree_match(+Pattern, ?Input, -Rest)
+% Direct 3-arg unanchored matcher (matches Pattern against Input, returning unparsed Rest).
+re_tree_match(Pattern, Input, Rest) :-
+    re_tree_match_groups_impl(Pattern, Input, _Match, _Groups, Rest).
+
+%% re_tree_match(+Pattern, -Match)//
+% DCG non-terminal //1 (expanded to 4 args: Pattern, Match, S0, S).
+re_tree_match(Pattern, Match, S0, S) :-
+    re_tree_match_groups_impl(Pattern, S0, Match, _Groups, S).
+
+%% re_tree_match_groups(+Pattern, ?Input, -Match, -Groups)
+% Direct 4-arg anchored matcher returning matched substring and positional capture groups.
+re_tree_match_groups(Pattern, Input, Match, Groups) :-
+    re_tree_match_groups_impl(Pattern, Input, Match, Groups, []).
+
+%% re_tree_match_groups(+Pattern, ?InputOrMatch, ?MatchOrGroups, ?GroupsOrS0, ?RestOrS)
+% Dual-purpose matcher:
+% 1. Direct 5-arg list call: (Pattern, Input, Match, Groups, Rest)
+% 2. DCG //3 expansion call: (Pattern, Match, Groups, S0, S)
+re_tree_match_groups(Pattern, InputOrMatch, MatchOrGroups, GroupsOrS0, RestOrS) :-
+    if_(is_input_arg_t(InputOrMatch),
+        re_tree_match_groups_impl(Pattern, InputOrMatch, MatchOrGroups, GroupsOrS0, RestOrS),
+        re_tree_match_groups_impl(Pattern, GroupsOrS0, InputOrMatch, MatchOrGroups, RestOrS)
+    ).
+
+%% re_tree_match_named(+Pattern, ?Input, -Match, -NamedGroups)
+% Direct 4-arg anchored matcher returning matched substring and named capture groups.
+re_tree_match_named(Pattern, Input, Match, NamedGroups) :-
+    re_tree_match_named_impl(Pattern, Input, Match, NamedGroups, []).
+
+%% re_tree_match_named(+Pattern, ?InputOrMatch, ?MatchOrNamed, ?NamedOrS0, ?RestOrS)
+% Dual-purpose matcher:
+% 1. Direct 5-arg list call: (Pattern, Input, Match, NamedGroups, Rest)
+% 2. DCG //3 expansion call: (Pattern, Match, NamedGroups, S0, S)
+re_tree_match_named(Pattern, InputOrMatch, MatchOrNamed, NamedOrS0, RestOrS) :-
+    if_(is_input_arg_t(InputOrMatch),
+        re_tree_match_named_impl(Pattern, InputOrMatch, MatchOrNamed, NamedOrS0, RestOrS),
+        re_tree_match_named_impl(Pattern, NamedOrS0, InputOrMatch, MatchOrNamed, RestOrS)
+    ).
+
+/* Internal Implementations */
+
+re_tree_match_groups_impl(Pattern, Input, Match, Groups, Rest) :-
+    to_input_chars(Input, Chars),
+    get_tree_automaton(Pattern, Automaton, GroupCount),
+    length(PosGroups, GroupCount),
+    S0 = state(Chars, PosGroups, [], []),
+    phrase(regex_tree_run(Automaton, S0, SF), Chars, Rest),
+    state_groups(SF, Groups),
+    extract_match(Chars, Rest, Match).
+
+re_tree_match_named_impl(Pattern, Input, Match, NamedGroups, Rest) :-
+    to_input_chars(Input, Chars),
+    get_tree_automaton(Pattern, Automaton, GroupCount),
+    length(PosGroups, GroupCount),
+    S0 = state(Chars, PosGroups, [], []),
+    phrase(regex_tree_run(Automaton, S0, SF), Chars, Rest),
+    state_named(SF, NamedGroups),
+    extract_match(Chars, Rest, Match).
+
+
+
+

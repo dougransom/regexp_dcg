@@ -1,0 +1,116 @@
+# pure_regex: Regular Expression Engine for Scryer Prolog and ISO Prolog
+
+> A pure, ISO-compliant regular expression library for Scryer Prolog providing dual DCG non-terminal and direct character list (`chars`) matching interfaces across multiple 1:1 API-compatible engines (Rational Tree Automata, DCG, DFA).
+
+## Overview & Key Entry Points
+
+- **Primary Module**: `src/pure_regex.pl` (`pure_regex`) - Main entry point re-exporting Rational Tree Automaton by default.
+- **Tree Automaton Engine**: `src/core/regexp_tree.pl` - Pure, deterministic `if_/3`-driven cyclic term finite state automaton matching engine.
+- **DCG Engine**: `src/core/regexp_compile_dcg.pl` - Full-featured backtracking DCG engine with capturing groups, lookaheads, named groups, and inline flags.
+- **DFA Engine**: `src/core/regexp_compile_dfa.pl` - Deterministic finite automaton execution.
+- **Package Manifest**: `scryer-manifest.pl` - Bakage package definition (`pkg(pure_regex)`).
+
+## Core Public API Interface
+
+All engines maintain identical 1:1 API signatures:
+
+### DCG Non-Terminal Predicates
+- `re_match(Pattern, Match)//0` - Matches `Pattern` against DCG input, unifies matched `chars` with `Match`.
+- `re_match(Pattern)//0` - Matches `Pattern` against DCG input without returning match slice.
+- `re_match_groups(Pattern, Match, Groups)//0` - Matches `Pattern` and extracts positional capturing groups.
+- `re_match_named(Pattern, Match, NamedMap)//0` - Matches `Pattern` and extracts named capturing groups.
+
+### Direct List Matching Predicates
+- `re_match(Pattern, Input)` - Anchored full match against `Input` character list (`chars`).
+- `re_match(Pattern, Input, Rest)` - Matches prefix of `Input`, returning unparsed remainder `Rest`.
+- `re_match(Pattern, Input, Rest, Options)` - Matches prefix with mode options (e.g. `[mode(dcg)]`, `[mode(tree)]`).
+- `re_match_groups(Pattern, Input, Match, Groups)` - Direct match returning `Match` and `Groups` list.
+- `re_match_named(Pattern, Input, Match, NamedMap)` - Direct match returning `Match` and named group list `[Name-Value, ...]`.
+
+### Compilation & Cache Management
+- `re_compile(Pattern, CompiledTerm)` - Pre-compiles `Pattern` into a reusable automaton structure.
+- `re_cache_info(Count, Keys)` - Inspects count and keys of dynamically compiled pattern cache.
+- `re_clear_cache/0` - Clears dynamic pattern cache entries across all engines (intended for the rare circumstance where an excessive number of distinct patterns have been compiled, resulting in excessive memory use by the Prolog system).
+
+## Usage Examples
+
+```prolog
+:- use_module('src/pure_regex').
+
+% Direct character list matching (Rational Tree engine default)
+?- re_match("[a-z]+", "hello").
+   true.
+
+% Select DCG engine via mode option
+?- re_match("[a-z]+", "hello", Rest, [mode(dcg)]).
+   Rest = "".
+
+% DCG non-terminal phrase matching
+?- phrase(re_match("[0-9]+", Match), "12345").
+   Match = "12345".
+
+% Capturing positional groups
+?- re_match_groups("(\\w+)@(\\w+)\\.(\\w+)", "user@domain.com", Match, Groups).
+   Match = "user@domain.com", Groups = ["user", "domain", "com"].
+
+% Named capture groups (requires mode(dcg))
+?- re_match_named("(?P<year>\\d{4})-(?P<month>\\d{2})", "2026-08", Match, NamedMap).
+   Match = "2026-08", NamedMap = ["year"-"2026", "month"-"08"].
+
+% Bidirectional generation (unbound Input variable)
+?- re_match("aa?b", X).
+   X = "aab"
+;  X = "ab".
+
+?- re_match("a.b", X).
+   X = [a, Y, b].  % dif(Y, '\n')
+
+?- re_match("a*b", X).
+   X = "b"
+;  X = "ab"
+;  X = "aab".
+```
+
+## DCG Tokenizer & Lexer Recipe
+
+`pure_regex` provides DCG non-terminals (`re_match//1`, `re_match//2`) for building declarative lexers:
+
+```prolog
+:- use_module(library(dcgs)).
+:- use_module('src/pure_regex').
+
+% Tokenize character list into structured AST tokens
+tokenize(Input, Tokens) :-
+    phrase(tokens(Tokens), Input).
+
+tokens([]) --> ws.
+tokens([Tok|Rest]) -->
+    ws,
+    token(Tok),
+    !,
+    tokens(Rest).
+
+ws               --> re_match("\\s*", _).
+token(ident(Id)) --> re_match("[a-zA-Z_][a-zA-Z0-9_]*", Id).
+token(num(N))    --> re_match("-?[0-9]+", Chars), { number_chars(N, Chars) }.
+token(str(S))    --> re_match("\"[^\"]*\"", S).
+token(op(Op))    --> re_match("==|!=|<=|>=|[+\\-*/=<>]", Op).
+```
+
+## Engine Selection Guide
+
+- **`tree` (Rational Tree Automaton, Default)**: Pre-compiles cyclic terms into a deterministic finite-state automaton. Fastest performance with no choicepoint generation for linear matching.
+- **`dcg` (Backtracking DCG)**: Full-featured engine supporting capture groups (`re_match_groups/4`), named groups (`re_match_named/4`), lookaheads (`(?=...)`, `(?!...)`), and inline flags.
+- **`dfa` (DFA Engine)**: Classical subset-construction deterministic finite automaton.
+
+## Documentation & Full Context
+
+- [Full Consolidated Documentation](llms-full.txt): Complete user guide, pattern reference, and full documentation for LLMs.
+- [User Guide & Pattern Reference](docs/usage.md): Detailed regex syntax reference (character classes, quantifiers, lookarounds, flags).
+- [Machine-Readable Metadata (CodeMeta / JSON-LD)](codemeta.json): CodeMeta 2.0 / Schema.org structured metadata for `pure_regex`.
+- [README](README.md): Project overview and Bakage installation guide.
+- [Scryer Prolog Standards](.agents/skills/scryer-prolog-standards/SKILL.md): Repository coding rules and ISO Prolog standards.
+
+## Development & Methodology
+
+Developed collaboratively via human-guided agentic AI workflows, prompting agents to author and modify code, DCGs, tests, and comments under strict ISO Prolog purity guidelines and automated test suites.

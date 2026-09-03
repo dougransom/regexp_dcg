@@ -1,0 +1,46 @@
+{
+  "@context": "https://doi.org/10.5063/schema/codemeta-2.0",
+  "@type": "SoftwareSourceCode",
+  "identifier": "pure_regex",
+  "name": "pure_regex",
+  "version": "0.1.0",
+  "description": "A pure, ISO-compliant Definite Clause Grammar (DCG) regular expression engine and tokenizing foundation designed for Scryer Prolog and other ISO-compliant Prolog implementations.",
+  "applicationCategory": "DeveloperApplication",
+  "operatingSystem": [
+    "Linux",
+    "macOS",
+    "Windows"
+  ],
+  "programmingLanguage": [
+    "Prolog",
+    "ISO Prolog"
+  ],
+  "runtimePlatform": [
+    "Scryer Prolog",
+    "Trealla Prolog"
+  ],
+  "codeRepository": "https://github.com/dougransom/regexp_dcg",
+  "issueTracker": "https://github.com/dougransom/regexp_dcg/issues",
+  "license": "https://spdx.org/licenses/Unlicense.html",
+  "author": [
+    {
+      "@type": "Person",
+      "givenName": "Doug",
+      "familyName": "Ransom"
+    }
+  ],
+  "keywords": [
+    "prolog",
+    "scryer-prolog",
+    "trealla-prolog",
+    "iso-prolog",
+    "dcg",
+    "regular-expressions",
+    "regex",
+    "parser",
+    "dfa",
+    "pure-prolog",
+    "lexer",
+    "rational-trees"
+  ]
+}

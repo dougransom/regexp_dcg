@@ -1,10 +1,10 @@
-# Using Regular Expression Patterns in Prolog
+# Using Regular Expression Patterns in Prolog (`pure_regex`)
 
-This document provides usage examples and pattern matching examples with expected Prolog toplevel outputs for the regular expression library.
+This document provides usage examples and pattern matching examples with expected Prolog toplevel outputs for the `pure_regex` library.
 
-To load the backtracking regular expression engine, run:
+To load the regular expression engine, run:
 ```prolog
-?- use_module(regexp_dcg).
+?- use_module(library(pure_regex)).
    true.
 ```
 
@@ -12,7 +12,7 @@ To load the backtracking regular expression engine, run:
 
 ### 1. Direct Pattern Match with phrase/2
 
-Match a string directly against a regular expression pattern using phrase/2. Patterns passed directly to re_match//1-2 are automatically compiled into DCG goals and cached using the pattern string as the key. This avoids pattern parsing overhead when matching the same pattern repeatedly, but creates a compiled DCG goal in the cache database for each unique pattern that remains in memory. This could be an issue for programs using many different patterns (perhaps thousands).
+Match a string directly against a regular expression pattern using phrase/2. When a pattern is written as a literal character list ("...") or atom ('...'), pure_regex compiles it ahead of time via goal_expansion/2 and inlines the compiled automaton term directly into the clause. **Patterns compiled from literals bypass the dynamic compilation cache entirely**, saving heap memory and avoiding cache lookup overhead. When a pattern is supplied dynamically at runtime via a variable, it is compiled on first use and cached in the dynamic pattern database.
 
 ```prolog
 ?- phrase(re_match("a.*b", Match), "acb").
@@ -26,7 +26,7 @@ Compile a regular expression pattern string into a reusable compiled structure.
 
 ```prolog
 ?- re_compile("a.*b", Compiled).
-   Compiled = compiled(regexp_dcg:dcg_concat([regexp_dcg:dcg_lit([a]),regexp_dcg:dcg_concat([regexp_dcg:dcg_star(regexp_dcg:dcg_dot),regexp_dcg:dcg_lit([b])])]),0)
+   Compiled = compiled_tree(sym(char(a),star(sym(dot,end,stp),sym(char(b),end,stp)),stp),0)
 ;  false.
 ```
 
@@ -36,25 +36,25 @@ Execute a pre-compiled pattern inside phrase/2 for maximum performance. Passing 
 
 ```prolog
 ?- re_compile("a.*b", Compiled), phrase(re_match(Compiled, Match), "acb").
-   Compiled = compiled(regexp_dcg:dcg_concat([regexp_dcg:dcg_lit([a]),regexp_dcg:dcg_concat([regexp_dcg:dcg_star(regexp_dcg:dcg_dot),regexp_dcg:dcg_lit([b])])]),0)
+   Compiled = compiled_tree(sym(char(a),star(sym(dot,end,stp),sym(char(b),end,stp)),stp),0)
    Match = "acb"
 ;  false.
 ```
 
-### 4. Inspect Compiled Pattern Cache
+### 4. Inspect Compiled Pattern Cache (Runtime Dynamic Patterns)
 
-Inspect the dynamic compilation cache using re_cache_info/2 to check the number of cached patterns and their pattern keys.
+Inspect the dynamic compilation cache using re_cache_info/2 to check the number of cached patterns and their pattern keys. Statically compiled literal patterns bypass this cache (Count = 0). When patterns are passed dynamically via variables at runtime, they enter the dynamic cache:
 
 ```prolog
-?- re_clear_cache, phrase(re_match("a.*b"), "acb"), phrase(re_match("[0-9]+"), "123"), re_cache_info(Count, Keys).
-   Count = 2
-   Keys = ["a.*b", "[0-9]+"]
+?- re_clear_cache, P1 = "a.*b", phrase(re_match(P1), "acb"), P2 = "[0-9]+", phrase(re_match(P2), "123"), re_cache_info(Count, Keys).
+   Count = 4
+   Keys = ["a.*b", "a.*b", "[0-9]+", "[0-9]+"]
 ;  false.
 ```
 
 ### 5. Clear Compiled Pattern Cache
 
-Clear all compiled pattern goals from the dynamic compilation database using re_clear_cache/0.
+Clear all compiled pattern goals from the dynamic compilation database using re_clear_cache/0. Note that re_clear_cache/0 is intended for the rare circumstance that an excessive number of distinct patterns have been compiled, resulting in excessive memory use by the Prolog system. In normal operation, compiled pattern caching provides substantial performance benefits without requiring manual invalidation.
 
 ```prolog
 ?- re_clear_cache, re_cache_info(Count, Keys).
@@ -62,6 +62,24 @@ Clear all compiled pattern goals from the dynamic compilation database using re_
    Keys = ""
 ;  false.
 ```
+
+## Compile-Time Static Compilation & Expansion Modes
+
+`pure_regex` provides compile-time macro expansion to eliminate pattern compilation latency at runtime:
+
+- **Approach A (Default, Goal Expansion):** When a literal character list (`"..."`) or atom (`'...'`) is passed to `re_match/2-3`, `re_match_groups/4-5`, or `re_match_named/4-5`, `goal_expansion/2` compiles the pattern during file loading. The resulting automaton is embedded directly as a constant term in the compiled clause. **Patterns compiled from literals bypass the dynamic pattern cache entirely.**
+- **Approach B (DCG Rule Generation via `re_rule//0`):** Define dedicated, named DCG grammar rules directly from regular expressions at compile time:
+  ```prolog
+  re_rule(ident//0, "^[a-zA-Z_][a-zA-Z0-9_]*$").
+  re_rule(ident_match(Match)//0, "^[a-zA-Z_][a-zA-Z0-9_]*$").
+  re_rule(ident_groups(Match, Groups)//0, "^([a-z]+)-([0-9]+)$").
+  ```
+- **Default Engine Selection:** Set the default regex engine globally via `user:regexp_engine(Engine)` (`rt` [default] or `dcg`).
+- **Static Compilation Toggle:** Enable or disable compile-time macro expansion via `user:regexp_static_compilation(true | false)`. When `false`, literal patterns pass through to runtime dynamic matching.
+- **Independent Static / Dynamic Overrides:** Override matching engines separately:
+  - `user:regexp_static_engine(Engine)`: overrides the engine used for compile-time static compilation (`rt` or `dcg`).
+  - `user:regexp_dynamic_engine(Engine)`: overrides the engine used for runtime dynamic pattern matching (`rt` or `dcg`).
+- **Expansion Strategy Mode:** Select the expansion strategy via `user:regexp_expansion(Mode)` (`term` [default, Approach A] or `rules` [Approach B]).
 
 ## Pattern Examples
 
@@ -289,11 +307,13 @@ Match pattern only if followed by lookahead sub-expression.
 
 ### 24. Named Group Capture
 
-Syntax support for named capturing groups.
+Syntax support for named capturing groups using re_match//2 for full pattern matching, and re_match_named//3 with re_group/3 to extract named captured subgroups.
 
 ```prolog
-?- phrase(re_match("(?P<id>abc)", Match), "abc").
-   Match = "abc"
+?- phrase(re_match_named("(?P<first>[a-z]+) ([a-z]+) (?P<last>[a-z]+)", Match, Named), "john middle doe"), re_group(Named, first, First).
+   Match = "john middle doe"
+   Named = [last-[d,o,e],first-[j,o,h,n]]
+   First = "john"
 ;  false.
 ```
 
@@ -313,7 +333,7 @@ Manually compile a pattern and execute matching.
 
 ```prolog
 ?- re_compile("a*b", Compiled), phrase(re_match(Compiled, Match), "aaab").
-   Compiled = compiled(regexp_dcg:dcg_concat([regexp_dcg:dcg_star(regexp_dcg:dcg_lit([a])),regexp_dcg:dcg_lit([b])]),0)
+   Compiled = compiled_tree(star(sym(char(a),end,stp),sym(char(b),end,stp)),0)
    Match = "aaab"
 ;  false.
 ```
@@ -345,7 +365,7 @@ Use `re_match//2` with a pre-compiled pattern.
 
 ```prolog
 ?- re_compile("a*b", Compiled), phrase(re_match(Compiled, Match), "aaabc", "c").
-   Compiled = compiled(regexp_dcg:dcg_concat([regexp_dcg:dcg_star(regexp_dcg:dcg_lit([a])),regexp_dcg:dcg_lit([b])]),0)
+   Compiled = compiled_tree(star(sym(char(a),end,stp),sym(char(b),end,stp)),0)
    Match = "aaab"
 ;  false.
 ```
@@ -356,31 +376,32 @@ Use `re_match_groups//3` with a pre-compiled pattern and group extraction. Captu
 
 ```prolog
 ?- re_compile("(a*)b", Compiled), phrase(re_match_groups(Compiled, Match, Groups), "aaabc", "c").
-   Compiled = compiled(regexp_dcg:dcg_concat([regexp_dcg:dcg_capture(0,regexp_dcg:dcg_star(regexp_dcg:dcg_lit([a]))),regexp_dcg:dcg_lit([b])]),1)
+   Compiled = compiled_tree(cap_open(0,star(sym(char(a),end,stp),cap_close(0,sym(char(b),end,stp)))),1)
    Match = "aaab"
    Groups = ["aaa"]
 ;  false.
 ```
 
-### 31. Compilation Cache Matching
+### 31. Compilation Cache Inspection
 
 Access and verify the internal compilation cache.
 
 ```prolog
-?- re_clear_cache, phrase(re_match("c*d", Match), "cccd"), regexp_dcg:to_chars("c*d", Key), regexp_dcg:pattern_cache(Key, Goal, GroupCount).
+?- re_clear_cache, phrase(re_match("c*d", Match), "cccd"), re_cache_info(Count, Keys).
    Match = "cccd"
-   Key = "c*d"
-   Goal = regexp_dcg:dcg_concat([regexp_dcg:dcg_star(regexp_dcg:dcg_lit([c])),regexp_dcg:dcg_lit([d])])
-   GroupCount = 0
+   Count = 0
+   Keys = ""
 ;  false.
 ```
 
 ### 32. Compilation Cache Clearing
 
-Clear the cache database and verify no patterns remain.
+Clear the cache database and verify no patterns remain. Intended for rare situations where excessive compiled patterns cause high memory use.
 
 ```prolog
-?- re_clear_cache, phrase(re_match("c*d", Match), "cccd"), re_clear_cache, \+ regexp_dcg:pattern_cache(_, _, _).
+?- re_clear_cache, phrase(re_match("c*d", Match), "cccd"), re_clear_cache, re_cache_info(CountAfter, KeysAfter).
+   CountAfter = 0
+   KeysAfter = ""
 ;  false.
 ```
 
